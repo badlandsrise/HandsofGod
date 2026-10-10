@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="JobDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/defs/job_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"work_wood"
+title = "Fell trees for the camp"
+era = 1
+kind = 8
+skill = &"woodcraft"
+max_people = 3
+outputs = {&"wood": 1}
+work_time = 1.0
+needs_discovery = &"stone_tools"

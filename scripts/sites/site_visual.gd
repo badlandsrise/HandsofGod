@@ -5,7 +5,12 @@ class_name SiteVisual extends Node3D
 ## Slot pips and hover rings are drawn by the hand.
 
 ## BuildingDef id -> catalog id, when the names differ.
-const BUILDING_ART := {&"camp": &"era2_shed", &"market": &"market_stall"}
+const BUILDING_ART := {&"camp": &"era2_shed", &"market": &"market_stall", &"farmhouse": &"era2_longhouse",
+	&"hunting_lodge": &"hut", &"woodcutter_camp": &"era2_shed", &"footbridge": &"bridge"}
+## Placeholder art ids worker B or later polish can give their own models:
+## hunting_lodge, woodcutter_camp, footbridge (now a scaled great bridge),
+## bridge_timber (a log). Composed here from kit pieces until then.
+const FOOTBRIDGE_SCALE := 1.0
 ## Moving parts in the Era 2 and 3 kits (scripts/assets/spinner.gd) turn while
 ## someone works: mill sails and wheels, the well's windlass, the school bell,
 ## the observatory dome, the harbour crane. The clock's hands always turn; the
@@ -216,7 +221,11 @@ func _job(id: StringName, seed_v: int) -> void:
 			_art(&"raft", 0, Vector3(0, wl - 0.1, 5.0), 0.2, 0.8)
 			_art(&"rowboat", 0, Vector3(2.2, wl - 0.1, 6.5), -0.3)
 			_art(&"barrels", 0, Vector3(-1.2, 0, 0.6), 0.5, 0.7)
-		&"temple_raising", &"bridge_building", &"barn_raising":
+		&"cart_haul":
+			# the farmhouse's handcart, loaded with sacks when there is grain to haul
+			_art(&"handcart", seed_v, Vector3.ZERO, 0.4)
+			_art(&"grain_sacks", 0, Vector3(1.6, 0, 0.4), 0.9, 0.7)
+		&"temple_raising", &"bridge_building", &"barn_raising", &"footbridge_raising":
 			# coils of rope and a ladder's worth of timber for the crew
 			_art(&"planks_pile", 0, Vector3(0, 0, 0), 0.4, 0.6)
 		_:
@@ -240,6 +249,17 @@ func _plot(s: Site, seed_v: int) -> void:
 	var span := maxf(fp.x, fp.y)
 	var bid := s.building.id
 	var id := _art_id(bid)
+	if s.is_fire():
+		# the first fire circle, laid round the fire that is already burning
+		var fire := _art(&"campfire", 0, Vector3.ZERO, 0.0, 1.25)
+		for l in fire.find_children("*", "OmniLight3D", true, false):
+			l.queue_free()
+		_flame = fire.find_child("Fire", true, false) as Node3D
+		for i in 4:
+			var a := TAU * i / 4.0 + 0.4
+			_ghost(_art(&"log_fallen", i, Vector3(cos(a), 0, sin(a)) * 2.6, -a + PI * 0.5, 0.55))
+		_material_piles(s, span + 2.0)
+		return
 	if bid == &"field":
 		# clearing the ground for a new field: stubble and stakes
 		_art(&"field_stubble", 0, Vector3.ZERO, 0.0, 1.0)
@@ -284,6 +304,8 @@ func _staged_plot(s: Site, id: StringName, seed_v: int) -> void:
 	# Era 3 buildings may be drawn smaller than their kit model (the great hall
 	# over the old temple): plot, frame and building all scale together.
 	var k := _fit(id, s.building.footprint) if s.building.era >= 3 else 1.0
+	if s.building.id == &"footbridge":
+		k = FOOTBRIDGE_SCALE
 	if s.state == Site.State.PLOT:
 		_hut_stage = 0
 		_art(plot_id, 0, Vector3.ZERO, 0.0, k)
@@ -395,6 +417,9 @@ func _building(bid: StringName, fp: Vector2, seed_v: int) -> void:
 			return
 		&"fire_circle":
 			var fire := _art(&"campfire", 0, Vector3.ZERO, 0.0, 1.4)
+			if site != null and site.is_fire() and Vector2(site.global_position.x - Valley.FIRE.x, site.global_position.z - Valley.FIRE.y).length() < 2.0:
+				for l in fire.find_children("*", "OmniLight3D", true, false):
+					l.queue_free()      # the first fire, ringed: the world's FirePit owns its light
 			_flame = fire.find_child("Fire", true, false) as Node3D
 			for i in 4:
 				var a := TAU * i / 4.0 + 0.4
@@ -402,6 +427,35 @@ func _building(bid: StringName, fp: Vector2, seed_v: int) -> void:
 			return
 		&"hut":
 			_art(&"hut", seed_v, Vector3.ZERO, 0.0)
+			return
+		&"footbridge":
+			_art(&"bridge", 0, Vector3.ZERO, 0.0, FOOTBRIDGE_SCALE)
+			return
+		&"farmhouse":
+			# the longhouse, its hay, and the bin: grain sacks stacked as the crew brings the harvest in
+			_art(&"era2_longhouse", seed_v, Vector3.ZERO, 0.0, _fit(&"era2_longhouse", fp))
+			_art(&"haystack", 0, Vector3(fp.x * 0.5 + 1.6, 0, -fp.y * 0.25), 0.4, 0.6)
+			_art(&"hay_wagon", 0, Vector3(-fp.x * 0.5 - 1.5, 0, fp.y * 0.1), 0.2, 0.8)
+			for i in 6:
+				_fill_nodes.append(_art(&"grain_sacks", i, Vector3(fp.x * 0.5 + 0.9 + (i % 3) * 0.7, 0, fp.y * 0.2 + (i / 3) * 0.8), i * 0.7, 0.55))
+			_art(&"tool_pitchfork", 0, Vector3(fp.x * 0.5 + 0.4, 0, fp.y * 0.45), 0.3)
+			return
+		&"hunting_lodge":
+			# a hide-roofed lodge, a drying rack of hides and a pair of antlers by the door
+			_art(&"hut", seed_v, Vector3.ZERO, 0.0, 1.1)
+			_art(&"drying_rack", 0, Vector3(fp.x * 0.5 + 1.2, 0, 0.6), 1.3)
+			_art(&"firewood_pile", 0, Vector3(-fp.x * 0.5 - 0.8, 0, 0.8), 0.2, 0.7)
+			_art(&"log_fallen", 1, Vector3(0.4, 0, fp.y * 0.5 + 1.2), 0.1, 0.45)
+			_art(&"deer", 2, Vector3(fp.x * 0.5 + 1.0, 0, -1.6), 2.0, 0.55)
+			return
+		&"woodcutter_camp":
+			# a lean-to shed, stacked logs and an axe in the block
+			_art(&"era2_shed", seed_v, Vector3.ZERO, 0.0, 0.9)
+			_art(&"firewood_pile", 0, Vector3(fp.x * 0.5 + 1.0, 0, 0.4), 0.3, 0.9)
+			_art(&"log_fallen", 0, Vector3(-fp.x * 0.5 - 1.2, 0, 0.6), 0.4, 0.7)
+			_art(&"log_fallen", 1, Vector3(-fp.x * 0.5 - 1.3, 0.35, 0.9), 0.5, 0.6)
+			_art(&"stump", seed_v, Vector3(1.2, 0, fp.y * 0.5 + 1.0), 0.0)
+			_art(&"tool_axe", 0, Vector3(1.3, 0.45, fp.y * 0.5 + 1.0), 0.6)
 			return
 	var id := _art_id(bid)
 	if id != &"":

@@ -79,6 +79,28 @@ func open_region(id: StringName) -> void:
 	regions[id] = true
 	Events.region_opened.emit(id)
 
+## People with nothing to do: alive, past babyhood, on no job and not busy
+## eating, sleeping, sheltering or running (the HUD counts them).
+func idle_people() -> Array:
+	return alive().filter(func(p): return p.stage != Person.Stage.BABY and p.pickable() \
+		and (p.job_site == null or not is_instance_valid(p.job_site)) and p.state in [Person.S.IDLE, Person.S.WALK])
+
+## The "Call" gesture (Austin's Era 2 notes): every idle person walks over to
+## `to` (the hand's spot) and waits there a while, so the hand can scoop them
+## up in one go. Returns how many answered. The hand binds it to C
+## (Game.ACTIONS hand_call); the HUD's call button calls it too.
+func call_idle(to: Vector3) -> int:
+	var n := 0
+	for p in idle_people():
+		if p.answer_call(to):
+			n += 1
+	stats["calls"] = int(stats.get("calls", 0)) + 1
+	if n > 0:
+		Events.toast.emit("%d idle %s coming to the hand" % [n, "person is" if n == 1 else "people are"])
+	else:
+		Events.toast.emit("Nobody is idle")
+	return n
+
 func new_person_id() -> int:
 	next_person_id += 1
 	return next_person_id - 1

@@ -7,6 +7,11 @@ class_name Wolves extends Node3D
 ## gestures also scare them.
 
 const ID := &"wolves"
+## Era 2 (2026-10-10): no wolf raids on the village. The wolves keep to their
+## den in the Western Meadow's far woods and only come out at dusk when people
+## work near it (DEN_WORK_R); they never leave the den's woods (DEN_LEASH).
+const DEN_WORK_R := 35.0
+const DEN_LEASH := 42.0
 const WOLF_SCRIPT := preload("res://scripts/threats/wolf.gd")
 
 var warned: bool = false
@@ -100,6 +105,9 @@ func start() -> void:
 		w.manager = self
 		var sp: Vector3 = spawn_points[i % spawn_points.size()] if not spawn_points.is_empty() else Vector3(-50, 0, 0)
 		w.home = sp
+		if Village.era >= 2:
+			w.home = Wolves.den()
+			w.leash = DEN_LEASH
 		add_child(w)
 		w.global_position = sp + Vector3(Game.rng.randf_range(-2, 2), 0, Game.rng.randf_range(-2, 2))
 	Events.threat_started.emit(ID, spawn_points[0] if not spawn_points.is_empty() else Vector3.ZERO)
@@ -119,6 +127,29 @@ func end() -> void:
 	planned = 0
 	if was:
 		Events.threat_ended.emit(ID)
+
+static func den() -> Vector3:
+	var p := Vector3(Valley.WOLF_DEN.x, 0, Valley.WOLF_DEN.y)
+	if Game.world != null and is_instance_valid(Game.world):
+		p.y = Game.world.ground_y(p.x, p.z)
+	return p
+
+## People out of shelter within DEN_WORK_R of the wolves' den.
+static func den_workers() -> int:
+	var d := Wolves.den()
+	var n := 0
+	for p in Village.alive():
+		if not is_instance_valid(p) or (p.has_method("is_sheltered") and p.is_sheltered()):
+			continue
+		if Vector2(p.global_position.x - d.x, p.global_position.z - d.z).length() <= DEN_WORK_R:
+			n += 1
+	return n
+
+## Can the dusk roll bring wolves now? Era 1: yes. Era 2: only near the den.
+static func may_come() -> bool:
+	if Village.era == 1:
+		return true
+	return Village.era == 2 and Wolves.den_workers() > 0
 
 func on_wolf_gone(_w) -> void:
 	pass

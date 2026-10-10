@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="BuildingDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/defs/building_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"hunting_lodge"
+title = "Hunting lodge"
+era = 1
+footprint = Vector2(4.0, 4.0)
+cost = {&"wood": 6, &"stone": 2}
+build_work = 24.0
+build_slots = 2
+jobs = Array[StringName]([&"work_lodge"])
+weight = 40.0
+workplace = true
+work_radius = 34.0
+work_jobs = Array[StringName]([&"hunt"])
+crew_min = 2
+crew_max = 4
+spawns = [[&"hunt", 16.0, -2.0]]

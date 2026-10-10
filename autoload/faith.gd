@@ -54,13 +54,17 @@ func _unlock(id: StringName) -> void:
 	if p.opens_region != &"":
 		Village.open_region(p.opens_region)
 
+## Powers renamed since older saves were made (Reach became Strong Arms).
+const RENAMED := {"reach": "strong_arms"}
+
 func save_state() -> Dictionary:
 	return {"total": total, "spent": spent, "unlocked": unlocked.keys().map(func(k): return str(k))}
 
 func load_state(d: Dictionary) -> void:
 	total = d.get("total", 0.0); spent = d.get("spent", 0.0)
 	unlocked.clear(); grip = 1; strength = 2.0
-	for k in d.get("unlocked", []):
+	for k0 in d.get("unlocked", []):
+		var k: String = str(RENAMED.get(str(k0), str(k0)))
 		var p := Defs.power(StringName(k))
 		if p == null:
 			continue

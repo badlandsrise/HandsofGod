@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="JobDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/defs/job_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"footbridge_raising"
+title = "Raise the footbridge"
+era = 2
+kind = 3
+skill = &"building"
+min_people = 3
+max_people = 3
+work_time = 24.0
+node_amount = 1
+wait_before_wander = 30.0

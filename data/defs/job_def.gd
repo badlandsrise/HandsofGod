@@ -1,7 +1,7 @@
 class_name JobDef extends Resource
 ## One kind of work. Sites (scripts/sites/site.gd) are placed instances of a JobDef.
 
-enum Kind { GATHER, CRAFT, BUILD, GROUP, TEND, HAUL, LEAD, DEVOTION }
+enum Kind { GATHER, CRAFT, BUILD, GROUP, TEND, HAUL, LEAD, DEVOTION, WORKPLACE }
 
 @export var id: StringName
 @export var title: String = ""

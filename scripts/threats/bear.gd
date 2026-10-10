@@ -20,6 +20,7 @@ const SEEK := 70.0
 var manager = null
 var state: int = S.PROWL
 var den: Vector3 = Vector3.ZERO
+var home_region: StringName = &""      # the bear keeps to this region (the Hill Quarry)
 var target: Node3D = null
 var scared_t: float = 0.0
 var swipes: int = 0
@@ -146,7 +147,9 @@ func _process(delta: float) -> void:
 		var nxt := global_position + step
 		if w.is_water(nxt):
 			nxt = global_position      # bears do not swim the great river
-		elif w.is_region_open(&"east_bank") and w.region_at(nxt) != &"east_bank" and w.region_at(nxt) != &"southern_plains":
+		elif home_region != &"" and w.region_at(nxt) != home_region:
+			nxt = global_position      # nor leave its own hills
+		elif home_region == &"" and w.is_region_open(&"east_bank") and w.region_at(nxt) != &"east_bank" and w.region_at(nxt) != &"southern_plains":
 			nxt = global_position      # nor walk the bridge
 		global_position = nxt
 		rotation.y = lerp_angle(rotation.y, atan2(dv.x, dv.z), minf(5.0 * dt, 1.0))

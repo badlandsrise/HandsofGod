@@ -12,6 +12,7 @@ const ACTIONS := {
 	&"hand_place_idle": [MOUSE_BUTTON_RIGHT],
 	&"hand_add": [KEY_SHIFT],
 	&"hand_gesture": [KEY_E],
+	&"hand_call": [KEY_C],             # call every idle person to the hand (Village.call_idle)
 	&"cam_pan": [MOUSE_BUTTON_MIDDLE],
 	&"cam_left": [KEY_A, KEY_LEFT], &"cam_right": [KEY_D, KEY_RIGHT],
 	&"cam_up": [KEY_W, KEY_UP], &"cam_down": [KEY_S, KEY_DOWN],
@@ -51,6 +52,19 @@ func _unhandled_input(e: InputEvent) -> void:
 	elif e.is_action_pressed(&"speed_3"): Clock.set_speed(3)
 	elif e.is_action_pressed(&"quicksave"): Save.write("quick")
 	elif e.is_action_pressed(&"quickload"): Save.load_slot("quick")
+	elif e.is_action_pressed(&"hand_call"): call_idle_to_hand()
+
+## Calls every idle person to where the hand points (C, or the HUD button).
+func call_idle_to_hand() -> int:
+	if world == null or not is_instance_valid(world) or not Clock.running:
+		return 0
+	var h = world.get("hand")
+	var at: Vector3 = h.get("ground") if h != null and is_instance_valid(h) and h.get("ground") is Vector3 else Vector3.INF
+	if not at.is_finite():
+		return 0
+	if world.has_method("walkable_point"):
+		at = world.walkable_point(at)
+	return Village.call_idle(at)
 
 func testing() -> bool:
 	return flags.has("test")

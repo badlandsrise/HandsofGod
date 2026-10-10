@@ -37,6 +37,8 @@ func update() -> void:
 		Village.stats["dream_active"] = str(d.id)
 		Village.stats["dream_started_t"] = Clock.total_t
 		Village.stats["dream_started_winters"] = int(Village.stats.get("winters_survived", 0))
+		if d.needs_buildings.has(&"fire_circle") and Village.era == 1:
+			Progression.ring_the_fire()       # before the world lays the dream's plots
 		Events.dream_started.emit(d.id)
 		if d.voice != "":
 			Events.toast.emit(d.voice)

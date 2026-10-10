@@ -11,8 +11,9 @@ class_name Era2Threats extends Node3D
 ##                E with Rain) or carry water from the well.
 ##   crop_blight  a growing field turns black; two people working it at once
 ##                fight it off. Left alone it takes the crop and spreads once.
-##   bears        a bear comes out of its den on the East Bank. Flick to scare
-##                it, lift it away with Strength II, or build the watchtower.
+##   bears        a bear comes out of its den above the Hill Quarry when people
+##                work the quarry. Flick to scare it, lift it away with
+##                Strength II, or build the watchtower over the quarry.
 ##   flood        the river rises over its banks: lift people out of the water;
 ##                low fields lose their crop, and grain kept outside a granary rots.
 
@@ -22,6 +23,9 @@ const DUE := {&"crop_blight": 13.0, &"drought": 22.0, &"bears": 28.0, &"flood": 
 const FLOOD_TOP := 4.8
 const FLOOD_HURT_AFTER := 7.0
 const GRAIN_ROT := 0.4
+## The bears' den, up the slope behind the Hill Quarry (2026-10-10: bears at
+## the quarry, not at random on the far bank).
+const QUARRY_DEN := Vector2(262.0, -134.0)
 
 var current: StringName = &""
 var phase: int = 0                 # 0 none, 1 warned, 2 active, 3 receding (flood)
@@ -108,7 +112,7 @@ func can(id: StringName) -> bool:
 		&"flood":
 			return Clock.season != Clock.Season.WINTER
 		&"bears":
-			return _people_in(&"east_bank") > 0 or _people_in(&"southern_plains") > 0
+			return _people_in(&"hill_quarry") > 0
 	return true
 
 func warn(id: StringName) -> void:
@@ -128,7 +132,7 @@ func _where(id: StringName) -> Vector3:
 	var w = _w()
 	match id:
 		&"bears":
-			return w._v3(LayoutEra2.BEAR_DEN) if w else Vector3.ZERO
+			return w._v3(QUARRY_DEN) if w else Vector3.ZERO
 		&"flood":
 			return w._v3(Vector2(0.0, Valley.river_z(0.0) - 14.0)) if w else Vector3.ZERO
 		&"crop_blight":
@@ -153,7 +157,8 @@ func _start() -> void:
 		&"bears":
 			bear = Bear.new()
 			bear.manager = self
-			bear.den = w._v3(LayoutEra2.BEAR_DEN) if w else Vector3.ZERO
+			bear.den = w._v3(QUARRY_DEN) if w else Vector3.ZERO
+			bear.home_region = &"hill_quarry"
 			add_child(bear)
 			bear.global_position = bear.den
 		&"flood":

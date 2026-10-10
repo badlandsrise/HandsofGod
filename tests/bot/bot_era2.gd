@@ -11,6 +11,7 @@ const SAFE := Vector2(-4.0, 8.0)        # high ground in the Clearing for flood 
 var bot = null
 var rains := 0
 var boulders := 0
+var timbers := 0
 var bear_moves := 0
 var bear_scares := 0
 var evacuated := 0
@@ -33,7 +34,7 @@ func short(k: StringName) -> int:
 		&"ore":
 			return own + short(&"bronze") * 2
 		&"clay":
-			return own + short(&"pots") * 2
+			return own + short(&"pots") * 2 + (4 if Village.count_buildings(&"smelter") == 0 and short(&"bronze") > 0 else 0)
 		&"wool":
 			return own + short(&"cloth") * 2
 	return own
@@ -52,8 +53,6 @@ func site_blocked(s) -> bool:
 		return false
 	if _flood_on() and _in_flood(s.global_position):
 		return true
-	if s.job != null and s.job.id == &"farm_field" and s.field_want() == &"":
-		return true
 	if s.job != null and s.job.only_season >= 0 and not s.in_season():
 		return true
 	return false
@@ -66,17 +65,6 @@ func score(s, idle_n: int) -> float:
 	var pop := maxi(Village.population(), 1)
 	var food_low: bool = Village.food() < bot._food_target()
 	match j.id:
-		&"farm_field":
-			var present := 0
-			for p in s.workers:
-				if is_instance_valid(p) and p.is_present_at(s, 1.6):
-					present += 1
-			match s.field_want():
-				&"cure": return 9.6 if s.workers.size() < 2 else 2.0
-				&"harvest": return 8.2
-				&"sow": return 7.0
-				&"water": return 6.0 if _has(&"water", 2) else 3.0
-			return 0.0
 		&"mill_grain":
 			return (6.7 if Village.store(&"flour") < 12 else 1.0) if _has(&"grain", 2) else 0.0
 		&"bake_bread":
@@ -116,7 +104,7 @@ func score(s, idle_n: int) -> float:
 			return 2.2 if s.workers.size() < 1 and int(Village.stats.get("bears_seen", 0)) > 0 else 0.0
 		&"pray_temple":
 			return 3.0 if s.workers.size() < bot._prayers_wanted() else 0.0
-		&"barn_raising", &"bridge_building", &"temple_raising", &"harvest_festival", &"raft_launch":
+		&"barn_raising", &"bridge_building", &"temple_raising", &"harvest_festival", &"raft_launch", &"footbridge_raising":
 			var waiting := 0
 			for p in s.workers:
 				if is_instance_valid(p):
@@ -132,8 +120,6 @@ func wasted(s, p = null) -> int:
 	if j == null or s.is_plot():
 		return -1
 	match j.id:
-		&"farm_field":
-			return 1 if s.field_want() == &"" else 0
 		&"mill_grain": return 0 if _has(&"grain", 2) else 1
 		&"bake_bread": return 0 if _has(&"flour", 2) and _has(&"wood", 1) else 1
 		&"fire_kiln": return 0 if _has(&"clay", 2) and _has(&"wood", 1) else 1
@@ -161,7 +147,7 @@ func think() -> bool:
 	if Village.era < 2:
 		return false
 	var w = Game.world
-	if _flood() or _bear() or _boulders():
+	if _flood() or _bear() or _boulders() or _timbers():
 		return true
 	_rain_cd -= bot.THINK
 	if _rain_cd <= 0.0 and Faith.has(&"rain"):
@@ -184,6 +170,22 @@ func _driest_field() -> Site:
 		if best == null or s.moisture < best.moisture:
 			best = s
 	return best
+
+## Strong Arms: carry the footbridge's timbers from the bridge yard to its plot.
+func _timbers() -> bool:
+	var w = Game.world
+	var e2 = w.village_ai.era2 if w.village_ai != null else null
+	if e2 == null or Faith.strength < Timber.WEIGHT:
+		return false
+	for t in e2.timbers():
+		var plot: Site = Timber.wanting_plot(t.global_position, 9999.0)
+		if plot == null:
+			return false
+		var i: int = plot.timbers_in
+		bot._move_object(t, plot.global_position + Vector3(-1.0 + 2.0 * i, 0, -2.5))
+		timbers += 1
+		return true
+	return false
 
 func _boulders() -> bool:
 	var w = Game.world
@@ -251,4 +253,4 @@ func _flood() -> bool:
 	return true
 
 func summary() -> String:
-	return "rain %d | boulders %d | bear lifted %d scared %d | flood evacuated %d" % [rains, boulders, bear_moves, bear_scares, evacuated]
+	return "rain %d | timbers %d | boulders %d | bear lifted %d scared %d | flood evacuated %d" % [rains, timbers, boulders, bear_moves, bear_scares, evacuated]
