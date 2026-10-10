@@ -198,8 +198,16 @@ func _on_building(site) -> void:
 
 func _on_dream_started(id: StringName) -> void:
 	var d: Dictionary = BookData.journal()["dreams"]
+	if d.has(str(id)) and d[str(id)].has("told"):
+		return
 	if not d.has(str(id)):
 		d[str(id)] = {"start": Clock.day, "era": Village.era}
+	d[str(id)]["told"] = true
+	var def: DreamDef = Defs.dream(id)
+	if def == null:
+		return
+	d[str(id)]["voice"] = def.voice
+	BookData.add_entry("dreamt", "%s we dreamed of something new: \"%s\"" % [BookData.on_day(Clock.day), def.text])
 
 func _on_dream_done(id: StringName) -> void:
 	var d: Dictionary = BookData.journal()["dreams"]

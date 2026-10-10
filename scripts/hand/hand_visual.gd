@@ -80,6 +80,8 @@ var _hud_rects: Array = []
 var _hud_t: float = 0.0
 var _last_air := Vector3.INF
 var _vel := Vector3.ZERO
+var _scoop_w := 0.0                    # 0 = the usual pose .. 1 = the dustpan scoop
+var _scoop_dir := Vector3.ZERO         # the sweep's direction (flat, smoothed)
 var _shadow_mat: ShaderMaterial
 var _ring_mat: ShaderMaterial
 var _scoop_mat: ShaderMaterial
@@ -87,6 +89,9 @@ var _trail_mat: StandardMaterial3D
 var _dot_mat: StandardMaterial3D
 var _ghost_mat: StandardMaterial3D
 var _ghost_ring_mat: ShaderMaterial
+var _ghost_bad_mat: StandardMaterial3D        # red: they can't be set down there
+var _ghost_bad_ring: ShaderMaterial
+var _ghost_red := false
 var _pip_full: StandardMaterial3D
 var _pip_new: StandardMaterial3D
 var _pip_empty: StandardMaterial3D
@@ -143,6 +148,13 @@ func _build_ghosts() -> void:
 	_ghost_mat.no_depth_test = false
 	_ghost_ring_mat = _gmat(Color(1.0, 0.95, 0.75, 0.9), 0.7)
 	_ghost_ring_mat.set_shader_parameter(&"ring_width", 0.12)
+	_ghost_bad_mat = _ghost_mat.duplicate()
+	_ghost_bad_mat.albedo_color = Color(1.0, 0.2, 0.14, 0.62)
+	_ghost_bad_mat.no_depth_test = true          # reads through the mist over locked land
+	_ghost_bad_mat.render_priority = 10
+	_ghost_bad_ring = _gmat(Color(1.0, 0.22, 0.15, 1.0), 0.7)
+	_ghost_bad_ring.set_shader_parameter(&"ring_width", 0.2)
+	_ghost_bad_ring.render_priority = 10
 	var root := Node3D.new()
 	root.name = "Ghosts"
 	root.top_level = true
@@ -316,12 +328,10 @@ func _pose(hand: Hand, dt: float) -> void:
 		t_hold = 1.0
 		t_tip = 18.0
 	elif hand.scooping:
-		c = [0.2, 0.15, 0.15, 0.15, 0.2]
-		t_cup = 1.0
-		t_spread = -0.4
+		c = HandScoop.CURL.duplicate()             # cupped, fingers together: a dustpan
+		t_cup = HandScoop.CUP
+		t_spread = HandScoop.SPREAD
 		t_hold = 0.7
-		t_tip = 40.0
-		t_roll = 48.0                          # palm turned in to sweep
 	elif reaching:
 		c = [0.3, 0.3, 0.32, 0.35, 0.4]
 		t_cup = 0.4
@@ -399,6 +409,21 @@ func _place(hand: Hand, dt: float) -> void:
 	if _push > 0.0:
 		lift.y = sin((1.0 - _push / 0.9) * PI) * hand_len * 0.15
 	var xf := Transform3D(bs, anchor + lift - bs * model.anchor_local(hold_blend))
+	# the scoop: turn the hand onto its edge, palm into the sweep, the edge on the ground
+	_scoop_w = move_toward(_scoop_w, 1.0 if hand.scooping else 0.0, dt * 5.0)
+	if _scoop_w > 0.0:
+		var flat := Vector3(_vel.x, 0.0, _vel.z)
+		if flat.length() > 1.0:
+			_scoop_dir = _scoop_dir.lerp(flat.normalized(), minf(6.0 * dt, 1.0)) if _scoop_dir != Vector3.ZERO else flat.normalized()
+		if _scoop_dir.length() < 0.1:
+			_scoop_dir = fwd.cross(Vector3.UP).normalized()   # at rest: as if sweeping right to left
+		var sb := HandScoop.basis(_scoop_dir.normalized(), fwd)
+		var e := smoothstep(0.0, 1.0, _scoop_w)
+		var nb := b.orthonormalized().slerp(sb, e).scaled(scale_v)
+		var origin := anchor - nb * model.anchor_local(hold_blend)
+		var ground_y: float = hand.ground.y if hand.ground.is_finite() else anchor.y - 2.2
+		origin.y += lerpf(0.0, HandScoop.lift(nb, origin, ground_y + HandScoop.CLEAR * hand_len), e)
+		xf = Transform3D(nb, origin)
 	if waving > 0.0:
 		# wave back: swing the hand side to side about the wrist
 		var u := 1.0 - waving / WAVE_TIME
@@ -546,8 +571,18 @@ func _update_ghosts(hand: Hand) -> void:
 		while n > 0 and not s.can_accept(n):
 			n -= 1
 		spots = hand.site_spots(s, n)
-	elif not hand.held.is_empty() and hand.mouse_on_ground and hand.held.size() > 1:
+	var bad := hand.aim_drop_reason() != "" if hand.has_method(&"aim_drop_reason") else false
+	if bad and not show_pips:
 		spots = hand.ground_spots(hand.ground, hand.held.size())
+	elif not show_pips and not hand.held.is_empty() and hand.mouse_on_ground and hand.held.size() > 1:
+		spots = hand.ground_spots(hand.ground, hand.held.size())
+	if bad != _ghost_red:
+		_ghost_red = bad
+		for g in ghosts:
+			for c in (g as Node3D).get_children():
+				if c is MeshInstance3D:
+					var ring: bool = (c as MeshInstance3D).mesh is PlaneMesh
+					(c as MeshInstance3D).material_override = (_ghost_bad_ring if ring else _ghost_bad_mat) if bad else (_ghost_ring_mat if ring else _ghost_mat)
 	for i in ghosts.size():
 		var g: Node3D = ghosts[i]
 		g.visible = i < spots.size()

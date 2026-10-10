@@ -19,16 +19,11 @@ var paths: Array = []
 func build(v: Valley) -> void:
 	valley = v
 	name = "Terrain"
-	var fire := Valley.FIRE
-	paths = [
-		[fire, Valley.CAVE_MOUTH], [fire, Vector2(Valley.stream_x(-9.0) - 2.0, -9.0)],
-		[fire, Vector2(18.0, 0.0)], [Vector2(18.0, 0.0), Valley.EAST_GAP + Vector2(10, 0)],
-		[fire, Vector2(-18.0, -2.0)], [Vector2(-18.0, -2.0), Valley.WEST_GAP + Vector2(-10, 0)],
-		[Valley.EAST_GAP + Vector2(10, 0), Vector2(110.0, 15.0)],
-		[Valley.WEST_GAP + Vector2(-10, 0), Vector2(-115.0, 5.0)],
-		[fire, Vector2(-9.5, -20.0)], [fire, Vector2(-14.0, 3.0)], [fire, Vector2(7.5, 9.0)],
-	]
-	paths = _wiggle(paths)
+	# The old trails of the Clearing are desire paths now (scripts/world/paths.gd,
+	# seeded by seed_trails()); only the built Pass Road is laid into the ground.
+	paths = []
+	for i in Valley.PASS.size() - 1:
+		paths.append([Valley.PASS[i], Valley.PASS[i + 1]])
 	material = ShaderMaterial.new()
 	material.shader = load("res://scenes/world/shaders/terrain.gdshader")
 	material.set_shader_parameter("noise_large", _noise_tex(11, 0.012, 4))
@@ -171,6 +166,21 @@ func _stamp(data: PackedByteArray, w: int, h: int, x: float, z: float, r: float,
 			if v > data[k]:
 				data[k] = v
 
+## The trails of a new valley (as desire-path wear): from the fire to the cave,
+## the stream, the two gaps and the bushes. Faint; use keeps them, or they fade.
+func trail_lines() -> Array:
+	var fire := Valley.FIRE
+	var segs := [
+		[fire, Valley.CAVE_MOUTH], [fire, Vector2(Valley.stream_x(-9.0) - 2.0, -9.0)],
+		[fire, Vector2(18.0, 0.0)], [Vector2(18.0, 0.0), Valley.EAST_GAP + Vector2(10, 0)],
+		[fire, Vector2(-18.0, -2.0)], [Vector2(-18.0, -2.0), Valley.WEST_GAP + Vector2(-10, 0)],
+		[fire, Vector2(-9.5, -20.0)], [fire, Vector2(-14.0, 3.0)], [fire, Vector2(7.5, 9.0)],
+	]
+	var lines: Array = []
+	for sg in _wiggle(segs):
+		lines.append([sg[0], sg[1]])
+	return lines
+
 ## Desire lines are never ruler-straight: split each segment and bend it gently.
 func _wiggle(segs: Array) -> Array:
 	var out: Array = []
@@ -197,9 +207,12 @@ static func _seg_dist(p: Vector2, a: Vector2, b: Vector2) -> float:
 func path_dist(x: float, z: float) -> float:
 	var p := Vector2(x, z)
 	var best := INF
+	if x < -30.0 or x > 15.0 or z < 20.0 or z > 90.0:
+		return best
 	for s in paths:
 		best = minf(best, _seg_dist(p, s[0], s[1]))
-	return best
+	# measured from the road's edge strip, so foliage keeps off the whole bed
+	return maxf(best - (Valley.PASS_FLAT - 1.4), 0.0)
 
 ## Shore data for the ground shader (UV2): x = 1 at the waterline fading to 0 about
 ## 1.5 m up the bank, y = 1 on the sandy coast (else river mud).
@@ -226,9 +239,9 @@ func splat(x: float, z: float, y: float, nrm: Vector3) -> Color:
 	var p := Vector2(x, z)
 	var dirt := 1.0 - Valley.ss(2.2, 4.4, p.distance_to(Valley.FIRE) + n * 1.5)
 	dirt = maxf(dirt, 1.0 - Valley.ss(2.0, 5.0, p.distance_to(Valley.CAVE_MOUTH) + n * 1.5))
-	# paths worn by use: a bare middle, trampled edges
-	var pd := path_dist(x, z) + n * 0.6
-	dirt = maxf(dirt, (1.0 - Valley.ss(0.2, 0.9, pd)) * 0.8)
+	# the Pass Road: a level dirt bed between the cutting walls
+	var pd := path_dist(x, z) + n * 0.5
+	dirt = maxf(dirt, (1.0 - Valley.ss(0.0, 1.2, pd)) * 0.92)
 	if Rect2(-205, -85, 405, 195).has_point(p) and p.length() > 60.0:
 		dirt = maxf(dirt, Valley.ss(0.65, 0.78, valley.noise.get_noise_2d(x * 1.7 + 50.0, z * 1.7)) * 0.2)
 	# dry Southern Plains read dusty

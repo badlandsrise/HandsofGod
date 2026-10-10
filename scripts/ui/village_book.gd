@@ -482,16 +482,28 @@ func _fill_dreams() -> void:
 				shown_future = true
 				body.add_child(_dream_card("?", "A dream we have not dreamed yet.", "", &"future"))
 			continue
+		if is_active and not Dreams.revealed(active):
+			if not shown_future:
+				shown_future = true
+				body.add_child(_dream_card("?", "The people are restless. A dream is stirring.", Dreams.teaser_hint(active), &"future"))
+			continue
 		var when := ""
 		if done:
 			when = "Came true on the %s day." % BookData.ordinal(int(info.get("done", Clock.day)))
 			if info.has("start"):
 				when = "Dreamed on the %s day. " % BookData.ordinal(int(info["start"])) + when
 		else:
-			when = "We are working on it: %s." % Dreams.progress_text(active)
+			when = "We are working on it."
 			if info.has("start"):
 				when = "Dreamed on the %s day. " % BookData.ordinal(int(info["start"])) + when
-		body.add_child(_dream_card("", "\"%s\"" % _dream_text(id), when, &"done" if done else &"active", Defs.dream(id).gate if Defs.dream(id) != null else false))
+		var card := _dream_card("", "\"%s\"" % _dream_text(id), when, &"done" if done else &"active", Defs.dream(id).gate if Defs.dream(id) != null else false)
+		if is_active:
+			var cv: VBoxContainer = card.get_child(0).get_child(1)
+			if active.voice != "":
+				cv.add_child(_para(active.voice, 18, &"hand", UiTheme.INK_SOFT))
+			for it in Dreams.checklist(active):
+				cv.add_child(DreamCard.ink_row(it))
+		body.add_child(card)
 	if ids.is_empty():
 		body.add_child(_para("No dreams yet. They will come.", 18, &"italic", UiTheme.INK_SOFT))
 	# right page: every dream that came true, and the turn of the age
@@ -832,6 +844,8 @@ class EntryIcon extends Control:
 				draw_circle(c, 5.5, Color("#d2617a"))
 			"dream":
 				draw_circle(c, 6.0, Color(UiTheme.LEAF, 0.7))
+			"dreamt":
+				draw_arc(c, 5.5, 0, TAU, 20, Color(UiTheme.LEAF, 0.8), 2.0, true)
 			"power":
 				PortraitFrame.draw_hand_mark(self, c + Vector2(0, 2), 7.0, UiTheme.OCHRE)
 			_:

@@ -248,6 +248,7 @@ func _refresh_look() -> void:
 	visual.apply_look(int(look.get("skin", 0)), int(look.get("hair", 0)), float(look.get("height", 1.0)), stage == Stage.ELDER, stage, outfit)
 	var wj := _job_def()
 	visual.set_job_colour(wj.skill if wj != null else &"")
+	visual.set_task(wj)   # the job's work clip and tools (TaskAnims)
 
 # --- contract API -------------------------------------------------------------------
 
@@ -444,6 +445,7 @@ func join(s: Site, by_hand: bool = true) -> bool:
 	_go(s.slot_position(s.slot_of(self)), WALK_SPEED)
 	var jd := s.work_job()
 	if visual: visual.set_job_colour(jd.skill if jd else &"")
+	if visual: visual.set_task(jd)   # the job's work clip and tools (TaskAnims)
 	if by_hand:
 		if wish != &"" and jd != null and jd.id == wish:
 			_grant_wish()
@@ -765,54 +767,12 @@ func _near_someone(r: float) -> bool:
 			return true
 	return false
 
+## [ui hook] wants are optional bonuses now (scripts/ai/wants.gd owns the rules).
 func _sim_wish(dt: float) -> void:
-	if stage == Stage.BABY:
-		return
-	if not Flags.onboarding_done() and wish == &"":
-		return             # the first minutes teach one wish at a time (onboarding.gd)
-	wish_t -= dt
-	if wish != &"":
-		if wish_t <= 0.0:
-			wish = &""                       # ignored: a little less trust
-			adjust_trust(-0.1)
-			wish_t = Game.rng.randf_range(WISH_GAP.x * 0.5, WISH_GAP.y * 0.5)
-			_show_wish()
-		return
-	if needs[&"warmth"] < 0.3 and Faith.has(&"warmth"):
-		wish = &"warmth"
-		wish_t = WISH_LIFETIME
-		_show_wish()
-		return
-	if wish_t > 0.0 or stage == Stage.CHILD:
-		return
-	var options: Array[StringName] = []
-	var mine := _job_def()
-	for s in Village.sites:
-		if not is_instance_valid(s) or s.is_plot() or s.job == null:
-			continue
-		var id: StringName = s.job.id
-		if (mine != null and id == mine.id) or options.has(id) or not s.can_accept(1):
-			continue
-		options.append(id)
-		# Favour work they are good at.
-		if stars(_family(s.job.skill)) >= 2:
-			options.append(id)
-	if options.is_empty():
-		wish_t = 20.0
-		return
-	wish = options[Game.rng.randi() % options.size()]
-	wish_t = WISH_LIFETIME
-	_show_wish()
+	Wants.sim(self, dt)
 
 func _grant_wish() -> void:
-	wish = &""
-	wish_t = Game.rng.randf_range(WISH_GAP.x, WISH_GAP.y)
-	adjust_trust(1.0)
-	needs[&"joy"] = minf(needs[&"joy"] + 0.3, 1.0)
-	Faith.add(Game.rng.randf_range(WISH_FAITH.x, WISH_FAITH.y) if Flags.onboarding_done() else 2.0, global_position)
-	if Game.rng.randf() < WISH_GIFT_CHANCE and Flags.onboarding_done():
-		Gifts.spawn_gift(self)
-	_show_wish()
+	Wants.grant(self)
 
 func _show_wish() -> void:
 	if visual == null:
@@ -1301,6 +1261,7 @@ func _leave_job() -> void:
 	_timer = 0.0
 	_set_cargo_visual()
 	if visual: visual.set_job_colour(&"")
+	if visual: visual.set_task(null)
 	if state == S.WORK or state == S.WAIT_GROUP:
 		state = S.IDLE
 
@@ -1310,7 +1271,7 @@ func _set_cargo_visual() -> void:
 	if _cargo.is_empty():
 		visual.set_cargo(null)
 	else:
-		visual.set_cargo(CARGO_COLOURS.get(_cargo.keys()[0], Color.WHITE))
+		visual.set_cargo(StringName(_cargo.keys()[0]))   # a real armful of that kind (PropKit)
 
 func _store_slot() -> Vector3:
 	var c := Site.store_point(global_position)
@@ -1500,7 +1461,12 @@ func _step(dt: float) -> void:
 	elif stage == Stage.CHILD: spd *= 0.9
 	if Clock.season == Clock.Season.WINTER: spd *= 0.85
 	if hurt_t > 0.0: spd *= 0.6
+	var wp = Game.world.paths if Game.world != null and &"paths" in Game.world else null
+	if wp != null:
+		spd *= wp.speed_mult(pos)       # roads worn by use are quicker (scripts/world/paths.gd)
 	var st := minf(spd * dt, dist)
+	if wp != null:
+		wp.step(pos, st, dir)           # and every step wears them in
 	pos += dir.normalized() * st
 	pos.y = Site.ground(pos.x, pos.z)
 	global_position = pos
@@ -1522,7 +1488,9 @@ func _path_dir(pos: Vector3) -> Vector3:
 	if it != _path_map_it or not _path_to.is_finite() or _path_to.distance_to(_target) > 0.3:
 		_path_to = _target
 		_path_map_it = it
-		_path = NavigationServer3D.map_get_path(_nav_map, pos, _target, true, nav.navigation_layers if nav != null else 1)
+		_path = Nav.find_path(_nav_map, pos, _target, nav.navigation_layers if nav != null else 1)
+		if Game.world != null and &"paths" in Game.world and Game.world.paths != null:
+			_path = Game.world.paths.refine(_path)    # keep to the worn roads
 		_path_i = 0
 	while _path_i < _path.size():
 		var c := _path[_path_i]
@@ -1676,12 +1644,13 @@ func _pose() -> int:
 		return PersonVisual.Pose.CARRY
 	if _moving and _carrying_baby():
 		return PersonVisual.Pose.CARRY
+	# a moving group job (the log carry): carrying it, walking or stood still
+	if state == S.WORK and job_site != null and is_instance_valid(job_site) and job_site.moves_to_store() and job_site.group_running:
+		return PersonVisual.Pose.CARRY
 	if state == S.WORK and not _moving:
 		var jd := _job_def()
 		if jd != null and jd.kind == JobDef.Kind.DEVOTION:
 			return PersonVisual.Pose.PRAY
-		if job_site != null and job_site.moves_to_store() and job_site.group_running:
-			return PersonVisual.Pose.CARRY
 		if _phase == "work" or _phase == "build":
 			return PersonVisual.Pose.WORK
 	if state == S.IDLE or state == S.WAIT_GROUP or state == S.EAT:

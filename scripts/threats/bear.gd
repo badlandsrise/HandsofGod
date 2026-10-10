@@ -151,12 +151,23 @@ func _process(delta: float) -> void:
 			nxt = global_position      # nor leave its own hills
 		elif home_region == &"" and w.is_region_open(&"east_bank") and w.region_at(nxt) != &"east_bank" and w.region_at(nxt) != &"southern_plains":
 			nxt = global_position      # nor walk the bridge
+		elif w.has_method(&"animal_step"):
+			nxt = w.animal_step(global_position, nxt)    # nor climb cliffs
 		global_position = nxt
 		rotation.y = lerp_angle(rotation.y, atan2(dv.x, dv.z), minf(5.0 * dt, 1.0))
 		moved = nxt != global_position or step.length() > 0.0
 	global_position.y = w.ground_y(global_position.x, global_position.z)
-	if _visual != null:
-		_visual.position.y = absf(sin(_anim * 6.0)) * 0.06 if moved else 0.0
+	var anim := _anim_node()
+	if anim != null:
+		# the visual reads its own speed for walk and gallop; flight is asked for
+		anim.play(&"flee" if state == S.SCARED else &"auto")
+
+## The animated model under the catalog node (WildAnimalVisual), or null.
+func _anim_node() -> Node:
+	if _visual == null:
+		return null
+	var m := _visual.get_node_or_null("Model")
+	return m if m != null and m.has_method(&"play") else null
 
 func _tower_sees() -> bool:
 	for s in Village.sites:
@@ -184,6 +195,8 @@ func _swipe(p: Person) -> void:
 	swipes += 1
 	Village.stats["bear_swipes"] = int(Village.stats.get("bear_swipes", 0)) + 1
 	p.hurt(1.0, &"bear")
+	if _anim_node() != null:
+		_anim_node().play(&"attack")
 	Events.alert.emit("The bear swiped at %s!" % p.given_name, p.global_position)
 	p.flee_from(global_position, 5.0)
 	target = null

@@ -12,6 +12,9 @@ uniform vec4 grass_lush : source_color = vec4(0.36, 0.52, 0.21, 1.0);
 uniform vec4 grass_yellow : source_color = vec4(0.58, 0.62, 0.26, 1.0);
 uniform vec4 grass_bleached : source_color = vec4(0.70, 0.66, 0.40, 1.0);
 
+global uniform sampler2D hog_wear : filter_linear, repeat_disable;   // desire paths (scripts/world/paths.gd)
+global uniform vec4 hog_wear_rect;
+
 varying vec3 wpos;
 varying vec3 base_w;
 varying float tip;
@@ -27,6 +30,13 @@ void vertex() {
 	VERTEX.z += cos(t * 0.8) * 0.09 * hog_wind * gust * tip;
 	// snow buries the grass
 	VERTEX.y *= 1.0 - clamp(hog_snow, 0.0, 1.0) * 0.85;
+	// trodden flat on a path, gone from a road
+	vec2 wuv = (base_w.xz - hog_wear_rect.xy) / hog_wear_rect.zw;
+	if (wuv.x > 0.0 && wuv.y > 0.0 && wuv.x < 1.0 && wuv.y < 1.0) {
+		vec2 wr = textureLod(hog_wear, wuv, 0.0).rg;
+		float trod = max(smoothstep(0.02, 0.12, wr.r), wr.g);
+		VERTEX *= 1.0 - trod * 0.97;
+	}
 	wpos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	NORMAL = vec3(0.0, 1.0, 0.0);
 }

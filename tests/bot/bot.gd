@@ -708,10 +708,11 @@ func _report() -> void:
 			if n > 0:
 				built.append("%s %d" % [id, n])
 		print("BOT   built: %s | plots: %s" % [", ".join(built), ", ".join(plots)])
-		# --save-day=DAY:path saves a mid-run snapshot (for profiling or a quick look)
-		var sd := str(Game.flags.get("save-day", ""))
-		if sd.contains(":") and Clock.day == int(sd.get_slice(":", 0)):
-			_save_gate(sd.substr(sd.find(":") + 1))
+	# --save-day=DAY:path saves a mid-run snapshot (for profiling or a quick look)
+	var sd := str(Game.flags.get("save-day", ""))
+	if sd.contains(":") and Clock.day == int(sd.get_slice(":", 0)):
+		_save_gate(sd.substr(sd.find(":") + 1))
+	if Village.era >= 2:
 		var jobs := {}
 		for p in Village.alive():
 			var js = p.job_site

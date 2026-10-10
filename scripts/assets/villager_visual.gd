@@ -7,8 +7,20 @@ extends Node3D
 ## API (keep it small; the Person scene drives it):
 ##   play(state: StringName, blend := 0.2)
 ##       idle, walk, run, carry, work, sit, wave, cheer, cower, held, fall, dead
-##       (extras: flee, chop, pickup, talk, dance). Unknown states fall back to idle.
-##       dead and pickup play once and hold their last frame; the rest loop.
+##       (extras: flee, chop, pickup, talk, dance, and every task clip in
+##       TaskAnims.TASK_CLIPS: pick, knap, tend, pray, hammer, ...). Unknown states fall
+##       back to idle. dead and pickup play once and hold their last frame; the rest loop.
+##       The hands take the clip's own props (TaskAnims.CLIP_PROPS: an axe for chop, ...).
+##       sit and sit_talk put a seat under the villager (a log or rock in Era 1, a stool
+##       later) unless set_seat_provided(true) says the world has one there.
+##       Walking and running clips play at the speed the villager really moves (measured
+##       from its own motion) so the feet do not slide.
+##   play_task(clip: StringName, right := DEFAULT, left := DEFAULT, blend := 0.2)
+##       play() with chosen props (PropKit ids, &"" = empty hand).
+##   hold_cargo(kind: StringName)
+##       an armful of a resource kind (PropKit.CARGO: berries, wood, stone, meat, ...),
+##       shown between the hands while a carry clip plays; &"" clears it.
+##   set_seat_provided(on: bool)
 ##   set_look(skin: Color, hair: Color, cloth: Color, outfit_variant: int)
 ##       outfit_variant picks body, hair style and clothing cut (wraps, see OUTFITS):
 ##       even = male body, odd = female body.
@@ -107,6 +119,17 @@ const HAT_COLOURS := {&"straw_hat": Color("#d2a75e"), &"coif": Color("#efe6d2"),
 	&"flat_cap": Color("#4a5f78"), &"hard_hat": Color("#f26b1d"), &"trilby": Color("#4a4440"), &"pillbox": Color("#2f8c88"),
 	&"kerchief": Color("#c8442e"), &"helmet": Color("#f2f1ec")}
 const ONE_SHOT := [&"dead", &"pickup"]
+## play_task(): keep the clip's own prop for that hand
+const DEFAULT := &"_"
+## Clips the armful (hold_cargo) shows in.
+const CARRY_CLIPS := [&"carry", &"carry_walk"]
+## Clips that sit on a seat (baby_sit sits on the ground).
+const SEAT_CLIPS := [&"sit", &"sit_talk"]
+## Where the seat goes under a sitting adult, in the model's own units (1.81 m body).
+const SEAT_AT := Vector3(0, 0, -0.27)
+## Playback-rate limits when matching a walk to the ground speed.
+const RATE_MIN := 0.45
+const RATE_MAX := 3.4
 const ADULT_HEIGHT := 1.7
 ## [overall scale, head scale] per Person.Stage
 const AGE := [Vector2(0.36, 1.6), Vector2(0.62, 1.38), Vector2(1.0, 1.16), Vector2(0.97, 1.16)]
@@ -124,6 +147,14 @@ var _stage: int = 2
 var _body_index: int = -1
 var _era: int = -1   # -1 = follow ArtPalette.current_era() at build time
 var _crew := false
+var _props := [&"", &""]          # PropKit ids in the right and left hand
+var _cargo_kind: StringName = &""
+var _cargo: Node3D
+var _seat: Node3D
+var _seat_provided := false
+var _last_pos := Vector3.INF
+var _speed := 0.0               # smoothed ground speed (m/s), measured
+var _grip_frames := {}          # "r"/"l" -> [grip Transform3D, palm Transform3D] in hand-bone space
 
 
 func _ready() -> void:
@@ -143,15 +174,78 @@ func _ready() -> void:
 
 ## Play a state (see the API above). blend is the cross-fade time in seconds.
 func play(state: StringName, blend: float = 0.2) -> void:
+	play_task(state, DEFAULT, DEFAULT, blend)
+
+
+## Play a clip with these props in the hands (PropKit ids; DEFAULT = the clip's own,
+## &"" = empty).
+func play_task(clip: StringName, right: StringName = DEFAULT, left: StringName = DEFAULT, blend: float = 0.2) -> void:
+	var defaults: Array = TaskAnims.CLIP_PROPS.get(clip, [&"", &""])
+	var r: StringName = defaults[0] if right == DEFAULT else right
+	var l: StringName = defaults[1] if left == DEFAULT else left
 	if not is_node_ready():
-		_state = state
+		_state = clip
+		_props = [r, l]
 		return
-	var s := state if _anim.has_animation(state) else &"idle"
-	if s == _state and _anim.is_playing() and _anim.current_animation == s:
+	var s := clip if _anim.has_animation(clip) else &"idle"
+	if s != _state or not _anim.is_playing() or _anim.current_animation != s:
+		_state = s
+		_anim.play(s, blend)
+		if not _anim.get_animation(s).has_meta(&"ground_speed"):
+			_anim.speed_scale = 1.0
+		_apply_arms()
+	_set_props(r, l)
+	_update_seat()
+	_update_cargo_visible()
+
+
+## An armful of a resource kind, shown while a carry clip plays (&"" = nothing).
+func hold_cargo(kind: StringName) -> void:
+	if kind == _cargo_kind:
 		return
-	_state = s
-	_anim.play(s, blend)
-	_apply_arms()
+	_cargo_kind = kind
+	if _cargo:
+		remove_child(_cargo)   # out now, so the new armful takes the name "Cargo"
+		_cargo.queue_free()
+		_cargo = null
+	if kind != &"" and is_node_ready():
+		_cargo = PropKit.make(PropKit.cargo_id(kind))
+		_cargo.name = "Cargo"
+		add_child(_cargo)
+		_place_cargo()
+	_update_cargo_visible()
+
+
+func cargo_kind() -> StringName:
+	return _cargo_kind
+
+
+## The PropKit ids in the hands now: [right, left].
+func held_props() -> Array:
+	return _props.duplicate()
+
+
+## True when the world already puts a seat (bench, log, stool) under this villager, so
+## sitting adds none of its own.
+func set_seat_provided(on: bool) -> void:
+	_seat_provided = on
+	if is_node_ready():
+		_update_seat()
+
+
+func has_seat() -> bool:
+	return _seat != null and _seat.visible
+
+
+## The top of a shoulder in world space (side &"r" or &"l"), where a carried log rests.
+func shoulder_point(side: StringName = &"r") -> Vector3:
+	if _skeleton == null:
+		return global_position + Vector3(0, 1.45, 0)
+	var bi := _skeleton.find_bone("upperarm_" + String(side))
+	if bi < 0:
+		return global_position + Vector3(0, 1.45, 0)
+	var size := _model.global_basis.x.length()
+	return _skeleton.global_transform * _skeleton.get_bone_global_pose(bi).origin + Vector3(0, 0.075 * size, 0)
 
 
 func current_state() -> StringName:
@@ -246,6 +340,11 @@ func _build() -> void:
 	if _anim.has_animation(_state):
 		_anim.play(_state, 0.0)
 	_apply_arms()
+	_grip_frames.clear()
+	_rebuild_props()
+	_update_seat(true)
+	if not _skeleton.skeleton_updated.is_connected(_place_cargo):
+		_skeleton.skeleton_updated.connect(_place_cargo)
 
 
 func _attach_hair(piece: String) -> void:
@@ -417,6 +516,8 @@ func _apply_age() -> void:
 	if mod:
 		mod.head_scale = a.y
 		mod.stoop = 0.22 if _stage == 3 else 0.0
+	if _seat:
+		_update_seat()
 
 
 func _apply_arms() -> void:
@@ -427,11 +528,150 @@ func _apply_arms() -> void:
 		return
 	match _state:
 		&"wave": mod.arms = VillagerPoseModifier.Arms.WAVE
-		&"cheer": mod.arms = VillagerPoseModifier.Arms.CHEER
 		&"cower": mod.arms = VillagerPoseModifier.Arms.COVER_HEAD
-		_: mod.arms = VillagerPoseModifier.Arms.NONE
+		_: mod.arms = VillagerPoseModifier.Arms.NONE   # cheer's arms are baked into the clip
 
 
 func _on_finished(anim_name: StringName) -> void:
 	if anim_name in ONE_SHOT:
 		return   # hold the last frame
+
+
+# ------------------------------------------------------------------ ground speed
+
+## Walking and running clips play at the villager's real speed: each carries the ground
+## speed it was authored for (meta "ground_speed", on the 1.81 m body) and the rate is
+## the measured speed over that, scaled to this figure's size.
+func _process(delta: float) -> void:
+	if _model == null or delta <= 0.0:
+		return
+	var p := global_position
+	var v := 0.0
+	if _last_pos != Vector3.INF:
+		var d := p - _last_pos
+		d.y = 0.0
+		v = d.length() / delta
+	_last_pos = p
+	if v > 25.0:
+		v = _speed   # a teleport, not a step
+	_speed = lerpf(_speed, v, minf(delta * 8.0, 1.0))
+	var a := _anim.get_animation(_state) if _anim.has_animation(_state) else null
+	if a == null or not a.has_meta(&"ground_speed"):
+		return
+	var size := _model.global_basis.x.length()
+	if _speed < 0.08 or size <= 0.0:
+		_anim.speed_scale = 1.0   # standing still in a walk (a portrait, a shot): natural pace
+		return
+	_anim.speed_scale = clampf(_speed / (float(a.get_meta(&"ground_speed")) * size), RATE_MIN, RATE_MAX)
+
+
+## The current playback rate (1 = as authored); tests read it.
+func play_rate() -> float:
+	return _anim.speed_scale if _anim else 1.0
+
+
+# ------------------------------------------------------------------ props in the hands
+
+func _set_props(r: StringName, l: StringName) -> void:
+	if _props[0] == r and _props[1] == l and _skeleton != null and _skeleton.get_node_or_null("HandR") != null:
+		return
+	_props = [r, l]
+	_rebuild_props()
+
+
+func _rebuild_props() -> void:
+	if _skeleton == null:
+		return
+	for side in ["r", "l"]:
+		var att_name := "HandR" if side == "r" else "HandL"
+		var att := _skeleton.get_node_or_null(att_name) as BoneAttachment3D
+		var id: StringName = _props[0 if side == "r" else 1]
+		if att:
+			for c in att.get_children():
+				if c.get_meta(&"prop_id", &"") != id:
+					c.free()
+			if att.get_child_count() > 0:
+				continue
+		if id == &"" or not PropKit.has(id):
+			continue
+		if att == null:
+			att = BoneAttachment3D.new()
+			att.name = att_name
+			att.bone_name = "hand_" + side
+			_skeleton.add_child(att)
+		var prop := PropKit.make(id)
+		var fr: Array = _hand_frames(side)
+		prop.transform = fr[0] if PropKit.mount(id) == &"grip" else fr[1]
+		att.add_child(prop)
+
+
+## [grip, palm] frames for a hand, in the hand bone's space, from the finger bones' rest:
+## f along the fingers, t across the knuckles toward the index finger, and the palm
+## normal. grip: +Y along t (a handle's working end comes out on the thumb side), +Z
+## along f, origin inside the closed fist. palm: +Y out of the palm, +Z along f.
+func _hand_frames(side: String) -> Array:
+	if _grip_frames.has(side):
+		return _grip_frames[side]
+	var sk := _skeleton
+	var f := Vector3.UP
+	var t := Vector3.BACK
+	var mi := sk.find_bone("middle_01_" + side)
+	var ii := sk.find_bone("index_01_" + side)
+	var pi := sk.find_bone("pinky_01_" + side)
+	if mi >= 0 and ii >= 0 and pi >= 0:
+		f = sk.get_bone_rest(mi).origin.normalized()
+		t = sk.get_bone_rest(ii).origin - sk.get_bone_rest(pi).origin
+		t = (t - f * t.dot(f)).normalized()
+	var palm := t.cross(f) if side == "r" else f.cross(t)
+	var grip := Transform3D(Basis(t.cross(f), t, f), f * 0.085 + palm * 0.035)
+	var palm_xf := Transform3D(Basis(palm.cross(f), palm, f), f * 0.05 + palm * 0.03)
+	_grip_frames[side] = [grip, palm_xf]
+	return _grip_frames[side]
+
+
+# ------------------------------------------------------------------ armful
+
+func _update_cargo_visible() -> void:
+	if _cargo:
+		_cargo.visible = _state in CARRY_CLIPS
+
+
+## Runs after the skeleton poses each frame: the armful sits between the hands, upright,
+## facing the way the villager faces.
+func _place_cargo() -> void:
+	if _cargo == null or _skeleton == null or not _cargo.visible:
+		return
+	var hr := _skeleton.find_bone("hand_r")
+	var hl := _skeleton.find_bone("hand_l")
+	if hr < 0 or hl < 0:
+		return
+	var a := _skeleton.get_bone_global_pose(hr)
+	var b := _skeleton.get_bone_global_pose(hl)
+	# a little along the fingers from the wrists, so it rests in the hands
+	var mid := (a.origin + a.basis.y.normalized() * 0.07 + b.origin + b.basis.y.normalized() * 0.07) * 0.5
+	var world := _skeleton.global_transform * mid
+	var s := _model.global_basis.x.length() / (ADULT_HEIGHT / 1.81)
+	_cargo.global_transform = Transform3D(global_basis.orthonormalized().scaled_local(Vector3.ONE * s), world)
+
+
+# ------------------------------------------------------------------ seats
+
+func _update_seat(rebuild := false) -> void:
+	var want := _state in SEAT_CLIPS and not _seat_provided and _model != null
+	if rebuild and _seat:
+		_seat.free()
+		_seat = null
+	if not want:
+		if _seat:
+			_seat.visible = false
+		return
+	if _seat == null:
+		var era := _tailoring()
+		var id := &"seat_stool" if era >= 2 else (&"seat_log" if posmod(_outfit, 3) != 1 else &"seat_rock")
+		_seat = PropKit.make(id)
+		_seat.name = "Seat"
+		add_child(_seat)
+	_seat.visible = true
+	var k := _model.scale.x
+	_seat.position = SEAT_AT * k
+	_seat.scale = Vector3.ONE * k / (ADULT_HEIGHT / 1.81)

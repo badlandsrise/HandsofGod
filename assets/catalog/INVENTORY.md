@@ -10,7 +10,7 @@ All packs are CC0. The pipeline is in `scripts/assets/tools/prep_packs.py` (its 
 | quaternius-ultimate-nature | 23.0 MB | 150 models as fbx / obj / blend | no (FBX imports cleanly via ufbx) | **Primary: nature** |
 | quaternius-medieval-village-megakit (Standard) | 161.0 MB | 176 modular pieces as gltf / fbx / obj, 54 png (2K PBR) | yes, glTF | **Era 2 buildings** (25 pieces), **Era 3 town** (55 more: brick and stone walls, glazed windows, doors, tile roofs, balconies, dormers, wagon) |
 | quaternius-universal-base-characters (Standard) | 129.0 MB | 2 rigged bodies + 8 hair/eyebrow pieces, gltf / fbx, 48 png | yes, glTF | **Villagers** |
-| quaternius-universal-animation-library (Standard) | 15.9 MB | 43 clips in 1 glb (+ root-motion glb, fbx) | yes, GLB | **Villager animations** |
+| quaternius-universal-animation-library (Standard) | 15.9 MB | 43 clips in 1 glb (+ root-motion glb, fbx) | yes, GLB | **Villager animations** (with UAL2) |
 | quaternius-farm-animals | 7.0 MB | 7 rigged animals (cow, horse, llama, pig, pug, sheep, zebra), fbx / obj / blend | no (FBX) | **Sheep, horse** (+ cow, pig for later) |
 | quaternius-modular-scifi-megakit (Standard) | 48.6 MB | 190 pieces, gltf / fbx / obj | yes | not used (reads too far-future for the mid-century Era 4) |
 | quaternius-ultimate-spaceships | 0.9 MB | 5 ships, fbx / obj / blend | no | not used (the rocket is modelled in code) |
@@ -25,8 +25,13 @@ All packs are CC0. The pipeline is in `scripts/assets/tools/prep_packs.py` (its 
 | kaykit-adventurers | 13.0 MB | 6 characters + props, glb / gltf / fbx / obj | yes | fallback only (not used) |
 | kaykit-medieval-hexagon | 35.3 MB | 221 hex tiles / buildings, gltf / fbx / obj | yes | fallback only (not used) |
 
-Missing: **Quaternius Ultimate Animated Animals** (wolf, deer, bear): `deer`, `wolf` and `bear` are
-low-poly primitive placeholders (`scenes/props/deer.tscn` etc., flagged `"placeholder": true`).
+Added later: **quaternius-universal-animation-library-2** (UAL2, 43 more clips on the same skeleton:
+tree chopping, carry walk, farm harvest / plant / water, consume, ...), and for the wild animals
+(the Ultimate Animated Animals pack is still Drive-blocked) **quaternius-oga-animal-pack-vol2**
+(the wolf), **oga-deer-low-poly-rigged** (the deer) and **oga-white-bear-low-poly** (the bear, not
+rigged: `WildAnimalVisual` rigs it from the mesh). All three are in `assets/models/animals/wild/`
+and walk, run, graze, lunge and flee with a procedural gait (`scripts/assets/quadruped_gait.gd`),
+shaded in the flat palette by vertex colour (`scenes/props/{deer,wolf,bear}.tscn`).
 
 ## The Era 1 kit (one primary pack per category)
 
@@ -37,7 +42,7 @@ low-poly primitive placeholders (`scenes/props/deer.tscn` etc., flagged `"placeh
 | Era 1 huts | built from primitives + Kenney/Quaternius pieces | `scenes/props/hut.tscn` (cone of hides on poles: reads far more primitive than the Survival Kit tents or any MegaKit piece), `hut_frame`, `hut_plot` |
 | Cave, cliff, cairn, shrine, Stone Circle, flint, food store | composed from Quaternius rocks + primitives | `scenes/props/*.tscn` (built by `scripts/assets/tools/build_props.gd`) |
 | Era 2 buildings | Quaternius Medieval Village MegaKit | `assets/models/village/` 25 glTF pieces (normal/ORM maps stripped, base colours at 512 px in `assets/textures/village/`), assembled into `era2_cottage`, `era2_longhouse`, `era2_shed` |
-| Villagers | Quaternius Universal Base Characters + Universal Animation Library (same skeleton) | `assets/models/characters/` 2 bodies + 8 hair pieces (textures stripped, body-region mask baked into vertex colour), `anims/villager_anims.res` (17 baked clips) |
+| Villagers | Quaternius Universal Base Characters + Universal Animation Library (same skeleton) | `assets/models/characters/` 2 bodies + 8 hair pieces (textures stripped, body-region mask baked into vertex colour), `anims/villager_anims.res` (45 baked clips: locomotion plus one or more per task, built by `build_villager_anims.gd` from UAL1 and UAL2; mapped to jobs in `scripts/assets/task_anims.gd`) |
 | Farm animals | Quaternius Farm Animals | `assets/models/animals/` Sheep, Horse, Cow, Pig (FBX, with Idle/Walk/... clips) |
 
 ## The Era 2 (Village) kit
@@ -191,9 +196,9 @@ the ground at their footprint centre and face +Z.
 - Era 1: `tree_pine tree_broad tree_birch tree_willow tree_dead bush berry_bush rock_small
   rock_large cliff grass_clump flowers fern lilypad log_fallen trunk_fallen stump campfire
   firewood_pile flint_node hut hut_frame hut_plot food_store drying_rack cairn shrine stone_circle
-  cave_mouth deer* wolf* villager tool_axe tool_pickaxe bedroll fish`
+  cave_mouth deer wolf villager tool_axe tool_pickaxe bedroll fish`
 - Era 2 (earlier): `era2_cottage` (now the kit cottages) `era2_longhouse era2_shed era2_wagon
-  era2_crate era2_fence crop_wheat crop_corn sheep horse bear*` (`*` placeholder)
+  era2_crate era2_fence crop_wheat crop_corn sheep horse bear`
 - Era 2 buildings, each with `_plot` and `_frame`: `cottage` (2 variants) `granary mill bakery
   kiln smelter smithy weaver workshop barn temple bridge well watchtower sheep_pen`; plus
   `market_stall` (3 awnings) `market_stall_frame charcoal_clamp jetty`

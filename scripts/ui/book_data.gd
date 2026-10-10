@@ -149,6 +149,7 @@ static func record_of(p) -> Dictionary:
 		sk[str(k)] = float(p.skills[k])
 	r["skills"] = sk
 	r["wish"] = str(p.wish)
+	r["wish_why"] = Wants.why(p) if p is Person else ""
 	r["status"] = p.status_text() if p.has_method(&"status_text") else ""
 	var hn: bool = p.has_meta(&"named_by_hand") and bool(p.get_meta(&"named_by_hand"))
 	r["hand_named"] = hn or is_hand_named(r["uid"])
@@ -272,13 +273,16 @@ static func wish_line(r: Dictionary) -> String:
 	var w := str(r.get("wish", ""))
 	var them := pronoun(r["sex"], "she").capitalize()
 	if w == "":
-		return "%s wishes for nothing just now." % them
+		return "%s is content with %s work just now." % [them, pronoun(r["sex"], "her")]
+	var why := str(r.get("wish_why", ""))
+	var what := w.replace("_", " ")
 	if w == "warmth":
-		return "%s is cold and wishes to be warm." % them
-	var jd: JobDef = Defs.job(StringName(w)) if Defs.has_method(&"job") else null
-	if jd != null and jd.title != "":
-		return "%s wishes to %s." % [them, jd.title.to_lower()]
-	return "%s wishes to %s." % [them, w.replace("_", " ")]
+		what = "be warmed by the hand"
+	else:
+		var jd: JobDef = Defs.job(StringName(w)) if Defs.has_method(&"job") else null
+		if jd != null and jd.title != "":
+			what = jd.title.to_lower()
+	return "%s would love to %s%s. If the hand lets %s, it will be a bonus of faith." % [them, what, (", because " + why) if why != "" else "", pronoun(r["sex"], "herobj")]
 
 # ---------------------------------------------------------------- family tree
 

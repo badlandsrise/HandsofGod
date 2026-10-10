@@ -59,8 +59,31 @@ uniform float detail_softness : hint_range(0.0, 6.0) = 0.0;      // mip bias: bl
 uniform float palette_tint : hint_range(0.0, 1.0) = 0.5;         // pull textures to the procedural colour
 uniform float normal_strength : hint_range(0.0, 2.0) = 0.6;
 
+// --- desire paths (scripts/world/paths.gd): r = wear / CAP, g = paved
+global uniform sampler2D hog_wear : filter_linear, repeat_disable;
+global uniform vec4 hog_wear_rect;
+// thresholds on the blurred wear: worn grass, dirt track, dirt road
+uniform vec3 wear_levels = vec3(0.026, 0.094, 0.24);
+uniform vec4 worn_color : source_color = vec4(0.58, 0.55, 0.32, 1.0);
+uniform vec4 paving_color : source_color = vec4(0.62, 0.58, 0.52, 1.0);
+
 varying vec3 wpos;
 varying vec3 wnorm;
+
+// The wear map with a little blur, so a trail reads as a soft-edged ribbon.
+vec2 wear_at(vec2 xz) {
+	vec2 uv = (xz - hog_wear_rect.xy) / hog_wear_rect.zw;
+	if (uv.x <= 0.0 || uv.y <= 0.0 || uv.x >= 1.0 || uv.y >= 1.0) {
+		return vec2(0.0);
+	}
+	vec2 o = 0.8 / hog_wear_rect.zw;
+	vec2 c = texture(hog_wear, uv).rg * 0.36;
+	c += texture(hog_wear, uv + vec2(o.x, o.y)).rg * 0.16;
+	c += texture(hog_wear, uv + vec2(-o.x, o.y)).rg * 0.16;
+	c += texture(hog_wear, uv + vec2(o.x, -o.y)).rg * 0.16;
+	c += texture(hog_wear, uv + vec2(-o.x, -o.y)).rg * 0.16;
+	return c;
+}
 
 void vertex() {
 	wpos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
@@ -170,10 +193,37 @@ void fragment() {
 	if (use_mud_tex) bank = styled(sample_anti(mud_albedo, xz * tex_tiling.w, nl2).rgb, bank);
 	if (use_forest_tex) forest = styled(sample_anti(forest_albedo, xz * forest_tiling, nl2).rgb, forest);
 
+	// ---- desire paths: worn grass, a dirt track, a beaten road, paving
+	vec2 wr = wear_at(xz);
+	float wv = wr.r + (nm - 0.5) * 0.035 + (nf - 0.5) * 0.025;
+	float worn_k = smoothstep(wear_levels.x, wear_levels.x + 0.05, wv);
+	float track_k = smoothstep(wear_levels.y - 0.015, wear_levels.y + 0.05, wv);
+	float road_k = smoothstep(wear_levels.z - 0.03, wear_levels.z + 0.08, wv);
+	float paved_k = smoothstep(0.25, 0.6, wr.g);
+	forest_w *= 1.0 - track_k;
+	grass = mix(grass, mix(grass, worn_color.rgb, 0.6 + 0.4 * nf), worn_k * 0.75 * (1.0 - track_k));
+	dirt_w = max(dirt_w, track_k * mix(0.6, 0.95, smoothstep(0.3, 0.7, nf2)));
+	dirt_w = max(dirt_w, road_k);
+	// a beaten road: packed and pale in the middle, darker ruts at its edges
+	vec3 road_dirt = mix(dirt, dirt_light.rgb * (0.95 + 0.1 * nf), road_k * 0.55);
+	road_dirt *= 1.0 - (track_k - road_k) * 0.12;
+	dirt = mix(dirt, road_dirt, track_k);
+
 	// ---- blend: grass base, then forest floor, dirt, bank, rock on top
 	vec3 c = grass;
 	c = mix(c, forest, forest_w);
 	c = mix(c, dirt, dirt_w);
+	if (paved_k > 0.001) {
+		// cobbles: offset rows of rounded setts with dark joints
+		vec2 q = xz * vec2(1.7, 2.3);
+		q.x += step(1.0, mod(floor(q.y), 2.0)) * 0.5;
+		vec2 f = fract(q);
+		float joint = smoothstep(0.03, 0.13, min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y)));
+		float shade = 0.82 + 0.3 * hog_hash(floor(q));
+		vec3 sett = paving_color.rgb * shade * (0.92 + 0.12 * nf);
+		vec3 paving = mix(dirt * 0.55, sett, joint);
+		c = mix(c, paving, paved_k);
+	}
 	c = mix(c, bank, bank_w);
 	c = mix(c, rock, rock_w);
 	// moss creeping over rock edges, boulders and the cliff foot
@@ -192,7 +242,10 @@ void fragment() {
 
 	// ---- weather, snow and locked regions
 	float sm = hog_snow_mask(wpos, wnorm.y);
-	c = mix(c, vec3(0.9, 0.93, 0.98), sm);
+	// trodden snow: the village's paths stay as packed, muddied ribbons
+	float trod = max(track_k, worn_k * 0.3);
+	vec3 snow_c = mix(vec3(0.9, 0.93, 0.98), mix(c, vec3(0.7, 0.68, 0.66), 0.55), trod * 0.8);
+	c = mix(c, snow_c, sm * (1.0 - road_k * 0.3 - paved_k * 0.45));
 	c *= 1.0 - hog_wet * 0.22;
 	c = hog_dim(c, hog_region_light(wpos));
 	ALBEDO = c;

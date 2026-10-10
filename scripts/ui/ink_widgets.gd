@@ -169,6 +169,45 @@ class GiftIcon extends Control:
 			draw_circle(c + Vector2(0, s * 0.12), s * 0.5, Color("#b86a3c"))
 			draw_rect(Rect2(c + Vector2(-s * 0.22, -s * 0.55), Vector2(s * 0.44, s * 0.3)), Color("#b86a3c"))
 			draw_line(c + Vector2(-s * 0.45, s * 0.1), c + Vector2(s * 0.45, s * 0.1), Color("#f0d9a0"), 2.0)
+		elif kind.contains("necklace") or kind.contains("bead"):
+			# a cord hanging in a U, beads strung along it, a bone pendant at the bottom
+			var cord := PackedVector2Array()
+			for i in 17:
+				var a := PI * (0.08 + 0.84 * i / 16.0)
+				cord.append(c + Vector2(cos(a) * s * 0.58, -s * 0.38 + sin(a) * s * 0.72))
+			draw_polyline(cord, Color("#6b4a2e"), maxf(1.2, s * 0.05), true)
+			var beads := [Color("#c0552f"), Color("#e2b44a"), Color("#3f7f86"), Color("#efe3c4")]
+			for i in 9:
+				if i == 4:
+					continue
+				var a := PI * (0.14 + 0.72 * i / 8.0)
+				var p := c + Vector2(cos(a) * s * 0.58, -s * 0.38 + sin(a) * s * 0.72)
+				draw_circle(p, s * 0.11, beads[i % beads.size()])
+				draw_arc(p, s * 0.11, 0, TAU, 12, Color(UiTheme.INK_SOFT, 0.55), 1.0, true)
+			var tip := c + Vector2(0, s * 0.34)
+			var pend := PackedVector2Array([tip + Vector2(-s * 0.13, -s * 0.02), tip + Vector2(s * 0.13, -s * 0.02), tip + Vector2(0, s * 0.36)])
+			draw_colored_polygon(pend, Color("#f2ead2"))
+			pend.append(pend[0])
+			draw_polyline(pend, Color(UiTheme.INK_SOFT, 0.7), 1.0, true)
+		elif kind.contains("book"):
+			draw_rect(Rect2(c - Vector2(s * 0.5, s * 0.36), Vector2(s, s * 0.72)), Color("#7a2f2a"))
+			draw_rect(Rect2(c - Vector2(s * 0.42, s * 0.28), Vector2(s * 0.38, s * 0.56)), Color("#f0e2bd"))
+			draw_rect(Rect2(c + Vector2(s * 0.04, -s * 0.28), Vector2(s * 0.38, s * 0.56)), Color("#f0e2bd"))
+			draw_circle(c + Vector2(-s * 0.23, -s * 0.08), s * 0.1, Color("#c9962f"))
+			for i in 3:
+				draw_line(c + Vector2(s * 0.1, -s * 0.12 + i * s * 0.13), c + Vector2(s * 0.36, -s * 0.12 + i * s * 0.13), Color(UiTheme.INK_SOFT, 0.6), 1.0)
+		elif kind.contains("photograph"):
+			draw_rect(Rect2(c - Vector2(s * 0.52, s * 0.4), Vector2(s * 1.04, s * 0.8)), Color("#f4efe2"))
+			draw_rect(Rect2(c - Vector2(s * 0.42, s * 0.3), Vector2(s * 0.84, s * 0.52)), Color("#8b8578"))
+			draw_colored_polygon(PackedVector2Array([c + Vector2(-s * 0.42, s * 0.22), c + Vector2(-s * 0.1, -s * 0.12), c + Vector2(s * 0.14, s * 0.1), c + Vector2(s * 0.42, -s * 0.06), c + Vector2(s * 0.42, s * 0.22)]), Color("#5d584f"))
+		elif kind.contains("rocket"):
+			var body := PackedVector2Array([c + Vector2(0, -s * 0.62), c + Vector2(s * 0.2, -s * 0.3), c + Vector2(s * 0.2, s * 0.34), c + Vector2(-s * 0.2, s * 0.34), c + Vector2(-s * 0.2, -s * 0.3)])
+			draw_colored_polygon(body, Color("#f7f2e6"))
+			body.append(body[0])
+			draw_polyline(body, Color(UiTheme.INK_SOFT, 0.8), 1.2, true)
+			draw_colored_polygon(PackedVector2Array([c + Vector2(-s * 0.2, s * 0.1), c + Vector2(-s * 0.4, s * 0.48), c + Vector2(-s * 0.2, s * 0.34)]), Color("#b0452f"))
+			draw_colored_polygon(PackedVector2Array([c + Vector2(s * 0.2, s * 0.1), c + Vector2(s * 0.4, s * 0.48), c + Vector2(s * 0.2, s * 0.34)]), Color("#b0452f"))
+			draw_circle(c + Vector2(0, -s * 0.12), s * 0.09, Color("#3f7f86"))
 		else:
 			draw_rect(Rect2(c - Vector2(s * 0.5, s * 0.4), Vector2(s, s * 0.8)), Color("#7d8fa3"))
 			for i in 3:

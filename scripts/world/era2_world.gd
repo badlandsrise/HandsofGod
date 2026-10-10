@@ -153,7 +153,7 @@ func _find_bridge() -> void:
 		if is_instance_valid(s) and s.building != null and s.building.id == &"bridge" and s.state == Site.State.FINISHED:
 			_set_bridge(s)
 			return
-	world.nav.extra_faces = PackedVector3Array()
+	world.nav.extra_faces = deck_faces()
 
 func _set_bridge(s: Site) -> void:
 	_bridge = s
@@ -169,8 +169,15 @@ func bank_height(c: Vector2) -> float:
 	var v: Valley = world.valley
 	return maxf(v.ground_y(c.x, c.y - DECK_HALF_L - 0.5), v.ground_y(c.x, c.y + DECK_HALF_L + 0.5))
 
-## Deck height (world) at x,z, or -INF off the bridge or before it is built.
+## Deck height (world) at x,z, or -INF off every bridge (the great bridge
+## once built, and the people's footbridges: add_crossing).
 func deck_y(x: float, z: float) -> float:
+	var y := _great_deck_y(x, z)
+	for d in _crossings.values():
+		y = maxf(y, _crossing_y(d, x, z))
+	return y
+
+func _great_deck_y(x: float, z: float) -> float:
 	if _bridge == null:
 		return -INF
 	if not is_instance_valid(_bridge):
@@ -186,8 +193,73 @@ func deck_y(x: float, z: float) -> float:
 	var t := (l - DECK_HALF_L) / DECK_RAMP
 	return lerpf(_bridge_base + 0.56, world.valley.ground_y(x, z), t)
 
-## Walkable triangles along the deck for the navmesh bake.
+# ================================================================ crossings
+
+## The people's footbridges over the great river (a crossing joins the far
+## bank to the village: World.add_crossing). id -> {x, z, half_l, half_w, base}.
+var _crossings: Dictionary = {}
+const CROSSING_HALF_W := 1.25
+const CROSSING_RAMP := 2.0
+
+## A walkable footbridge deck across the river at `c` (north-south), as long
+## as the water there is wide (plus a metre onto each bank).
+func add_crossing(id: StringName, c: Vector2) -> void:
+	var v: Valley = world.valley
+	var n := 0.0
+	while n < 30.0 and v.is_water(c.x, c.y - n):
+		n += 0.5
+	var sth := 0.0
+	while sth < 30.0 and v.is_water(c.x, c.y + sth):
+		sth += 0.5
+	var z0 := c.y - n - 1.0
+	var z1 := c.y + sth + 1.0
+	var mid := (z0 + z1) * 0.5
+	var base := maxf(v.ground_y(c.x, z0), v.ground_y(c.x, z1))
+	base = maxf(base, Valley.river_level(c.x) + 0.45)
+	_crossings[id] = {"x": c.x, "z": mid, "half_l": (z1 - z0) * 0.5, "half_w": CROSSING_HALF_W, "base": base}
+	world.nav.extra_faces = deck_faces()
+
+func has_crossing(id: StringName) -> bool:
+	return _crossings.has(id)
+
+func crossing_ids() -> Array:
+	return _crossings.keys()
+
+func _crossing_y(d: Dictionary, x: float, z: float) -> float:
+	var lat := absf(x - float(d["x"]))
+	var l := absf(z - float(d["z"]))
+	var hl: float = d["half_l"]
+	if lat > float(d["half_w"]) or l > hl + CROSSING_RAMP:
+		return -INF
+	var top := float(d["base"]) + 0.3 + 0.4 * (1.0 - pow(minf(l / hl, 1.0), 2.0))
+	if l <= hl:
+		return top
+	return lerpf(float(d["base"]) + 0.3, world.valley.ground_y(x, z), (l - hl) / CROSSING_RAMP)
+
+func _crossing_faces(d: Dictionary) -> PackedVector3Array:
+	var f := PackedVector3Array()
+	var len: float = float(d["half_l"]) + CROSSING_RAMP
+	var steps := 20
+	var xa: float = float(d["x"]) - float(d["half_w"])
+	var xb: float = float(d["x"]) + float(d["half_w"])
+	for i in steps:
+		var z0: float = float(d["z"]) - len + 2.0 * len * i / steps
+		var z1: float = float(d["z"]) - len + 2.0 * len * (i + 1) / steps
+		var a := Vector3(xa, _crossing_y(d, xa, z0), z0)
+		var b := Vector3(xb, _crossing_y(d, xb, z0), z0)
+		var cc := Vector3(xa, _crossing_y(d, xa, z1), z1)
+		var dd := Vector3(xb, _crossing_y(d, xb, z1), z1)
+		f.append_array([a, b, cc, b, dd, cc])
+	return f
+
+## Walkable triangles along every deck for the navmesh bake.
 func deck_faces() -> PackedVector3Array:
+	var f := _great_deck_faces()
+	for d in _crossings.values():
+		f.append_array(_crossing_faces(d))
+	return f
+
+func _great_deck_faces() -> PackedVector3Array:
 	var f := PackedVector3Array()
 	if _bridge == null:
 		return f
@@ -199,10 +271,10 @@ func deck_faces() -> PackedVector3Array:
 		var z1 := c.z - len + 2.0 * len * (i + 1) / steps
 		var xa := c.x - DECK_HALF_W
 		var xb := c.x + DECK_HALF_W
-		var a := Vector3(xa, deck_y(xa, z0), z0)
-		var b := Vector3(xb, deck_y(xb, z0), z0)
-		var cc := Vector3(xa, deck_y(xa, z1), z1)
-		var d := Vector3(xb, deck_y(xb, z1), z1)
+		var a := Vector3(xa, _great_deck_y(xa, z0), z0)
+		var b := Vector3(xb, _great_deck_y(xb, z0), z0)
+		var cc := Vector3(xa, _great_deck_y(xa, z1), z1)
+		var d := Vector3(xb, _great_deck_y(xb, z1), z1)
 		f.append_array([a, b, cc, b, d, cc])
 	return f
 
@@ -260,6 +332,7 @@ func reset() -> void:
 	_reset_rockfall()
 	set_flood(0.0)
 	_bridge = null
+	_crossings.clear()
 	if world.nav:
 		world.nav.extra_faces = PackedVector3Array()
 

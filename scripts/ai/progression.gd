@@ -72,12 +72,12 @@ func _discoveries() -> void:
 	if not Flags.has(&"stone_tools") and int(Village.stats.get("stone_knapped", 0)) >= STONE_FOR_TOOLS:
 		Flags.set_flag(&"stone_tools")
 		Flags.remember("We learned to make stone tools. Now we gather faster, and we can fell trees.")
-		Events.alert.emit("They have made stone tools: gathering is quicker, and trees can be felled", _at_stash())
+		Events.alert.emit(PersonInfo.discovery_line(&"stone_tools"), _at_stash())   # [ui hook] says who and why
 	if not Flags.has(&"hide_clothes") and Village.store(&"hide") >= HIDES_FOR_CLOTHES:
 		Village.take_store(&"hide", HIDES_FOR_CLOTHES)
 		Flags.set_flag(&"hide_clothes")
 		Flags.remember("We sewed clothes from the hides of the hunt, and the winter bit less.")
-		Events.alert.emit("They have sewn hide clothes for the winter", _at_stash())
+		Events.alert.emit(PersonInfo.discovery_line(&"hide_clothes"), _at_stash())   # [ui hook]
 
 func _on_job_completed(site) -> void:
 	if not (site is Site) or not is_instance_valid(site) or site.job == null:
@@ -195,9 +195,7 @@ func _maybe_hut() -> void:
 		return
 	var s2 := _add_plot(&"hut")
 	if s2 != null:
-		var who: Array = Village.alive().filter(func(p): return p.stage == Person.Stage.ADULT and (p.home == null or not is_instance_valid(p.home)))
-		var line := "%s want a home of their own" % (who[0].given_name + " and the others" if who.size() > 1 else (who[0].given_name if who.size() == 1 else "They"))
-		Events.alert.emit(line, s2.global_position)
+		Events.alert.emit(PersonInfo.home_wish_line("home"), s2.global_position)   # [ui hook] names the pair
 
 func _add_plot(bid: StringName) -> Site:
 	var w = Game.world

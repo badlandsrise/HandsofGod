@@ -56,5 +56,6 @@ static func spawn_gift(p: Person, at: Vector3 = Vector3.INF, grants: StringName 
 	var pos := base + jitter
 	pos.y = Site.ground(pos.x, pos.z)
 	g.global_position = pos
-	Events.toast.emit("%s left a gift" % g.from_name if g.from_name != "" else "A gift was left for you")
+	# [ui hook] an alert you can click to look; Guidance marks the gift with a glow and an arrow
+	Events.alert.emit("%s left a gift for the hand" % g.from_name if g.from_name != "" else "A gift was left for the hand", pos)
 	return g

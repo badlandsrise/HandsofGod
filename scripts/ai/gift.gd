@@ -5,7 +5,7 @@ class_name Gift extends Node3D
 
 const SCENE := "res://scenes/sites/gift.tscn"
 const KINDS: Dictionary = {
-	1: ["flowers", "carved hand", "handprint stone"],
+	1: ["flowers", "carved hand", "handprint stone", "bead necklace"],
 	2: ["painted pot", "woven cloth"],
 	3: ["illuminated book", "clockwork hand"],
 	4: ["photograph of the village", "model rocket"],
@@ -29,28 +29,9 @@ func _build_visual() -> void:
 	var old := get_node_or_null("Visual")
 	if old:
 		remove_child(old); old.queue_free()
-	var v := Node3D.new()
+	var v := PropKit.gift_visual(kind)   # the real object on a soft glow (PropKit)
 	v.name = "Visual"
 	add_child(v)
-	var col := Color(0.95, 0.45, 0.6)
-	var mesh: Mesh
-	if kind.contains("hand") or kind.contains("stone"):
-		var b := BoxMesh.new(); b.size = Vector3(0.4, 0.15, 0.3); mesh = b
-		col = Color(0.75, 0.4, 0.2)
-	elif kind == "flowers":
-		var s := SphereMesh.new(); s.radius = 0.18; s.height = 0.3; s.radial_segments = 6; s.rings = 3; mesh = s
-	else:
-		var c := CylinderMesh.new(); c.top_radius = 0.15; c.bottom_radius = 0.2; c.height = 0.35; c.radial_segments = 6; mesh = c
-		col = Color(0.7, 0.5, 0.3)
-	var mi := MeshInstance3D.new()
-	mi.mesh = mesh
-	var m := StandardMaterial3D.new()
-	m.albedo_color = col
-	m.emission_enabled = true
-	m.emission = col * 0.4
-	mi.material_override = m
-	mi.position = Vector3(0, 0.18, 0)
-	v.add_child(mi)
 
 func title() -> String:
 	return "%s from %s" % [kind, from_name] if from_name != "" else kind

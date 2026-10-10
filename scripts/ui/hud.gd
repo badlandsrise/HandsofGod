@@ -7,6 +7,11 @@ class_name Hud extends CanvasLayer
 ## M2: alerts are parchment cards with the portrait of the person they are about;
 ## the HUD also owns the Chronicle (the Book's journal), Portraits, Notices (dream
 ## and region banners), the naming card and the era card.
+## Playtest pass: the goal panel (GoalPanel: the dream and its live checklist,
+## or "The people are restless..."), the dream card that waits for a click
+## (DreamCard), power buttons that list every missing requirement on hover
+## (PowerInfo), store tooltips, the idle counter with its Call button, and the
+## Guidance beats (camera pans, beacons, blessing rings, first-time hints).
 
 const FOOD_PER_PERSON_PER_DAY := 1.0
 ## Materials that matter in each era even at zero (food is always shown).
@@ -28,12 +33,10 @@ const SEASONS := ["Spring", "Summer", "Autumn", "Winter"]
 const ALERT_SECONDS := 10.0
 const TOAST_SECONDS := 4.0
 const MAX_ALERTS := 5
-const MAX_DREAMS := 3
 
 var ui_scale: float = 1.0
 var root: Control
-var dreams_panel: PanelContainer
-var dreams_box: VBoxContainer
+var dreams_panel: GoalPanel
 var stores_panel: PanelContainer
 var stores_box: HBoxContainer
 var faith_ring: FaithRing
@@ -49,8 +52,13 @@ var chronicle: Chronicle
 var notices: Notices
 var naming: NamingCard
 var era_card: EraCard
+var dream_card: DreamCard
+var guidance: Guidance
+var power_card: PowerInfo.Card
+var idle_panel: PanelContainer
+var idle_label: Label
+var idle_button: Button
 
-var _dreams: Array = []        # {id, node, pips, done_t}
 var _alerts: Array = []        # {node, t}
 var _toasts: Array = []        # {node, t}
 var _power_buttons: Dictionary = {}   # id -> Button
@@ -82,6 +90,7 @@ func _ready() -> void:
 	_build_faith()
 	_build_alerts()
 	_build_toasts()
+	_build_idle()
 	notices = Notices.new()
 	root.add_child(notices)
 	book = VillageBook.new(self)
@@ -90,13 +99,18 @@ func _ready() -> void:
 	root.add_child(era_card)
 	naming = NamingCard.new()
 	root.add_child(naming)
+	dream_card = DreamCard.new()
+	root.add_child(dream_card)
+	guidance = Guidance.new(self)
+	add_child(guidance)
 	book.person_clicked.connect(func(p: Person):
 		pan_to(p.global_position)
+		guidance.mark(p, 8.0)
 		book.close_book())
 	get_viewport().size_changed.connect(_fit)
 	_fit()
-	Events.dream_started.connect(add_dream)
-	Events.dream_done.connect(finish_dream)
+	Events.dream_started.connect(func(_id): dreams_panel.refresh())
+	Events.dream_done.connect(func(_id): dreams_panel.refresh())
 	Events.alert.connect(add_alert)
 	Events.toast.connect(add_toast)
 	Events.power_unlocked.connect(func(_id): rebuild_powers())
@@ -126,6 +140,9 @@ func _panel(preset: int) -> PanelContainer:
 	return p
 
 func _label(text: String, fs: int = 17, col: Color = UiTheme.TEXT) -> Label:
+	return Hud.make_label(text, fs, col)
+
+static func make_label(text: String, fs: int = 17, col: Color = UiTheme.TEXT) -> Label:
 	var l := Label.new()
 	l.text = text
 	l.add_theme_font_size_override(&"font_size", fs)
@@ -133,15 +150,10 @@ func _label(text: String, fs: int = 17, col: Color = UiTheme.TEXT) -> Label:
 	return l
 
 func _build_dreams() -> void:
-	dreams_panel = _panel(Control.PRESET_TOP_LEFT)
-	dreams_panel.custom_minimum_size.x = 290
-	var v := VBoxContainer.new()
-	dreams_panel.add_child(v)
-	v.add_child(_label("VILLAGE DREAMS", 13, UiTheme.ACCENT))
-	dreams_box = VBoxContainer.new()
-	dreams_box.add_theme_constant_override(&"separation", 6)
-	v.add_child(dreams_box)
-	dreams_panel.visible = false
+	dreams_panel = GoalPanel.new()
+	root.add_child(dreams_panel)
+	dreams_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT, Control.PRESET_MODE_MINSIZE, 14)
+	dreams_panel.look_at.connect(pan_to)
 
 func _build_stores() -> void:
 	stores_panel = _panel(Control.PRESET_CENTER_TOP)
@@ -197,6 +209,8 @@ func _build_faith() -> void:
 	power_bar = HBoxContainer.new()
 	power_bar.add_theme_constant_override(&"separation", 6)
 	v.add_child(power_bar)
+	power_card = PowerInfo.Card.new()
+	root.add_child(power_card)
 
 func _build_alerts() -> void:
 	alerts_box = VBoxContainer.new()
@@ -209,6 +223,81 @@ func _build_alerts() -> void:
 	alerts_box.add_theme_constant_override(&"separation", 6)
 	alerts_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
+## Bottom right: how many people stand idle, and a button that calls them
+## to the hand (Village.call_idle, when the village has it) or else looks at
+## each idle person in turn.
+func _build_idle() -> void:
+	idle_panel = _panel(Control.PRESET_BOTTOM_RIGHT)
+	idle_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	idle_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override(&"separation", 10)
+	idle_panel.add_child(h)
+	idle_label = _label("0 idle", 16, UiTheme.TEXT_DIM)
+	idle_label.mouse_filter = Control.MOUSE_FILTER_PASS
+	idle_label.tooltip_text = "People with no work. Hover one to see why."
+	h.add_child(idle_label)
+	idle_button = Button.new()
+	idle_button.focus_mode = Control.FOCUS_NONE
+	idle_button.custom_minimum_size = Vector2(76, 32)
+	idle_button.add_theme_font_size_override(&"font_size", 15)
+	idle_button.pressed.connect(call_idle)
+	h.add_child(idle_button)
+	idle_panel.visible = false
+
+var _idle_i: int = -1
+
+## The thing that can call the idle to a spot: Village.call_idle(at) or the
+## world's (worker C's gesture), else null.
+static func idle_caller() -> Object:
+	if Village.has_method(&"call_idle"):
+		return Village
+	if Game.world != null and is_instance_valid(Game.world) and Game.world.has_method(&"call_idle"):
+		return Game.world
+	return null
+
+## Calls every idle person to where the hand is (or the camera looks), or, if
+## the village can't call them, looks at the next idle person.
+func call_idle() -> int:
+	var idle := PersonInfo.idle_people()
+	if idle.is_empty():
+		add_toast("Everyone is busy.")
+		return 0
+	var caller := Hud.idle_caller()
+	if caller != null:
+		var r = caller.call(&"call_idle", _call_point())
+		var n: int = int(r) if (r is int or r is float) else idle.size()
+		add_toast("%s coming to the hand." % ("1 idle person is" if n == 1 else "%d idle people are" % n))
+		return n
+	_idle_i = (_idle_i + 1) % idle.size()
+	var p: Person = idle[_idle_i]
+	pan_to(p.global_position)
+	guidance.mark(p, 5.0)
+	add_toast("%s: %s" % [p.given_name, PersonInfo.idle_reason(p)])
+	return 0
+
+func _call_point() -> Vector3:
+	var hand := get_tree().get_first_node_in_group(&"hand")
+	if hand != null and &"ground" in hand and (hand.ground as Vector3).is_finite():
+		return hand.ground
+	var cam := get_tree().get_first_node_in_group(&"camera_rig")
+	if cam != null and &"target_focus" in cam:
+		return cam.target_focus
+	return Vector3.ZERO
+
+func _refresh_idle() -> void:
+	var on := Flags.onboarding_done() and Village.population() > 0
+	idle_panel.visible = on and not book.is_open()
+	if not on:
+		return
+	var n := PersonInfo.idle_people().size()
+	idle_label.text = "%d idle" % n
+	idle_label.add_theme_color_override(&"font_color", UiTheme.ACCENT if n > 0 else UiTheme.TEXT_DIM)
+	var can_call := Hud.idle_caller() != null
+	idle_button.text = "Call" if can_call else "Find"
+	idle_button.disabled = n == 0
+	idle_button.tooltip_text = "Call every idle person to the hand." if can_call else "Look at the next idle person."
+
 func _build_toasts() -> void:
 	toast_box = VBoxContainer.new()
 	root.add_child(toast_box)
@@ -220,92 +309,18 @@ func _build_toasts() -> void:
 
 # ---------------------------------------------------------------- dreams
 
+## The id of the dream the goal panel shows (the active one, or the next).
 func dream_ids() -> Array:
-	return _dreams.map(func(d): return d["id"])
+	return [dreams_panel.dream_id] if dreams_panel != null and dreams_panel.dream_id != &"" else []
 
-func add_dream(id: StringName) -> void:
-	for d in _dreams:
-		if d["id"] == id:
-			return
-	var def := Defs.dream(id)
-	var b := PanelContainer.new()
-	b.mouse_filter = Control.MOUSE_FILTER_STOP
-	b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	b.add_theme_stylebox_override(&"panel", UiTheme.box(Color(1, 1, 1, 0.05), Color(1, 1, 1, 0.0), 8, 8.0, 0))
-	b.tooltip_text = "Click to look"
-	var v := VBoxContainer.new()
-	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	b.add_child(v)
-	var l := _label(def.text if def != null and def.text != "" else String(id).capitalize(), 16)
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.custom_minimum_size.x = 250
-	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	v.add_child(l)
-	var pips := UiPips.new()
-	pips.radius = 5.0
-	v.add_child(pips)
-	dreams_box.add_child(b)
-	b.gui_input.connect(func(e: InputEvent):
-		if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
-			_pan_to_dream(id))
-	_dreams.append({"id": id, "node": b, "pips": pips, "done_t": -1.0})
-	while _dreams.size() > MAX_DREAMS:
-		var old: Dictionary = _dreams.pop_front()
-		(old["node"] as Node).queue_free()
-	dreams_panel.visible = true
-	_refresh_dreams()
-
-func finish_dream(id: StringName) -> void:
-	for d in _dreams:
-		if d["id"] == id and d["done_t"] < 0.0:
-			d["done_t"] = 4.0
-			(d["node"] as Control).modulate = Color(0.75, 1.0, 0.7)
-			var pips: UiPips = d["pips"]
-			pips.filled = pips.total
-
-## {x: met, y: needed} for a dream's checklist.
+## {x: met, y: needed} for a dream's checklist (one per line of it).
 static func dream_progress(def: DreamDef) -> Vector2i:
+	var items := Dreams.checklist(def)
 	var got := 0
-	var need := 0
-	if def == null:
-		return Vector2i.ZERO
-	for b in def.needs_buildings:
-		var n := int(def.needs_buildings[b])
-		need += n
-		got += mini(Village.count_buildings(b), n)
-	for k in def.needs_stores:
-		need += 1
-		var have := Village.food() if k == &"food" else Village.store(k)
-		if have >= int(def.needs_stores[k]):
+	for it in items:
+		if it["done"]:
 			got += 1
-	if def.needs_population > 0:
-		need += 1
-		if Village.population() >= def.needs_population:
-			got += 1
-	if def.needs_survive_winter:
-		need += 1
-		if int(Village.stats.get("winters_survived", 0)) > 0:
-			got += 1
-	return Vector2i(got, need)
-
-func _refresh_dreams() -> void:
-	for d in _dreams:
-		if d["done_t"] >= 0.0:
-			continue
-		var pr := dream_progress(Defs.dream(d["id"]))
-		var pips: UiPips = d["pips"]
-		var total := mini(pr.y, 10)
-		pips.setup(int(round(float(pr.x) * float(total) / float(maxi(pr.y, 1)))), total)
-
-func _pan_to_dream(id: StringName) -> void:
-	var def := Defs.dream(id)
-	if def == null:
-		return
-	for b in def.needs_buildings:
-		for s in Village.sites:
-			if s is Site and is_instance_valid(s) and s.building != null and s.building.id == b:
-				pan_to(s.global_position)
-				return
+	return Vector2i(got, items.size())
 
 # ---------------------------------------------------------------- alerts and toasts
 
@@ -349,12 +364,14 @@ func rebuild_powers() -> void:
 	var ps: Array = Defs.powers.values().filter(func(d): return d.era <= Village.era)
 	ps.sort_custom(func(a, b): return a.era < b.era or (a.era == b.era and a.cost < b.cost))
 	for d in ps:
-		var b := Button.new()
+		var b := PowerButton.new()
 		b.focus_mode = Control.FOCUS_NONE
 		b.custom_minimum_size = Vector2(86, 52)
 		b.text = "%s\n%s" % [d.title, "gift" if d.free else str(int(d.cost))]
 		b.add_theme_font_size_override(&"font_size", 14)
 		b.pressed.connect(_on_power_pressed.bind(d.id))
+		b.mouse_entered.connect(show_power_card.bind(d.id))
+		b.mouse_exited.connect(hide_power_card)
 		power_bar.add_child(b)
 		_power_buttons[d.id] = b
 	if ps.is_empty():
@@ -362,9 +379,27 @@ func rebuild_powers() -> void:
 	_refresh_powers()
 
 func power_state(id: StringName) -> StringName:
-	if Faith.has(id): return &"owned"
-	if Faith.can_buy(id): return &"affordable"
-	return &"locked"
+	var d := Defs.power(id)
+	return PowerInfo.state(d) if d != null else &"locked"
+
+## The requirements card over the power bar (hover, or tests and screenshots).
+func show_power_card(id: StringName) -> void:
+	power_card.show_power(id)
+	await get_tree().process_frame
+	place_power_card()
+
+func place_power_card() -> void:
+	if not is_instance_valid(power_card) or not power_card.visible:
+		return
+	var b: Control = _power_buttons.get(power_card.power_id)
+	power_card.reset_size()
+	var bx := b.get_global_rect() if b != null and is_instance_valid(b) else Rect2(Vector2(20, root.size.y - 140), Vector2(80, 50))
+	var inv := root.get_global_transform().affine_inverse()
+	var top: Vector2 = inv * bx.position
+	power_card.position = Vector2(clampf(top.x, 10.0, root.size.x - power_card.size.x - 10.0), top.y - power_card.size.y - 40.0)
+
+func hide_power_card() -> void:
+	power_card.visible = false
 
 func _refresh_powers() -> void:
 	var hand := get_tree().get_first_node_in_group(&"hand")
@@ -373,30 +408,30 @@ func _refresh_powers() -> void:
 	var any_affordable := false
 	for id in _power_buttons:
 		var d := Defs.power(id)
-		var b: Button = _power_buttons[id]
+		var b: PowerButton = _power_buttons[id]
 		var st := power_state(id)
-		var tip := "%s  (%s)\n%s\nOpens: %s" % [d.title, "a gift opens this" if d.free else "%d faith" % int(d.cost), d.what_it_does, d.what_it_opens]
+		b.lock = st == &"locked"
+		b.tooltip_text = ""
 		match st:
 			&"owned":
 				b.modulate = Color(1, 1, 1)
 				var sb := UiTheme.box(Color(0.3, 0.36, 0.18, 0.92), UiTheme.GOOD if id != sel else Color(1, 1, 0.8), 8, 8.0, 2 if id != sel else 3)
 				b.add_theme_stylebox_override(&"normal", sb)
-				tip += "\nOwned." + ("  Selected: hold E." if d.gesture and id == sel else ("  Click to select, then hold E." if d.gesture else ""))
 			&"affordable":
 				any_affordable = true
 				b.modulate = Color(1, 1, 1)
 				var pulse := 0.6 + 0.4 * sin(Time.get_ticks_msec() * 0.005)
 				b.add_theme_stylebox_override(&"normal", UiTheme.box(Color(0.45, 0.3, 0.12, 0.95), Color(UiTheme.ACCENT, pulse), 8, 8.0, 2))
-				tip += "\nClick to unlock."
 			_:
-				b.modulate = Color(1, 1, 1, 0.5)
+				b.modulate = Color(1, 1, 1, 0.55 if st == &"locked" else 0.75)
 				b.remove_theme_stylebox_override(&"normal")
-				if not d.free and (cheapest == 0.0 or d.cost < cheapest):
+				if not d.free and st == &"faith" and (cheapest == 0.0 or d.cost < cheapest):
 					cheapest = d.cost
-		b.tooltip_text = tip
 	faith_ring.available = Faith.available()
 	faith_ring.next_cost = cheapest
 	faith_ring.affordable = any_affordable
+	if power_card.visible and not _power_buttons.has(power_card.power_id):
+		power_card.visible = false
 
 func _on_power_pressed(id: StringName) -> void:
 	var d := Defs.power(id)
@@ -405,6 +440,8 @@ func _on_power_pressed(id: StringName) -> void:
 	if Faith.can_buy(id):
 		if Faith.buy(id):
 			add_toast("%s: %s" % [d.title, d.what_it_opens if d.what_it_opens != "" else d.what_it_does])
+			if power_card.visible and power_card.power_id == id:
+				show_power_card(id)
 		return
 	if Faith.has(id):
 		var hand := get_tree().get_first_node_in_group(&"hand")
@@ -421,20 +458,33 @@ func _on_power_pressed(id: StringName) -> void:
 				add_toast("Lift Buildings: click a house to pick it up, click again to set it down. Press again to stop.")
 			_refresh_powers()
 		return
-	if d.free:
-		add_toast("Your people will open this one.")
-	elif d.era > Village.era:
-		add_toast("Not yet. This belongs to a later age.")
-	else:
-		add_toast("%s needs %d faith." % [d.title, int(d.cost)])
+	add_toast(PowerInfo.locked_line(d))
+
+## A power button that draws a small padlock while requirements other than
+## faith are missing.
+class PowerButton extends Button:
+	var lock := false:
+		set(v):
+			if v != lock:
+				lock = v
+				queue_redraw()
+	func _draw() -> void:
+		if not lock:
+			return
+		var c := Vector2(size.x - 13.0, size.y - 13.0)
+		var col := Color(1.0, 0.85, 0.6, 0.95)
+		draw_arc(c + Vector2(0, -1.5), 3.4, PI, TAU, 10, col, 1.6, true)
+		draw_rect(Rect2(c + Vector2(-4.5, -1.5), Vector2(9, 7)), col, true)
+		draw_circle(c + Vector2(0, 1.8), 1.1, Color(0.2, 0.12, 0.05))
 
 # ---------------------------------------------------------------- refresh
 
 func refresh() -> void:
 	_refresh_stores()
-	_refresh_dreams()
+	dreams_panel.refresh()
 	_refresh_powers()
 	_refresh_time()
+	_refresh_idle()
 
 var _stores_sig: String = "~"
 
@@ -476,6 +526,10 @@ func _store_item(kind: StringName, title: String, n: int) -> Control:
 	cc.add_child(dot)
 	h.add_child(cc)
 	h.add_child(_label("%s %d" % [title, n], 17))
+	var note := PersonInfo.store_note(kind)
+	if note != "":
+		h.mouse_filter = Control.MOUSE_FILTER_PASS
+		h.tooltip_text = note
 	return h
 
 func _refresh_time() -> void:
@@ -509,14 +563,7 @@ func _process(_d: float) -> void:
 		if t["t"] <= 0.0:
 			_toasts.erase(t)
 			n.queue_free()
-	for d in _dreams.duplicate():
-		if d["done_t"] >= 0.0:
-			d["done_t"] -= dt
-			if d["done_t"] <= 0.0:
-				_dreams.erase(d)
-				(d["node"] as Node).queue_free()
 	_update_modal_state()
-	dreams_panel.visible = not _dreams.is_empty() and not book.is_open()
 
 ## Esc: closes the topmost card or the book. Returns true if it closed something
 ## (the menu asks first, so Esc never opens the pause menu over the book).
@@ -527,6 +574,9 @@ func close_top_modal() -> bool:
 		return true          # the names must be given; Esc does nothing here
 	if era_card != null and era_card.is_open():
 		era_card.keep_playing()
+		return true
+	if dream_card != null and dream_card.is_open():
+		dream_card.accept()
 		return true
 	if book != null and book.is_open():
 		book.close_book()
@@ -542,6 +592,9 @@ func _update_modal_state() -> void:
 		(c as Control).visible = not book_open
 	alerts_box.visible = not book_open
 	toast_box.visible = not book_open
+	if book_open and power_card.visible:
+		power_card.visible = false
+	dreams_panel.visible = not book_open and dreams_panel.mode != &"none"
 	if m == _modal_was:
 		return
 	_modal_was = m
@@ -560,7 +613,7 @@ func _update_modal_state() -> void:
 			hand.process_mode = Node.PROCESS_MODE_INHERIT
 
 func modal_open() -> bool:
-	return (naming != null and naming.is_open()) or (era_card != null and era_card.is_open())
+	return (naming != null and naming.is_open()) or (era_card != null and era_card.is_open()) or (dream_card != null and dream_card.is_open())
 
 func _unhandled_input(e: InputEvent) -> void:
 	if modal_open():
