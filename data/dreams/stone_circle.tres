@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="DreamDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/defs/dream_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"stone_circle"
+era = 1
+text = "A circle of stones that points at the sky."
+gate = true
+needs_buildings = {&"stone_circle": 1}
+needs_population = 12
+reward_faith = 15.0

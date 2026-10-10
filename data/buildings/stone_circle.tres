@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="BuildingDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/defs/building_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"stone_circle"
+title = "Stone Circle"
+era = 1
+footprint = Vector2(8, 8)
+cost = {&"stone": 20, &"wood": 6}
+build_work = 80.0
+build_slots = 4
+jobs = Array[StringName]([&"pray"])
+joy_radius = 8.0
+weight = 200.0

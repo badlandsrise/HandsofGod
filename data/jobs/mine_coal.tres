@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="JobDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/defs/job_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"mine_coal"
+title = "Mine coal"
+era = 4
+kind = 0
+skill = &"gathering"
+min_people = 1
+max_people = 4
