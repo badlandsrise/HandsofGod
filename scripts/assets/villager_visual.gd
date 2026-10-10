@@ -15,9 +15,14 @@ extends Node3D
 ##   set_era(era: int)
 ##       picks the tailoring: 1 = hides (OUTFITS), 2 = woven clothes (OUTFITS_ERA2:
 ##       linen undershirt, hose or long skirt, trim bands, aprons, straw hats, coifs),
-##       3+ = town clothes (OUTFITS_ERA3: coats, waistcoats, breeches and stockings,
-##       bodices and full skirts, tricorns, felt hats, bonnets, mob caps, flat caps).
+##       3 = town clothes (OUTFITS_ERA3: coats, waistcoats, breeches and stockings,
+##       bodices and full skirts, tricorns, felt hats, bonnets, mob caps, flat caps),
+##       4+ = the clothes of their trade (OUTFITS_ERA4: overalls, lab coats, suits and
+##       dresses; hard hats, trilbies, pillbox hats, kerchiefs).
 ##       Until called, the villager follows ArtPalette.current_era() when it is built.
+##   set_crew(on: bool)
+##       the rocket's crew: a white flight suit with navy boots and gloves, orange bands,
+##       the mission patch and an open-face helmet (CREW_SUITS, by body), whatever the era.
 ##   set_age_scale(stage: int)
 ##       Person.Stage: 0 BABY, 1 CHILD, 2 ADULT, 3 ELDER. Smaller bodies get a bigger head.
 ##   set_tint(c: Color)   multiplies the whole figure (e.g. dim at night, red when hurt).
@@ -74,12 +79,33 @@ const OUTFITS_ERA3 := [
 	[0, ["Hair_Beard", "Eyebrows_Regular"], Vector4(0.32, 0.79, 0.64, 0.53), Vector4(2, 1, 1, 0.72), "#3e4fa0", &""],                    # coat, blue waistcoat, bare head
 	[1, ["Hair_SimpleParted", "Eyebrows_Female"], Vector4(0.06, 0.79, 0.34, 0.56), Vector4(2, 0, 0, 0.5), "#7d1f4a", &""],               # gown with a plum hem band
 ]
+## Era 4 (Launch): same layout; style.x = 3 selects the shader's Era 4 tailoring:
+## style.y = 0 overalls (w = shirt sleeve reach), 1 lab coat, 2 day clothes (z = 1 men's
+## suit, z = 0 dress), 3 flight suit. The job colour is the overalls, the shirt under the
+## lab coat, the suit or the dress; trim is the tie, pockets, belt and shoes.
+const OUTFITS_ERA4 := [
+	[0, ["Hair_SimpleParted", "Eyebrows_Regular"], Vector4(0.06, 0.79, 0.5, 0.53), Vector4(3, 0, 0, 0.5), "#c8442e", &"hard_hat"],      # overalls, hard hat
+	[1, ["Hair_Buns", "Eyebrows_Female"], Vector4(0.3, 0.79, 0.64, 0.56), Vector4(3, 1, 0, 0.72), "#f26b1d", &""],                     # lab coat
+	[0, ["Hair_Buzzed", "Hair_Beard", "Eyebrows_Regular"], Vector4(0.3, 0.79, 0.64, 0.53), Vector4(3, 1, 0, 0.72), "#1c2a4a", &""],   # lab coat, navy tie
+	[1, ["Hair_Long", "Eyebrows_Female"], Vector4(0.24, 0.79, 0.34, 0.56), Vector4(3, 2, 0, 0.72), "#c8442e", &"pillbox"],              # dress, red belt and shoes, pillbox
+	[0, ["Hair_Long", "Hair_Beard", "Eyebrows_Regular"], Vector4(0.47, 0.79, 0.64, 0.53), Vector4(3, 2, 1, 0.72), "#c8442e", &"trilby"],  # suit and tie, trilby
+	[1, ["Hair_BuzzedFemale", "Eyebrows_Female"], Vector4(0.06, 0.79, 0.5, 0.56), Vector4(3, 0, 0, 0.48), "#f2eee6", &"kerchief"],     # overalls, kerchief
+	[0, ["Hair_Beard", "Eyebrows_Regular"], Vector4(0.06, 0.79, 0.5, 0.53), Vector4(3, 0, 0, 0.55), "#e0a526", &"flat_cap"],           # overalls, flat cap
+	[1, ["Hair_SimpleParted", "Eyebrows_Female"], Vector4(0.24, 0.79, 0.3, 0.56), Vector4(3, 2, 0, 0.72), "#1c2a4a", &""],              # dress, navy belt
+]
+## The crew's flight suits, [male, female]: style.y = 3, trim = the orange bands.
+const CREW_SUITS := [
+	[0, ["Hair_Buzzed", "Eyebrows_Regular"], Vector4(0.06, 0.8, 0.62, 0.53), Vector4(3, 3, 0, 0.72), "#f26b1d", &"helmet"],
+	[1, ["Hair_Buns", "Eyebrows_Female"], Vector4(0.06, 0.8, 0.62, 0.56), Vector4(3, 3, 0, 0.72), "#f26b1d", &"helmet"],
+]
 const UNDER_LINEN := Color("#e8dcc0")
 const UNDER_TOWN := Color("#f3efe6")
+const UNDER_SHIRT := Color("#e9eef2")
 ## hat colours (they use the hair material, so tint and era grading apply)
 const HAT_COLOURS := {&"straw_hat": Color("#d2a75e"), &"coif": Color("#efe6d2"), &"cap": Color("#6a4a32"), &"scarf": Color("#c9b48a"),
 	&"tricorn": Color("#2c2a33"), &"felt_hat": Color("#3d3440"), &"bonnet": Color("#e4d3a8"), &"mob_cap": Color("#f4efe4"),
-	&"flat_cap": Color("#4a5f78")}
+	&"flat_cap": Color("#4a5f78"), &"hard_hat": Color("#f26b1d"), &"trilby": Color("#4a4440"), &"pillbox": Color("#2f8c88"),
+	&"kerchief": Color("#c8442e"), &"helmet": Color("#f2f1ec")}
 const ONE_SHOT := [&"dead", &"pickup"]
 const ADULT_HEIGHT := 1.7
 ## [overall scale, head scale] per Person.Stage
@@ -97,6 +123,7 @@ var _outfit: int = 0
 var _stage: int = 2
 var _body_index: int = -1
 var _era: int = -1   # -1 = follow ArtPalette.current_era() at build time
+var _crew := false
 
 
 func _ready() -> void:
@@ -141,9 +168,16 @@ func set_look(skin: Color, hair: Color, cloth: Color, outfit_variant: int) -> vo
 		_build()
 
 
-## 1 = Era 1 hides, 2 = Era 2 woven clothes, 3 or later = Era 3 town clothes.
+## 1 = Era 1 hides, 2 = Era 2 woven clothes, 3 = Era 3 town clothes, 4 or later = Era 4.
 func set_era(era: int) -> void:
 	_era = era
+	if is_node_ready():
+		_build()
+
+
+## Dress this villager as one of the rocket's crew (true) or back in their own clothes.
+func set_crew(on: bool) -> void:
+	_crew = on
 	if is_node_ready():
 		_build()
 
@@ -163,13 +197,15 @@ func set_tint(c: Color) -> void:
 # ------------------------------------------------------------------ internals
 
 func _tailoring() -> int:
-	return clampi(_era if _era >= 0 else ArtPalette.current_era(), 1, 3)
+	return clampi(_era if _era >= 0 else ArtPalette.current_era(), 1, 4)
 
 
 func _build() -> void:
 	var era := _tailoring()
-	var woven := era >= 2
-	var o: Array = [OUTFITS, OUTFITS_ERA2, OUTFITS_ERA3][era - 1][_outfit]
+	var woven := era >= 2 or _crew
+	var o: Array = [OUTFITS, OUTFITS_ERA2, OUTFITS_ERA3, OUTFITS_ERA4][era - 1][_outfit]
+	if _crew:
+		o = CREW_SUITS[_outfit % 2]
 	var body: int = o[0]
 	if body != _body_index or _model == null:
 		if _model:
@@ -203,7 +239,7 @@ func _build() -> void:
 			mi.set_instance_shader_parameter(&"outfit_style", o[3] if woven else Vector4(0, 0, 0, 0.72))
 			if woven:
 				mi.set_instance_shader_parameter(&"trim_color", Color(o[4]))
-				mi.set_instance_shader_parameter(&"under_color", UNDER_TOWN if era >= 3 else UNDER_LINEN)
+				mi.set_instance_shader_parameter(&"under_color", UNDER_SHIRT if era >= 4 or _crew else (UNDER_TOWN if era >= 3 else UNDER_LINEN))
 	_build_hat(o[5] if woven else &"")
 	_apply_colors()
 	_apply_age()
@@ -281,6 +317,27 @@ func _build_hat(kind: StringName) -> void:
 			parts.append([_ball_mesh(0.13), Vector3(0.012, top - 0.035, 0.0), Vector3(-8, 0, -6), Vector3(1.08, 0.32, 1.12), 1.0])
 			parts.append([_cyl_mesh(0.112, 0.114, 0.035, 18), Vector3(0, top - 0.06, -0.008), Vector3(-8, 0, 0), Vector3.ONE, 0.8])
 			parts.append([_cyl_mesh(0.07, 0.075, 0.012, 12), Vector3(0, top - 0.06, 0.11), Vector3(-14, 0, 0), Vector3(1.0, 1.0, 0.7), 0.7])  # peak
+		&"hard_hat":
+			# a domed safety helmet with a ridge and a short peak
+			parts.append([_dome_mesh(0.128), Vector3(0, top - 0.075, -0.008), Vector3(-6, 0, 0), Vector3(1.0, 1.02, 1.08), 1.0])
+			parts.append([_cyl_mesh(0.146, 0.15, 0.014, 20), Vector3(0, top - 0.075, 0.004), Vector3(-6, 0, 0), Vector3(1.0, 1.0, 1.12), 0.9])
+			parts.append([_box_mesh(Vector3(0.026, 0.02, 0.24)), Vector3(0, top + 0.05, -0.012), Vector3(-6, 0, 0), Vector3.ONE, 0.88])
+		&"trilby":
+			parts.append([_cyl_mesh(0.17, 0.165, 0.014, 22), Vector3(0, top - 0.05, -0.005), Vector3(-5, 0, 0), Vector3(1.0, 1.0, 1.06), 1.0])
+			parts.append([_cyl_mesh(0.085, 0.105, 0.105, 16), Vector3(0, top + 0.005, -0.01), Vector3(-5, 0, 0), Vector3(1.0, 1.0, 1.1), 1.0])
+			parts.append([_cyl_mesh(0.104, 0.106, 0.026, 16), Vector3(0, top - 0.03, -0.01), Vector3(-5, 0, 0), Vector3(1.0, 1.0, 1.1), Color("#1c2a4a")])  # band
+		&"pillbox":
+			parts.append([_cyl_mesh(0.07, 0.075, 0.05, 18), Vector3(0.0, top - 0.005, -0.03), Vector3(-18, 0, 8), Vector3.ONE, 1.0])
+		&"kerchief":
+			parts.append([_dome_mesh(0.122), Vector3(0, top - 0.1, -0.02), Vector3(-16, 0, 0), Vector3(1.03, 1.0, 1.08), 1.0])
+			parts.append([_ball_mesh(0.035), Vector3(0, top - 0.01, 0.1), Vector3.ZERO, Vector3(1.6, 0.8, 0.9), 0.85])   # the knot on top
+		&"helmet":
+			# open-face flight helmet: a white shell round the back of the head, an orange
+			# crest stripe, the gold visor raised over the brow, a chrome neck ring below
+			parts.append([_dome_mesh(0.165), Vector3(0, top - 0.115, -0.03), Vector3(-28, 0, 0), Vector3(1.0, 1.25, 1.05), 1.0])
+			parts.append([_box_mesh(Vector3(0.04, 0.012, 0.3)), Vector3(0, top + 0.02, -0.03), Vector3(-10, 0, 0), Vector3.ONE, Color("#f26b1d")])
+			parts.append([_dome_mesh(0.16), Vector3(0, top - 0.06, 0.035), Vector3(-75, 0, 0), Vector3(1.02, 0.35, 1.0), Color("#d9a441")])
+			parts.append([_cyl_mesh(0.14, 0.14, 0.035, 20), Vector3(0, -0.07, -0.01), Vector3.ZERO, Vector3.ONE, Color("#b8bec6")])
 	var col: Color = HAT_COLOURS.get(kind, Color("#c9a582"))
 	for p in parts:
 		var mi := MeshInstance3D.new()

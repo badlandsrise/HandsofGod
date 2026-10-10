@@ -80,6 +80,8 @@ func _ready() -> void:
 		var sd: Node = load(SHOTS_SCRIPT).new()
 		sd.name = "ShotDirector"
 		add_child(sd)
+	elif Game.flags.has("goodbye"):
+		_dev_goodbye()
 	elif Game.flags.has("no-title"):
 		new_game()
 		Clock.running = true
@@ -339,6 +341,28 @@ func frame_camera(cam: Camera3D, focus: Vector3, dist: float, yaw: float, pitch_
 	var off := Vector3(sin(yaw) * cos(pitch), sin(pitch), cos(yaw) * cos(pitch)) * dist
 	cam.global_position = focus + off
 	cam.look_at(focus, Vector3.UP)
+
+# ================================================================ the goodbye
+
+var goodbye: Node = null          # the ending while it plays (scripts/ending/)
+
+## [ending] Plays the goodbye (DESIGN 9) at the launch tower: the last evening,
+## the crew, the countdown, liftoff, the wave, the credits, then free play at
+## dawn. The Era 4 gameplay calls this once the rocket is ready.
+func start_goodbye(opts: Dictionary = {}) -> Node:
+	if goodbye != null and is_instance_valid(goodbye) and not goodbye.done:
+		return goodbye
+	goodbye = GoodbyeSequence.new()
+	add_child(goodbye)
+	goodbye.begin(self, opts)
+	return goodbye
+
+## [dev] `--goodbye`: a generated Era 4 launch site, people and Book, then the goodbye.
+func _dev_goodbye() -> void:
+	new_game()
+	GoodbyeStage.setup(self)
+	set_title_mode(false)
+	start_goodbye()
 
 # ================================================================ title
 

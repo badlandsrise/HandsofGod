@@ -59,6 +59,9 @@ func _set_hint(on: bool) -> void:
 func _process(delta: float) -> void:
 	if not active:
 		return
+	if Clock.running:
+		leave()            # play started by any route (e.g. world.start_play directly)
+		return
 	var dt := minf(Clock.real_delta if Clock.real_delta > 0.0 else delta, 0.1)
 	t += dt
 	# the sun climbs a touch while you sit on the title

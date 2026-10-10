@@ -25,6 +25,16 @@
 designed and built in-engine for Hands of God by Claude (`scripts/front/`,
 `tools/music/front.py`).
 
+## The goodbye and its credits roll
+
+The ending (`scripts/ending/`) rolls these credits in game as "Among the Stars", with the
+names of the player's own people and lines from their Village Book woven between them. The
+roll is built from this file (`scripts/ending/credits_roll.gd`); keep the two in step.
+
+## Engine
+
+Made with the **Godot Engine** (MIT licence, https://godotengine.org/license).
+
 ## Art
 
 All third-party art is CC0 (public domain dedication); credit is given anyway. Hand-built props,
@@ -39,6 +49,9 @@ shaders and the placeholder animals are made for this project.
 | Farm Animals (Animated) | Quaternius | CC0 | https://quaternius.itch.io/lowpoly-animated-animals (quaternius.com/packs/farmanimal.html) |
 | Survival Kit | Kenney (www.kenney.nl) | CC0 | https://kenney.nl/assets/survival-kit |
 | Pirate Kit (row boats, ships, crates) | Kenney (www.kenney.nl) | CC0 | https://kenney.nl/assets/pirate-kit |
+| City Kit (Industrial) | Kenney (www.kenney.nl) | CC0 | https://kenney.nl/assets/city-kit-industrial |
+| City Kit (Commercial) | Kenney (www.kenney.nl) | CC0 | https://kenney.nl/assets/city-kit-commercial |
+| Space Kit | Kenney (www.kenney.nl) | CC0 | https://kenney.nl/assets/space-kit |
 | Hand models and hand poses (godot-xr-tools) | Miodrag Sejic (DigitalN8m4r3), GodotVR/godot-xr-tools | CC0 | https://github.com/GodotVR/godot-xr-tools |
 
 The hand is a white cartoon glove modelled for Hands of God on the CC0 godot-xr-tools
@@ -59,6 +72,15 @@ and stone walls, glazed windows, doors, round-tile roof pieces, balconies, dorme
 wagon), the Pirate Kit (the two sailing ships and cargo crates) and the Survival Kit (barrels,
 anvil, tools). The slate, cobble, stained-glass, clock-face, flag and book textures
 (`assets/textures/era3/`) are procedural, painted by `scripts/assets/tools/gen_era3_textures.py`.
+
+The Era 4 (Launch) kit was made for Hands of God too. The rocket, the launch tower, the
+apartment blocks, the works, the institute, mission control, the radio telescope, the rail
+line, vehicles, street furniture, piles and tools are modelled in code
+(`scripts/assets/tools/build_era4.gd`), with CC0 details from Kenney's City Kit Industrial
+(storage tanks, water tower, shipping containers), City Kit Commercial (far-skyline blocks,
+awnings) and Space Kit (satellite dishes). The concrete, asphalt, curtain-wall, mission
+patch, flag, poster and steam textures (`assets/textures/era4/`) are procedural, painted by
+`scripts/assets/tools/gen_era4_textures.py`.
 
 ## Ground textures
 

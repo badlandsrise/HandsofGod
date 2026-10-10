@@ -27,6 +27,8 @@ var _jobs3: Dictionary = {}
 
 
 func _init() -> void:
+	if (get_script() as Script).resource_path != "res://scripts/assets/tools/build_era3.gd":
+		return   # a subclass (build_era4.gd) reuses the helpers and runs its own jobs
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--only="):
 			_only = a.substr(7).split(",", false)
@@ -1888,13 +1890,95 @@ func _light_tower(done: bool) -> void:
 	spot.owner = _root
 
 
+## The Kenney Pirate Kit ships, rebuilt in the Era 3 palette: the pack's geometry
+## is read face by face and each face is given a town material by the colour it
+## sampled from the pack's colour map (warm wood, dark tarred wales, iron, brass),
+## the sails plain undyed linen and the pennants the town's plum. The hull is made
+## a little longer and slimmer, and the masts a touch taller, so it reads less
+## like a toy.
 func _ships() -> void:
 	_begin("ship_small")
-	_model(BOATS + "ship-small.glb", Vector3.ZERO, Vector3.ZERO, 1.2, null, SHIP)
+	_ship(BOATS + "ship-small.glb", 1.2)
 	_save("ship_small")
 	_begin("ship_merchant")
-	_model(BOATS + "ship-medium.glb", Vector3.ZERO, Vector3.ZERO, 1.25, null, SHIP)
+	_ship(BOATS + "ship-medium.glb", 1.25)
 	_save("ship_merchant")
+
+
+const SHIP_SHAPE := Vector3(0.84, 1.08, 1.16)   # slimmer, taller, longer
+
+func _ship(path: String, s: float) -> void:
+	var src := (load(path) as PackedScene).instantiate() as Node3D
+	var cmap: Image = (load(BOATS + "Textures/colormap.png") as Texture2D).get_image()
+	if cmap.is_compressed():
+		cmap.decompress()
+	var stack: Array = [[src, Transform3D.IDENTITY]]
+	var shape := Basis.from_scale(SHIP_SHAPE * s)
+	while not stack.is_empty():
+		var it: Array = stack.pop_back()
+		var n: Node = it[0]
+		var xf: Transform3D = it[1]
+		if n is Node3D and n != src:
+			xf = xf * (n as Node3D).transform
+		for c in n.get_children():
+			stack.append([c, xf])
+		if not (n is MeshInstance3D):
+			continue
+		var mesh := (n as MeshInstance3D).mesh
+		if mesh == null:
+			continue
+		var part := String(n.name)
+		for si in mesh.get_surface_count():
+			var arr := mesh.surface_get_arrays(si)
+			var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+			var nr: PackedVector3Array = arr[Mesh.ARRAY_NORMAL]
+			var uv: PackedVector2Array = arr[Mesh.ARRAY_TEX_UV] if arr[Mesh.ARRAY_TEX_UV] != null else PackedVector2Array()
+			var idx: PackedInt32Array = arr[Mesh.ARRAY_INDEX] if arr[Mesh.ARRAY_INDEX] != null else PackedInt32Array()
+			if idx.is_empty():
+				idx.resize(v.size())
+				for i in v.size():
+					idx[i] = i
+			for t in range(0, idx.size() - 2, 3):
+				var a := idx[t]
+				var b := idx[t + 1]
+				var c := idx[t + 2]
+				var col := Color(0.6, 0.45, 0.3)
+				if not uv.is_empty():
+					var u := (uv[a] + uv[b] + uv[c]) / 3.0
+					col = cmap.get_pixel(clampi(int(u.x * cmap.get_width()), 0, cmap.get_width() - 1),
+						clampi(int(u.y * cmap.get_height()), 0, cmap.get_height() - 1))
+				var m := _ship_material(part, col)
+				var pa := shape * (xf * v[a])
+				var pb := shape * (xf * v[b])
+				var pc := shape * (xf * v[c])
+				var out := shape.inverse().transposed() * (xf.basis * (nr[a] + nr[b] + nr[c]))
+				_tri(m, pa, pb, pc, out, _auto_uv(pa, out), _auto_uv(pb, out), _auto_uv(pc, out))
+	src.free()
+
+
+## Which town material a face of the pack's ship becomes.
+func _ship_material(part: String, col: Color) -> String:
+	if part.begins_with("sail"):
+		return "linen"
+	if part.begins_with("flag"):
+		return "cloth_plum"
+	var l := col.get_luminance()
+	if col.s < 0.2:
+		if l > 0.8:
+			return "linen"       # rigging, trims
+		return "iron" if l < 0.35 else "iron_light"
+	if col.h > 0.1 and col.h < 0.2 and col.s > 0.5:
+		return "brass"
+	if col.h > 0.5 and col.h < 0.8:
+		return "paint_blue" if l < 0.6 else "linen"
+	if col.h > 0.25 and col.h <= 0.5:
+		return "paint_green"
+	# the warm range: the pack's salmon and brown woods
+	if l > 0.62:
+		return "wood"
+	if l > 0.42:
+		return "timber"
+	return "wood_dark"
 
 
 # ================================================================== the aqueduct (milestone 2)

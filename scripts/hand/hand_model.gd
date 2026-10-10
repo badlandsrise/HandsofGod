@@ -2,7 +2,7 @@ class_name HandModel extends Node3D
 ## The hand's body: the white cartoon glove (assets/models/hand/cartoon_glove,
 ## modelled for Hands of God on the CC0 godot-xr-tools hand by Miodrag Sejic:
 ## 26-joint OpenXR skeleton, rolled cuff, three stitches), with the fingers puffed
-## a little more, a dark cap closing the hollow cuff, a soft matte cloth shader
+## a little more, a light lining cap closing the hollow cuff, a soft matte cloth shader
 ## with an era-coloured rim, a ghostly glowing state, and an ink outline. Swappable: HandVisual only uses the API below, so another
 ## rigged hand scene with the same functions can replace scenes/hand/hand_model.tscn.
 ##
@@ -361,9 +361,11 @@ static func _mid(a: int, b: int, edge: Dictionary, pos: PackedVector3Array, nrm:
 	edge[key] = i
 	return i
 
-## A dark, slightly dished cap just inside the cuff's opening, so the hollow
-## sleeve can never be seen into from any angle. Fitted to the opening's own
-## shape (the innermost lip vertices per angle).
+## A slightly dished cap just inside the cuff's opening, so the hollow sleeve
+## can never be seen into from any angle: the glove's closed lining, a light
+## cloth gathered toward the middle (shaded by hand_glove.gdshaderinc from
+## COLOR.g and the cap-plane UV2), never a dark hole. Fitted to the opening's
+## own shape (the innermost lip vertices per angle).
 func _build_cap() -> void:
 	var v: PackedVector3Array = glove.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
 	var zmax := -INF
@@ -400,18 +402,22 @@ func _build_cap() -> void:
 	var verts := PackedVector3Array()
 	var nrm := PackedVector3Array()
 	var cols := PackedColorArray()
+	var uv2 := PackedVector2Array()
 	verts.append(Vector3(c.x, c.y, z - 0.004))
 	nrm.append(Vector3(0, 0, 1))
 	cols.append(Color(0, 1, 0, 1))
-	const RINGS := 4
+	uv2.append(Vector2.ZERO)
+	const RINGS := 6
 	for k in RINGS:
 		var t := float(k + 1) / float(RINGS)
 		for i in BINS:
 			var ang := (float(i) + 0.5) / float(BINS) * TAU - PI
 			var r := rin[i] * 1.06 * t
 			verts.append(Vector3(c.x + cos(ang) * r, c.y + sin(ang) * r, z - 0.004 * (1.0 - t * t)))
-			nrm.append(Vector3(0, 0, 1))
+			# a shallow bowl: the normals lean in toward the middle
+			nrm.append(Vector3(-cos(ang) * 0.45 * t, -sin(ang) * 0.45 * t, 1.0).normalized())
 			cols.append(Color(0, 1, 0, 1))
+			uv2.append(Vector2(cos(ang), sin(ang)) * t)
 	var ind := PackedInt32Array()
 	for i in BINS:
 		ind.append_array([0, 1 + (i + 1) % BINS, 1 + i])
@@ -434,6 +440,7 @@ func _build_cap() -> void:
 	arr[Mesh.ARRAY_VERTEX] = verts
 	arr[Mesh.ARRAY_NORMAL] = nrm
 	arr[Mesh.ARRAY_COLOR] = cols
+	arr[Mesh.ARRAY_TEX_UV2] = uv2
 	arr[Mesh.ARRAY_INDEX] = ind
 	var m := ArrayMesh.new()
 	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
