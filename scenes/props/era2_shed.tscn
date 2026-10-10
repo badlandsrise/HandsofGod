@@ -1,0 +1,31 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/models/village/Corner_Exterior_Wood.gltf" id="1_oaid0"]
+[ext_resource type="PackedScene" path="res://assets/models/village/Roof_Wooden_2x1.gltf" id="2_b8au3"]
+[ext_resource type="PackedScene" path="res://assets/models/village/Prop_Crate.gltf" id="3_c7518"]
+
+[node name="Era2Shed" type="Node3D" unique_id=287638220]
+
+[node name="Corner_Exterior_Wood2" type="Node3D" parent="." unique_id=1229032756 instance=ExtResource("1_oaid0")]
+transform = Transform3D(1, 0, 0, 0, 0.8, 0, 0, 0, 1, 1, 0, 1)
+
+[node name="@Node3D@142" type="Node3D" parent="." unique_id=793909243 instance=ExtResource("1_oaid0")]
+transform = Transform3D(1, 0, 0, 0, 0.8, 0, 0, 0, 1, -1, 0, 1)
+
+[node name="@Node3D@143" type="Node3D" parent="." unique_id=897784360 instance=ExtResource("1_oaid0")]
+transform = Transform3D(1, 0, 0, 0, 0.8, 0, 0, 0, 1, 1, 0, -1)
+
+[node name="@Node3D@144" type="Node3D" parent="." unique_id=1371275176 instance=ExtResource("1_oaid0")]
+transform = Transform3D(1, 0, 0, 0, 0.8, 0, 0, 0, 1, -1, 0, -1)
+
+[node name="Roof_Wooden_2x12" type="Node3D" parent="." unique_id=462085472 instance=ExtResource("2_b8au3")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.4, 0)
+
+[node name="@Node3D@145" type="Node3D" parent="." unique_id=1489981387 instance=ExtResource("2_b8au3")]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0, 2.4, 0)
+
+[node name="Prop_Crate2" type="Node3D" parent="." unique_id=2086236506 instance=ExtResource("3_c7518")]
+transform = Transform3D(0.67614806, 0, 0.18117332, 0, 0.7, 0, -0.18117332, 0, 0.67614806, 0.3, 0, -0.3)
+
+[node name="@Node3D@146" type="Node3D" parent="." unique_id=698265675 instance=ExtResource("3_c7518")]
+transform = Transform3D(0.5168309, 0, -0.18811108, 0, 0.55, 0, 0.18811108, 0, 0.5168309, -0.5, 0, 0.2)

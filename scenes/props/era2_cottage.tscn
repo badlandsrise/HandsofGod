@@ -1,0 +1,49 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/models/village/Wall_Plaster_Door_Round.gltf" id="1_2icr3"]
+[ext_resource type="PackedScene" path="res://assets/models/village/Wall_Plaster_Window_Wide_Round.gltf" id="2_kxs7q"]
+[ext_resource type="PackedScene" path="res://assets/models/village/Wall_Plaster_WoodGrid.gltf" id="3_b6j2x"]
+[ext_resource type="PackedScene" path="res://assets/models/village/Wall_Plaster_Straight.gltf" id="4_gnts2"]
+[ext_resource type="PackedScene" path="res://assets/models/village/Corner_Exterior_Wood.gltf" id="5_j6edp"]
+[ext_resource type="PackedScene" path="res://assets/models/village/Roof_RoundTiles_4x4.gltf" id="6_eacdq"]
+
+[node name="Era2Cottage" type="Node3D" unique_id=1514319385]
+
+[node name="Wall_Plaster_Door_Round2" type="Node3D" parent="." unique_id=1868076413 instance=ExtResource("1_2icr3")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0, 2)
+
+[node name="Wall_Plaster_Window_Wide_Round2" type="Node3D" parent="." unique_id=1627291229 instance=ExtResource("2_kxs7q")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 2)
+
+[node name="Wall_Plaster_WoodGrid2" type="Node3D" parent="." unique_id=2103687012 instance=ExtResource("3_b6j2x")]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -1, 0, -2)
+
+[node name="Wall_Plaster_Straight2" type="Node3D" parent="." unique_id=241137772 instance=ExtResource("4_gnts2")]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 1, 0, -2)
+
+[node name="@Node3D@125" type="Node3D" parent="." unique_id=1125435315 instance=ExtResource("2_kxs7q")]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -2, 0, 1)
+
+[node name="@Node3D@126" type="Node3D" parent="." unique_id=1526152315 instance=ExtResource("4_gnts2")]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -2, 0, -1)
+
+[node name="@Node3D@127" type="Node3D" parent="." unique_id=134323764 instance=ExtResource("4_gnts2")]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 2, 0, 1)
+
+[node name="@Node3D@128" type="Node3D" parent="." unique_id=1080839346 instance=ExtResource("3_b6j2x")]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 2, 0, -1)
+
+[node name="Corner_Exterior_Wood2" type="Node3D" parent="." unique_id=1229032756 instance=ExtResource("5_j6edp")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 2)
+
+[node name="@Node3D@129" type="Node3D" parent="." unique_id=1408034225 instance=ExtResource("5_j6edp")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 2)
+
+[node name="@Node3D@130" type="Node3D" parent="." unique_id=1197779260 instance=ExtResource("5_j6edp")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, -2)
+
+[node name="@Node3D@131" type="Node3D" parent="." unique_id=2119310861 instance=ExtResource("5_j6edp")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, -2)
+
+[node name="Roof_RoundTiles_4x42" type="Node3D" parent="." unique_id=1762767230 instance=ExtResource("6_eacdq")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.12, 0)

@@ -1,0 +1,44 @@
+[gd_scene format=3]
+
+[ext_resource type="Material" path="res://assets/models/materials/cave_dark.tres" id="1_o0mj8"]
+[ext_resource type="PackedScene" path="res://assets/models/nature/Rock_4.fbx" id="2_wtjac"]
+[ext_resource type="PackedScene" path="res://assets/models/nature/Rock_7.fbx" id="3_h7dwl"]
+[ext_resource type="PackedScene" path="res://assets/models/nature/Rock_6.fbx" id="4_xrmt3"]
+[ext_resource type="PackedScene" path="res://assets/models/nature/Rock_Moss_6.fbx" id="5_kq3yf"]
+[ext_resource type="PackedScene" path="res://assets/models/nature/Rock_Moss_5.fbx" id="6_wi236"]
+[ext_resource type="PackedScene" path="res://assets/models/nature/Rock_2.fbx" id="7_hcxkr"]
+[ext_resource type="PackedScene" path="res://assets/models/nature/Rock_5.fbx" id="8_u5jjk"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_o7jjs"]
+size = Vector3(4.2, 3.6, 3)
+
+[node name="CaveMouth" type="Node3D" unique_id=883485619]
+
+[node name="@MeshInstance3D@92" type="MeshInstance3D" parent="." unique_id=1582924490]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, -0.4)
+material_override = ExtResource("1_o0mj8")
+mesh = SubResource("BoxMesh_o7jjs")
+
+[node name="Rock_4" type="Node3D" parent="." unique_id=722642809 instance=ExtResource("2_wtjac")]
+transform = Transform3D(1.3680801, 0, 3.7587707, 0, 7.5, 0, -3.3828936, 0, 1.2312721, -3.6, 1, 0.2)
+
+[node name="Rock_7" type="Node3D" parent="." unique_id=902112475 instance=ExtResource("3_h7dwl")]
+transform = Transform3D(-2.1000001, 0, 3.6373065, 0, 7.5, 0, -3.2908964, 0, -1.9000002, 3.7, 1.2, 0)
+
+[node name="Rock_6" type="Node3D" parent="." unique_id=1895314687 instance=ExtResource("4_xrmt3")]
+transform = Transform3D(0.27889884, -2.4382112e-08, 3.187823, -2.2729921e-07, -2.6, 0, 7.47146, -6.5317573e-07, -0.6536691, 0, 3.7, -0.2)
+
+[node name="@Node3D@93" type="Node3D" parent="." unique_id=1648027245 instance=ExtResource("4_xrmt3")]
+transform = Transform3D(11.817693, 0, 2.0837784, 0, 9, 0, -0.86824095, 0, 4.924039, 0.2, 0, -3.4)
+
+[node name="Rock_Moss_6" type="Node3D" parent="." unique_id=33797040 instance=ExtResource("5_kq3yf")]
+transform = Transform3D(-3.7587705, 0, -1.3680806, 0, 5, 0, 1.3680806, 0, -3.7587705, -6.4, 0, -1.2)
+
+[node name="Rock_Moss_5" type="Node3D" parent="." unique_id=939978576 instance=ExtResource("6_wi236")]
+transform = Transform3D(3.0310888, 0, 1.75, 0, 4, 0, -1.6, 0, 2.7712812, 6.3, 0, -1)
+
+[node name="Rock_2" type="Node3D" parent="." unique_id=168700366 instance=ExtResource("7_hcxkr")]
+transform = Transform3D(0.8660254, 0, 0.5, 0, 1, 0, -0.5, 0, 0.8660254, -2, 0, 2.2)
+
+[node name="Rock_5" type="Node3D" parent="." unique_id=145462004 instance=ExtResource("8_u5jjk")]
+transform = Transform3D(0.20837773, 0, 1.1817694, 0, 1.2, 0, -1.1817694, 0, 0.20837773, 2.4, 0, 2)

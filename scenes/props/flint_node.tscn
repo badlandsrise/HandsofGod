@@ -1,0 +1,47 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/models/nature/Rock_3.fbx" id="1_wfc6r"]
+[ext_resource type="PackedScene" path="res://assets/models/nature/Rock_5.fbx" id="2_03vaf"]
+[ext_resource type="PackedScene" path="res://assets/models/props/resource-stone.glb" id="3_6imc5"]
+
+[node name="FlintNode" type="Node3D" unique_id=742353274]
+
+[node name="Rock_3" type="Node3D" parent="." unique_id=2028730996 instance=ExtResource("1_wfc6r")]
+transform = Transform3D(1.5974774, 0, 0.58143425, 0, 1.7, 0, -0.58143425, 0, 1.5974774, 0, 0.1, 0)
+metadata/hog_pull = 0.1
+metadata/hog_tint = Color(0.49019608, 0.5176471, 0.5803922, 1)
+
+[node name="Rock_5" type="Node3D" parent="." unique_id=145462004 instance=ExtResource("2_03vaf")]
+transform = Transform3D(-0.15628336, 0, 0.8863269, 0, 0.9, 0, -0.8863269, 0, -0.15628336, 0.75, 0, 0.35)
+metadata/hog_pull = 0.1
+metadata/hog_tint = Color(0.49019608, 0.5176471, 0.5803922, 1)
+
+[node name="resource-stone2" type="Node3D" parent="." unique_id=1361174314 instance=ExtResource("3_6imc5")]
+transform = Transform3D(2.6, 0, 0, 0, 2.6, 0, 0, 0, 2.6, 0.90756965, 0, 0.2807442)
+metadata/hog_pull = 0.2
+metadata/hog_tint = Color(0.3529412, 0.37254903, 0.43137255, 1)
+
+[node name="@Node3D@10" type="Node3D" parent="." unique_id=690938428 instance=ExtResource("3_6imc5")]
+transform = Transform3D(1.5647191, 0, 2.0764523, 0, 2.6, 0, -2.0764523, 0, 1.5647191, 0.25500128, 0, 1.1213716)
+metadata/hog_pull = 0.2
+metadata/hog_tint = Color(0.3529412, 0.37254903, 0.43137255, 1)
+
+[node name="@Node3D@11" type="Node3D" parent="." unique_id=585397740 instance=ExtResource("3_6imc5")]
+transform = Transform3D(-0.7166571, 0, 2.4992802, 0, 2.6, 0, -2.4992802, 0, -0.7166571, -0.69691646, 0, 0.6456063)
+metadata/hog_pull = 0.2
+metadata/hog_tint = Color(0.3529412, 0.37254903, 0.43137255, 1)
+
+[node name="@Node3D@12" type="Node3D" parent="." unique_id=739318595 instance=ExtResource("3_6imc5")]
+transform = Transform3D(-2.427309, 0, 0.93175656, 0, 2.6, 0, -0.93175656, 0, -2.427309, -1.098637, 0, -0.33984825)
+metadata/hog_pull = 0.2
+metadata/hog_tint = Color(0.3529412, 0.37254903, 0.43137255, 1)
+
+[node name="@Node3D@13" type="Node3D" parent="." unique_id=1835423739 instance=ExtResource("3_6imc5")]
+transform = Transform3D(-2.204925, 0, -1.3777901, 0, 2.6, 0, 1.3777901, 0, -2.204925, -0.21065323, 0, -0.9263505)
+metadata/hog_pull = 0.2
+metadata/hog_tint = Color(0.3529412, 0.37254903, 0.43137255, 1)
+
+[node name="@Node3D@14" type="Node3D" parent="." unique_id=459123891 instance=ExtResource("3_6imc5")]
+transform = Transform3D(-0.22660485, 0, -2.5901062, 0, 2.6, 0, 2.5901062, 0, -0.22660485, 0.8436357, 0, -0.7815234)
+metadata/hog_pull = 0.2
+metadata/hog_tint = Color(0.3529412, 0.37254903, 0.43137255, 1)

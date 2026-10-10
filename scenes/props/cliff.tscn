@@ -1,0 +1,28 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/models/nature/Rock_6.fbx" id="1_a1rlj"]
+[ext_resource type="PackedScene" path="res://assets/models/nature/Rock_4.fbx" id="2_xr5b6"]
+[ext_resource type="PackedScene" path="res://assets/models/nature/Rock_7.fbx" id="3_81wse"]
+[ext_resource type="PackedScene" path="res://assets/models/nature/Rock_Moss_6.fbx" id="4_d45c1"]
+[ext_resource type="PackedScene" path="res://assets/models/nature/Rock_3.fbx" id="5_hx70a"]
+[ext_resource type="PackedScene" path="res://assets/models/nature/Rock_Moss_5.fbx" id="6_ghsex"]
+
+[node name="Cliff" type="Node3D" unique_id=585129908]
+
+[node name="Rock_6" type="Node3D" parent="." unique_id=1895314687 instance=ExtResource("1_a1rlj")]
+transform = Transform3D(4.698463, 0, 1.7101008, 0, 6.5, 0, -1.5390906, 0, 4.2286167, -5.5, 0, -0.5)
+
+[node name="Rock_4" type="Node3D" parent="." unique_id=722642809 instance=ExtResource("2_xr5b6")]
+transform = Transform3D(1.1646852, 0, 4.3466663, 0, 8, 0, -3.8637035, 0, 1.0352758, -2.2, 1, -1)
+
+[node name="Rock_7" type="Node3D" parent="." unique_id=902112475 instance=ExtResource("3_81wse")]
+transform = Transform3D(-3.2139382, 0, 3.8302221, 0, 8.5, 0, -3.4472, 0, -2.8925443, 1.5, 1.2, -0.8)
+
+[node name="Rock_Moss_6" type="Node3D" parent="." unique_id=33797040 instance=ExtResource("4_d45c1")]
+transform = Transform3D(-4.698463, 0, -1.7101008, 0, 6, 0, 1.5390906, 0, -4.2286167, 5.2, 0, -0.3)
+
+[node name="Rock_3" type="Node3D" parent="." unique_id=2028730996 instance=ExtResource("5_hx70a")]
+transform = Transform3D(1.9151111, 0, 1.6069691, 0, 2.2, 0, -1.6069691, 0, 1.9151111, -3.8, 0, 1.6)
+
+[node name="Rock_Moss_5" type="Node3D" parent="." unique_id=939978576 instance=ExtResource("6_ghsex")]
+transform = Transform3D(2.3635387, 0, 0.41675568, 0, 2, 0, -0.38202605, 0, 2.166577, 3.6, 0, 1.8)

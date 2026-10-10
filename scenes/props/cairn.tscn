@@ -1,0 +1,24 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/models/nature/Rock_6.fbx" id="1_idwa6"]
+[ext_resource type="PackedScene" path="res://assets/models/nature/Rock_5.fbx" id="2_plu18"]
+[ext_resource type="PackedScene" path="res://assets/models/nature/Rock_2.fbx" id="3_1hbrq"]
+[ext_resource type="PackedScene" path="res://assets/models/nature/Rock_3.fbx" id="4_22sen"]
+[ext_resource type="PackedScene" path="res://assets/models/nature/Rock_1.fbx" id="5_ffyn5"]
+
+[node name="Cairn" type="Node3D" unique_id=941637818]
+
+[node name="Rock_6" type="Node3D" parent="." unique_id=1895314687 instance=ExtResource("1_idwa6")]
+transform = Transform3D(1.28025, 0, 0.22574264, 0, 0.7, 0, -0.20837784, 0, 1.1817694, 0, 0, 0)
+
+[node name="Rock_5" type="Node3D" parent="." unique_id=145462004 instance=ExtResource("2_plu18")]
+transform = Transform3D(0.1649657, 0, 0.9355674, 0, 0.6, 0, -0.8370866, 0, 0.14760089, 0.02, 0.45, 0)
+
+[node name="Rock_2" type="Node3D" parent="." unique_id=168700366 instance=ExtResource("3_1hbrq")]
+transform = Transform3D(-0.6928204, 0, 0.39999986, 0, 0.6, 0, -0.39999986, 0, -0.6928204, -0.02, 0.83, 0.02)
+
+[node name="Rock_3" type="Node3D" parent="." unique_id=2028730996 instance=ExtResource("4_22sen")]
+transform = Transform3D(-0.35353315, 0, -0.42132452, 0, 0.5, 0, 0.42132452, 0, -0.35353315, 0.03, 1.2, 0)
+
+[node name="Rock_1" type="Node3D" parent="." unique_id=2107177367 instance=ExtResource("5_ffyn5")]
+transform = Transform3D(0.22500016, 0, -0.38971132, 0, 0.4, 0, 0.38971132, 0, 0.22500016, 0, 1.42, 0)
