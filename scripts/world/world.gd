@@ -17,6 +17,7 @@ const HUD_CANDIDATES := ["res://scenes/ui/hud.tscn"]
 const TITLE_SCENE := "res://scenes/world/title.tscn"
 const BOT_SCRIPT := "res://tests/bot/bot.gd"
 const SHOTS_SCRIPT := "res://tests/shots/shot_director.gd"
+const WORLD_SHOTS_SCRIPT := "res://tests/shots/fb_world_shots.gd"
 const LOG_COUNT := 3
 const LOG_WEIGHT := 4.0
 const BRANCH_WEIGHT := 2.0
@@ -32,6 +33,9 @@ var threats: Threats
 var wolves: Wolves
 var era2: Era2World
 var era3: Era3World
+var drops: Drops                  # where the hand may set people down (reachability, the far bank)
+var paths: Paths                  # desire paths worn by footsteps
+var pass_road: PassRoad           # the road through the southern ridge (Strength II)
 var fire: FirePit
 var storm: StormOpening
 var dynamic: Node3D
@@ -81,6 +85,12 @@ func _ready() -> void:
 		var sd: Node = load(SHOTS_SCRIPT).new()
 		sd.name = "ShotDirector"
 		add_child(sd)
+	elif Game.flags.has("world-shots") and ResourceLoader.exists(WORLD_SHOTS_SCRIPT):
+		new_game()
+		Clock.running = true
+		var ws: Node = load(WORLD_SHOTS_SCRIPT).new()
+		ws.name = "WorldShots"
+		add_child(ws)
 	elif Game.flags.has("goodbye"):
 		_dev_goodbye()
 	elif Game.flags.has("no-title"):
@@ -101,10 +111,13 @@ func build() -> void:
 		Events.era_changed.connect(AssetCatalog.set_era)
 	valley = Valley.new()
 	valley.generate()
+	valley.apply_pads(build_pads())
+	drops = Drops.new(self)
 	look = Look.new()
 	look.name = "Look"
 	add_child(look)
 	regions = Regions.new()
+	regions.access = drops.accessible
 	add_child(regions)
 	regions.setup(valley)
 	terrain = Terrain.new()
@@ -116,8 +129,13 @@ func build() -> void:
 	_build_props()
 	_bake_ground_mask()
 	nav = Nav.new()
+	nav.access = drops.accessible
 	add_child(nav)
 	nav.setup(valley, foliage.tree_points)
+	pass_road.apply_obstacles()
+	paths = Paths.new()
+	add_child(paths)
+	paths.setup(self)
 	for r in foliage.rock_points:
 		var rp: Vector3 = r[0]
 		nav.set_box_obstacle("rock_%d_%d" % [roundi(rp.x), roundi(rp.z)], rp, Vector2.ONE * float(r[1]) * 1.4, 0.0)
@@ -151,7 +169,14 @@ func build() -> void:
 	print("world: built in %d ms" % build_ms)
 
 func _keep_out_zones() -> Array:
-	var z: Array = [[Valley.FIRE, 8.0], [Valley.CAVE_MOUTH, 6.0], [Valley.EAST_GAP, 13.0], [Valley.WEST_GAP, 13.0], [Valley.EAST_GAP - Vector2(9, 0), 9.0], [Valley.WEST_GAP + Vector2(9, 0), 9.0]]
+	var z: Array = [[Valley.PASS_SCREE, 10.0], [Valley.FIRE, 8.0], [Valley.CAVE_MOUTH, 6.0], [Valley.EAST_GAP, 13.0], [Valley.WEST_GAP, 13.0], [Valley.EAST_GAP - Vector2(9, 0), 9.0], [Valley.WEST_GAP + Vector2(9, 0), 9.0]]
+	# the Pass Road's bed and the foot of its cutting walls stay clear of trees
+	for i in Valley.PASS.size() - 1:
+		var a: Vector2 = Valley.PASS[i]
+		var b: Vector2 = Valley.PASS[i + 1]
+		var n := maxi(int(a.distance_to(b) / 3.0), 1)
+		for k in n + 1:
+			z.append([a.lerp(b, float(k) / n), Valley.PASS_FLAT + 2.2])
 	for row in LayoutEra1.JOBS:
 		z.append([Vector2(row[1], row[2]), 3.0])
 	for id in LayoutEra1.PLOT_SPOTS:
@@ -160,6 +185,44 @@ func _keep_out_zones() -> Array:
 	z.append_array(LayoutEra2.keep_out())
 	z.append_array(LayoutEra3.keep_out())
 	return z
+
+## Build pads (Valley.apply_pads): the ground under every authored build spot
+## is levelled so fields and buildings sit flush on it. Spots on the water's
+## edge (bridges, the harbour, the watermill) and on real hillsides keep their
+## ground; plots only go on ground flat enough to level gently.
+const PAD_SKIP := [&"bridge", &"footbridge", &"harbour", &"watermill", &"lighthouse", &"aqueduct", &"raft"]
+const PAD_MAX_RISE := 3.0
+
+func build_pads() -> Array:
+	var out: Array = []
+	var ids := {}
+	for table in [LayoutEra1.PLOT_SPOTS, LayoutEra2.PLOT_SPOTS, LayoutEra3.PLOT_SPOTS]:
+		for id in table:
+			ids[id] = true
+	for id in ids:
+		if PAD_SKIP.has(id):
+			continue
+		var b: BuildingDef = Defs.building(id)
+		var fp := b.footprint if b != null else Vector2(4, 4)
+		if AssetCatalog.has(id):
+			var art := AssetCatalog.footprint(id)
+			fp = Vector2(maxf(fp.x, art.x), maxf(fp.y, art.y))
+		var yaw: float = LayoutEra3.YAW.get(id, b.yaw if b != null else 0.0)
+		for spot in plot_spots(id):
+			out.append_array(_pad_for(spot, fp, yaw))
+	for spot in LayoutEra2.PLAINS_FIELDS:
+		out.append_array(_pad_for(spot, Vector2(8.0, 6.0), 0.0))
+	return out
+
+func _pad_for(spot: Vector2, fp: Vector2, yaw: float) -> Array:
+	var reach := fp.length() * 0.5 + 1.5
+	for k in 8:
+		var a := TAU * k / 8.0
+		if valley.is_water(spot.x + cos(a) * reach, spot.y + sin(a) * reach):
+			return []
+	if valley.flatness(spot, fp) > PAD_MAX_RISE:
+		return []
+	return [[spot, fp * 0.5, yaw]]
 
 func _v3(p: Vector2, lift: float = 0.0) -> Vector3:
 	return Vector3(p.x, valley.ground_y(p.x, p.y) + lift, p.y)
@@ -244,6 +307,13 @@ func _build_props() -> void:
 	branch.weight = BRANCH_WEIGHT
 	branch.build_log_visual(5.0, 0.22, true)
 	props.add_child(branch)
+	# ---- the Pass Road through the southern ridge, choked with scree until Strength II
+	pass_road = PassRoad.new()
+	props.add_child(pass_road)
+	pass_road.build(self)
+	# ---- the shoulders of the two gaps: rock and deadfall either end of the
+	# trunk and the logs, so the barriers close the whole way through
+	_build_gap_shoulders(props)
 	# ---- landmark: a giant tree in the Western Meadow, seen from anywhere
 	var giant := Node3D.new()
 	giant.name = "GiantTree"
@@ -254,6 +324,34 @@ func _build_props() -> void:
 	gv.scale = Vector3.ONE * 4.2
 	giant.add_child(gv)
 	_reset_props()
+
+const GAP_SHOULDERS := [[Vector2(-47.5, -6.8), 0.4], [Vector2(-46.5, 10.6), 2.1], [Vector2(47.5, -7.2), 1.1], [Vector2(46.0, 11.2), 2.8]]
+
+func _build_gap_shoulders(props: Node3D) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 818
+	var root := Node3D.new()
+	root.name = "GapShoulders"
+	props.add_child(root)
+	for row in GAP_SHOULDERS:
+		var c: Vector2 = row[0]
+		var yaw: float = row[1]
+		var big := AssetCatalog.instance(&"rock_large", int(c.x))
+		big.position = _v3(c, -0.35)
+		big.rotation = Vector3(0.1, yaw, -0.15)
+		big.scale = Vector3.ONE * 1.25
+		root.add_child(big)
+		var dead := AssetCatalog.instance(&"tree_dead", int(c.y))
+		dead.rotation = Vector3(PI * 0.5 * 0.92, yaw + 1.2, 0.0)
+		dead.position = _v3(c + Vector2(1.6, 0.0).rotated(yaw), 0.4)
+		dead.scale = Vector3.ONE * 0.75
+		root.add_child(dead)
+		for k in 3:
+			var b := AssetCatalog.instance(&"bush", k + int(c.y))
+			b.position = _v3(c + Vector2(rng.randf_range(-2.2, 2.2), rng.randf_range(-1.6, 1.6)), 0.0)
+			b.scale = Vector3.ONE * rng.randf_range(0.9, 1.3)
+			root.add_child(b)
+		_props_blocking.append([Vector3(c.x, 0, c.y), Vector2(4.4, 3.4), yaw])
 
 ## Darkens the ground at the feet of trees, rocks and props, lays forest floor under
 ## the canopy and moss along the cliff foot (Terrain.bake_ground_mask).
@@ -275,6 +373,13 @@ func _bake_ground_mask() -> void:
 		if Terrain.DETAIL.has_point(Vector2(t.x, t.z)):
 			trees.append(t)
 	terrain.bake_ground_mask(trees, blobs)
+
+## A new valley's trails, as faint desire-path wear: the fire to the cave,
+## the stream, the gaps and the bushes. Use keeps them; neglect fades them.
+func _seed_trails() -> void:
+	for line in terrain.trail_lines():
+		paths.stamp_line(line, Paths.TRACK + 4.0, 0.9)
+	paths.flush()
 
 ## Puts the fixed props back to their new-game state.
 func _reset_props() -> void:
@@ -553,9 +658,18 @@ func spawn_plot(building_id: StringName, at: Vector3) -> Site:
 		if building_id == &"bridge" and era2 != null:
 			y = era2.bank_height(Vector2(at.x, at.z))    # rests on the banks, over the water
 		s.position = Vector3(at.x, y, at.z)
-		s.rotation.y = LayoutEra3.YAW.get(building_id, b.yaw)
+		s.rotation.y = LayoutEra3.YAW.get(building_id, b.yaw) + LayoutEra2.home_yaw(building_id, Vector2(at.x, at.z))
 	dynamic.add_child(s)
+	_block_wear(s)
 	return s as Site
+
+## Nothing wears a path under a building, its plot or a field.
+func _block_wear(s) -> void:
+	if paths == null or not is_instance_valid(s) or not (s is Node3D) or not ("building" in s) or s.building == null:
+		return
+	if s.building.id in [&"bridge", &"footbridge"]:
+		return
+	paths.block_rect(s.global_position if s.is_inside_tree() else s.position, s.building.footprint + Vector2(0.6, 0.6), s.rotation.y)
 
 func _placeholder_trunk_job() -> JobDef:
 	# Not in the data yet: a group job for three, BuildingDef-free.
@@ -614,6 +728,97 @@ func scare_threats(at: Vector3, radius: float) -> int:
 func walkable_point(p: Vector3) -> Vector3:
 	return nav.closest(p) if nav else p
 
+# ================================================================ where people may go
+
+## [hand] Why people can't be set down at `p`, or "" when they can: it must
+## be open land they could walk back to the village from (Drops.check).
+func drop_reason(p: Vector3) -> String:
+	return drops.check(p) if drops else ""
+
+## [hand] The same for placing people on a site (looser: the site's own spot
+## may stand off the navmesh, in a stream or on a deck).
+func site_drop_reason(s: Node3D) -> String:
+	if drops == null or not is_instance_valid(s):
+		return ""
+	return drops.check(s.global_position, 6.0)
+
+## The nearest spot to `p` where people may be set down (the green when none is).
+func safe_drop_point(p: Vector3) -> Vector3:
+	if drop_reason(p) == "":
+		return p
+	var q := walkable_point(p)
+	if q.is_finite() and drop_reason(q) == "":
+		return q
+	return walkable_point(fire_position() + Vector3(3.0, 0, 4.0))
+
+## [ai] A crossing of the great river now stands (the people's footbridge:
+## id &"east_footbridge"). Its deck becomes walkable, and the far bank's
+## regions open to the camera and the hand once they are open.
+func add_crossing(id: StringName, at: Vector2 = Vector2.INF) -> void:
+	if not at.is_finite():
+		at = _crossing_spot(id)
+	if era2 != null and not era2.has_crossing(id):
+		era2.add_crossing(id, at)
+	drops.add_crossing(id)
+	nav.rebake()
+
+func has_crossing() -> bool:
+	return drops != null and drops.has_crossing()
+
+func _crossing_spot(id: StringName) -> Vector2:
+	if id == &"east_footbridge":
+		for s in Village.sites:
+			if is_instance_valid(s) and s.building != null and s.building.id == &"footbridge":
+				return Vector2(s.global_position.x, s.global_position.z)
+	return LayoutEra2.FOOTBRIDGE
+
+## Camera rig hook: keeps the focus over land the people can reach.
+func camera_clamp(from: Vector3, to: Vector3) -> Vector3:
+	if regions == null:
+		return to
+	if not from.is_finite() or Vector2(from.x - to.x, from.z - to.z).length() > 40.0:
+		return to if regions.camera_ok(to.x, to.z) else regions.nearest_ok(to)
+	return regions.clamp_camera(from, to)
+
+## Wolves and bears: a step from `from` toward `to`, refused up a cliff, into
+## water or into land that is still locked (they turn along the slope instead).
+const ANIMAL_MAX_GRADE := 0.75      # rise over run (about 37 degrees), as the navmesh
+func animal_step(from: Vector3, to: Vector3) -> Vector3:
+	var d := Vector3(to.x - from.x, 0, to.z - from.z)
+	var len := d.length()
+	if len < 0.0001 or valley == null:
+		return to
+	var here_ok := drops == null or drops.accessible(region_at(from))
+	for a in [0.0, 0.6, -0.6, 1.2, -1.2]:
+		var dir := d.rotated(Vector3.UP, a)
+		var q := from + dir
+		var rise := valley.ground_y(q.x, q.z) - valley.ground_y(from.x, from.z)
+		if rise / len > ANIMAL_MAX_GRADE:
+			continue
+		if valley.is_water(q.x, q.z) and not valley.is_water(from.x, from.z):
+			continue
+		if here_ok and drops != null and not drops.accessible(region_at(q)):
+			continue
+		return Vector3(q.x, to.y, q.z)
+	return from
+
+# ================================================================ the Pass Road
+
+## [ai] Strength II has cleared the way: the scree across the Pass Road rolls
+## aside and the road from the green to the river flats opens.
+func open_pass(instant: bool = false) -> bool:
+	if pass_road == null or not pass_road.open(instant):
+		return false
+	Village.stats["pass_open"] = true
+	if not instant:
+		nav.rebake()
+		Events.alert.emit("The Pass Road is open: the river flats are a short walk now", _v3(Valley.PASS_SCREE))
+		Flags.remember("The hand cleared the scree from the pass, and the road south to the river flats opened")
+	return true
+
+func pass_open() -> bool:
+	return pass_road != null and pass_road.opened
+
 # ================================================================ regions
 
 ## Opens a region: removes its blocker, widens the camera bounds, lightens it
@@ -629,6 +834,10 @@ func _on_region_opened(id: StringName) -> void:
 	var c := Valley.canon(id)
 	if c != id and not Village.regions.has(c):
 		Village.regions[c] = true
+	# Until the people's footbridge is in the data (Strong Arms), the East Bank
+	# opened by Reach gets its crossing straight away, so it stays reachable.
+	if c == &"east_bank" and Defs.building(&"footbridge") == null and not has_crossing():
+		add_crossing(&"east_footbridge")
 	_open_region_visual(c, false)
 
 func _open_region_visual(id: StringName, instant: bool) -> void:
@@ -708,6 +917,45 @@ func edge_point(region: StringName) -> Vector3:
 		return _v3(Vector2(180.0, 15.0))
 	return _v3(Vector2(Valley.WEST_GAP.x + 7.0, Valley.WEST_GAP.y + 4.0))
 
+# ================================================================ the era transition
+
+var home_rebuild: HomeRebuild = null
+
+## [ai] Where the camera hangs during an era transition: over the homes.
+func transition_focus(_era: int) -> Vector3:
+	var c := Vector3.ZERO
+	var n := 0
+	for s in Village.sites:
+		if is_instance_valid(s) and s.building != null and s.building.id in [&"hut", &"cottage"] and s.state == Site.State.FINISHED:
+			c += s.global_position
+			n += 1
+	if n == 0:
+		return fire_position() + Vector3(-8, 0, 2)
+	c /= n
+	return Vector3(c.x, ground_y(c.x, c.z), c.z)
+
+## [ai] Era 1 -> 2: the huts come down and rise again as cottages, one after
+## another, over `duration` seconds (EraTransition calls this as the season turns).
+func rebuild_homes_on_screen(duration: float) -> void:
+	finish_home_rebuild()
+	var huts: Array = []
+	for s in Village.sites:
+		if is_instance_valid(s) and s.building != null and s.building.id == &"hut" and s.state == Site.State.FINISHED:
+			huts.append(s)
+	if huts.is_empty():
+		return
+	# nearest the camera's middle first, so the eye follows the rebuild outward
+	var mid := transition_focus(1)
+	huts.sort_custom(func(a, b): return a.global_position.distance_to(mid) < b.global_position.distance_to(mid))
+	home_rebuild = HomeRebuild.new()
+	add_child(home_rebuild)
+	home_rebuild.begin(huts, duration)
+
+func finish_home_rebuild() -> void:
+	if home_rebuild != null and is_instance_valid(home_rebuild):
+		home_rebuild.finish_now()
+	home_rebuild = null
+
 ## A bigger village wants a wider view: the camera may pull further back each era.
 func _on_era_changed(e: int) -> void:
 	if camera_rig != null and "max_dist" in camera_rig:
@@ -723,7 +971,7 @@ func _on_building_finished(site) -> void:
 	var size := Vector2(3, 3)
 	if "building" in site and site.building != null:
 		size = site.building.footprint
-		if site.building.id in [&"field", &"bridge", &"market"]:
+		if site.building.id in [&"field", &"bridge", &"footbridge", &"market"]:
 			return        # walked on (or over), not round
 	nav.set_box_obstacle("bld_%d" % site.get_instance_id(), site.global_position, size * 0.9, site.global_rotation.y)
 	nav.rebake()
@@ -858,9 +1106,14 @@ func new_game() -> void:
 	opened_at = {&"clearing": 0.0}
 	Onboarding.reset()
 	Village.stats["era_started_t"] = 0.0
+	drops.reset()
+	paths.clear()
+	pass_road.close()
+	pass_road.apply_obstacles()
 	_reset_props()
 	regions.sync_instant()
 	var huddled := LayoutEra1.spawn(self)
+	_seed_trails()
 	for s in Village.sites:
 		if _is_trunk_site(s):
 			trunk_site = s
@@ -877,6 +1130,9 @@ func save_state() -> Dictionary:
 	for l in logs:
 		lg.append(l.save_state())
 	return {
+		"drops": drops.save_state(),
+		"pass": pass_road.save_state(),
+		"paths": paths.save_state(),
 		"logs": lg,
 		"branch": branch.save_state(),
 		"trunk_cleared": trunk.cleared,
@@ -894,6 +1150,13 @@ func save_state() -> Dictionary:
 ## can find their job site by uid).
 func load_state(d: Dictionary, nodes: Array) -> void:
 	clear_dynamic()
+	paths.clear()
+	drops.load_state(d.get("drops", {}))
+	if not d.has("drops"):
+		# an older save: the far bank was reached by Reach, before there were crossings
+		for id in Drops.FAR_SIDE:
+			if Village.regions.has(id):
+				drops.allow_region(id)
 	_reset_props()
 	var lg: Array = d.get("logs", [])
 	for i in mini(lg.size(), logs.size()):
@@ -916,7 +1179,20 @@ func load_state(d: Dictionary, nodes: Array) -> void:
 	Clock.apply_era(Defs.era(Village.era))
 	Save.restore_nodes(dynamic, nodes)
 	era2.load_state(d.get("era2", {}))
+	for id in drops.crossings.keys():
+		era2.add_crossing(id, _crossing_spot(id))
 	era3.load_state(d.get("era3", {}))
+	pass_road.close()
+	if bool((d.get("pass", {}) as Dictionary).get("open", false)) or (not d.has("pass") and Village.regions.has(&"hill_quarry")):
+		pass_road.open(true)
+	pass_road.apply_obstacles()
+	for s in Village.sites:
+		_block_wear(s)
+	if d.has("paths"):
+		paths.load_state(d["paths"])
+	else:
+		_seed_trails()
+	regions.sync_instant()
 	threats.load_state(d.get("threats", {}))
 	apply_safety_net()
 	_ensure_active_dream_plots()

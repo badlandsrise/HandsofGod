@@ -56,7 +56,8 @@ func _process(delta: float) -> void:
 		S.FLEE:
 			flee_t -= delta
 			var fwd := Vector3(sin(rotation.y), 0, cos(rotation.y))
-			global_position += fwd * SPEED * 1.6 * delta
+			var to := global_position + fwd * SPEED * 1.6 * delta
+			global_position = w.animal_step(global_position, to) if w.has_method(&"animal_step") else to
 			moved = true
 			if flee_t <= 0.0:
 				if manager != null and manager.has_method("on_wolf_gone"):
@@ -91,7 +92,7 @@ func _process(delta: float) -> void:
 				next = global_position + out.normalized() * SPEED * 0.5 * delta
 				target = null
 			if dist > BITE_RANGE * 0.8:
-				global_position = next
+				global_position = w.animal_step(global_position, next) if w.has_method(&"animal_step") else next
 				moved = true
 				rotation.y = lerp_angle(rotation.y, atan2(d.x, d.z), minf(8.0 * delta, 1.0))
 			if state == S.STALK and dist <= BITE_RANGE:

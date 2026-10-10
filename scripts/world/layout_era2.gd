@@ -24,10 +24,38 @@ const PLOT_SPOTS := {
 	&"market": [Vector2(-13.0, 19.0)],
 	&"watchtower": [Vector2(178.0, 172.0)],
 	&"barn": [Vector2(1.0, 89.0)],
-	&"cottage": [Vector2(-30.0, 17.0), Vector2(-1.0, 26.0), Vector2(-31.0, 7.0), Vector2(27.0, 27.0), Vector2(-24.0, 29.0), Vector2(26.0, -24.0), Vector2(24.0, 38.0), Vector2(-36.0, -12.0)],
+	# The village grows outward: the Clearing's home lots are the huts' (they
+	# rebuild as cottages where they stand), so new cottages line West End, a
+	# street out through the western gap into the meadow. Lots are 7 x 5.5 m
+	# with 4 m or more between them, nearest the gap first.
+	&"cottage": [Vector2(-64.0, 10.0), Vector2(-65.0, -12.0), Vector2(-75.0, 10.0), Vector2(-76.0, -8.0), Vector2(-86.0, 10.0),
+		Vector2(-87.0, -8.0), Vector2(-97.0, 10.0), Vector2(-98.0, -8.0), Vector2(-64.0, -24.0), Vector2(-75.0, 20.0),
+		Vector2(-75.0, -22.0), Vector2(-86.0, 20.0), Vector2(-86.0, -18.0), Vector2(-75.0, 30.0)],
 	&"temple": [Vector2(6.5, -21.0)],
 	&"bridge": [Vector2(150.0, 130.0)],
+	&"footbridge": [FOOTBRIDGE],
 }
+## The people's footbridge over the great river at the shallows (worker C's
+## `footbridge` plot, 14 x 3 m spanning north-south): World.add_crossing lays
+## its walkable deck here. East of x 140, where the far shore is the East Bank
+## (west of it the far shore is the Southern Plains, which open later), and
+## clear of the great bridge's span at x 150.
+const FOOTBRIDGE := Vector2(164.0, 128.0)
+## West End's street, from the western gap into the meadow (homes face it).
+const WEST_END_Z := 2.5
+## Homes face their street or the green, with a little hand-built irregularity.
+const HOME_TURN := 0.09
+
+## Extra yaw for a home on `at` (huts and cottages): those south of their
+## street turn to face it, and each sits a touch off square.
+static func home_yaw(id: StringName, at: Vector2) -> float:
+	if id != &"hut" and id != &"cottage":
+		return 0.0
+	var h := fposmod(sin(at.x * 12.9898 + at.y * 78.233) * 43758.5453, 1.0)
+	var jitter := (h - 0.5) * 2.0 * HOME_TURN
+	var street_z := WEST_END_Z if at.x < -46.0 else -6.0
+	return jitter + (PI if at.y > street_z else 0.0)
+
 ## Fields on the Southern Plains (dry until the hand brings Rain).
 const PLAINS_FIELDS: Array[Vector2] = [Vector2(-30.0, 166.0), Vector2(-18.0, 166.0), Vector2(-6.0, 166.0),
 	Vector2(-30.0, 177.0), Vector2(-18.0, 177.0), Vector2(-6.0, 177.0)]

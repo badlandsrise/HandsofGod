@@ -1358,7 +1358,12 @@ func _step(dt: float) -> void:
 	elif stage == Stage.CHILD: spd *= 0.9
 	if Clock.season == Clock.Season.WINTER: spd *= 0.85
 	if hurt_t > 0.0: spd *= 0.6
+	var wp = Game.world.paths if Game.world != null and &"paths" in Game.world else null
+	if wp != null:
+		spd *= wp.speed_mult(pos)       # roads worn by use are quicker (scripts/world/paths.gd)
 	var st := minf(spd * dt, dist)
+	if wp != null:
+		wp.step(pos, st, dir)           # and every step wears them in
 	pos += dir.normalized() * st
 	pos.y = Site.ground(pos.x, pos.z)
 	global_position = pos
@@ -1380,7 +1385,9 @@ func _path_dir(pos: Vector3) -> Vector3:
 	if it != _path_map_it or not _path_to.is_finite() or _path_to.distance_to(_target) > 0.3:
 		_path_to = _target
 		_path_map_it = it
-		_path = NavigationServer3D.map_get_path(_nav_map, pos, _target, true, nav.navigation_layers if nav != null else 1)
+		_path = Nav.find_path(_nav_map, pos, _target, nav.navigation_layers if nav != null else 1)
+		if Game.world != null and &"paths" in Game.world and Game.world.paths != null:
+			_path = Game.world.paths.refine(_path)    # keep to the worn roads
 		_path_i = 0
 	while _path_i < _path.size():
 		var c := _path[_path_i]

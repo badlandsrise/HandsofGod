@@ -148,6 +148,8 @@ func _process(delta: float) -> void:
 			nxt = global_position      # bears do not swim the great river
 		elif w.is_region_open(&"east_bank") and w.region_at(nxt) != &"east_bank" and w.region_at(nxt) != &"southern_plains":
 			nxt = global_position      # nor walk the bridge
+		elif w.has_method(&"animal_step"):
+			nxt = w.animal_step(global_position, nxt)    # nor climb cliffs
 		global_position = nxt
 		rotation.y = lerp_angle(rotation.y, atan2(dv.x, dv.z), minf(5.0 * dt, 1.0))
 		moved = nxt != global_position or step.length() > 0.0

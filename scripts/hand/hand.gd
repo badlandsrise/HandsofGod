@@ -236,6 +236,11 @@ func place_on_site(s: Site) -> int:
 	if n <= 0:
 		show_hint("No room here")
 		return 0
+	var why := site_drop_reason(s)
+	if why != "":
+		show_hint(why)
+		strain()
+		return 0
 	var spots := site_spots(s, n)
 	var placed: Array = held.slice(0, n)
 	held = held.slice(n)
@@ -261,6 +266,11 @@ func place_on_ground(at: Vector3) -> void:
 		place_object(at)
 		return
 	if held.is_empty():
+		return
+	var why := drop_reason(at)
+	if why != "":
+		show_hint(why)       # people only go where they could walk home from
+		strain()
 		return
 	var placed: Array = held.duplicate()
 	held.clear()
@@ -294,7 +304,41 @@ func release_all() -> void:
 	if held_object != null:
 		place_object(ground)
 	if not held.is_empty():
-		place_on_ground(ground)
+		var w := Game.world
+		place_on_ground(w.safe_drop_point(ground) if w != null and w.has_method(&"safe_drop_point") else ground)
+		if not held.is_empty():
+			_force_release()
+
+## Last resort: set everyone down at their own safe ground point.
+func _force_release() -> void:
+	var placed: Array = held.duplicate()
+	held.clear()
+	var spots := ground_spots(ground, placed.size())
+	for i in placed.size():
+		_release_person(placed[i], spots[i], null)
+	Events.hand_placed.emit(placed, null)
+
+## [world] Why the held people can't be set down at `p` ("" when they can):
+## only where they could walk back to the village from (World.drop_reason).
+func drop_reason(p: Vector3) -> String:
+	var w := Game.world
+	if w == null or not w.has_method(&"drop_reason") or not p.is_finite():
+		return ""
+	return w.drop_reason(p)
+
+func site_drop_reason(s: Node3D) -> String:
+	var w := Game.world
+	if w == null or not w.has_method(&"site_drop_reason"):
+		return ""
+	return w.site_drop_reason(s)
+
+## The reason the people in the hand can't go down where it aims ("" if they can).
+func aim_drop_reason() -> String:
+	if held.is_empty() or not mouse_on_ground:
+		return ""
+	if is_instance_valid(hover_site) and hover_site.can_accept(1):
+		return site_drop_reason(hover_site)
+	return drop_reason(ground)
 
 func _release_person(p: Person, at: Vector3, s: Site) -> void:
 	if not is_instance_valid(p):
@@ -825,6 +869,9 @@ func tooltip_text() -> String:
 		return "%s · set down" % _thing_name(held_object)
 	if not held.is_empty():
 		var who := ("1 person" if held.size() == 1 else "%d people" % held.size())
+		var why := aim_drop_reason()
+		if why != "":
+			return "%s · %s" % [who, why]
 		if is_instance_valid(hover_site):
 			var t := hover_site.hover_text()
 			if not hover_site.can_accept(1):

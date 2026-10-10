@@ -39,11 +39,13 @@ float hog_region_light(vec3 wpos) {
 	return smoothstep(0.0, 1.0, l);
 }
 
-// Locked regions read as dim, cool and a little desaturated.
+// Locked regions sink into a pale, cool haze (the mist sheets of
+// scripts/world/regions.gd hang over it): desaturated, low-contrast shapes.
 vec3 hog_dim(vec3 c, float lit) {
 	float g = dot(c, vec3(0.3, 0.55, 0.15));
-	vec3 locked = mix(vec3(g), c, 0.65) * vec3(0.6, 0.62, 0.72);
-	return mix(locked, c, lit);
+	vec3 locked = mix(vec3(g), c, 0.35);
+	locked = mix(locked, vec3(0.62, 0.66, 0.72), 0.55);
+	return mix(locked, c, smoothstep(0.0, 1.0, lit));
 }
 
 // Snow that settles on upward faces. `up` is the world normal's y.

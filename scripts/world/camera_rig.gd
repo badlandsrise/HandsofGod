@@ -91,7 +91,7 @@ func step(dt: float) -> void:
 		var pan := Vector2(
 			Input.get_action_strength(&"cam_right") - Input.get_action_strength(&"cam_left"),
 			Input.get_action_strength(&"cam_down") - Input.get_action_strength(&"cam_up"))
-		if edge_pan and get_window().has_focus():
+		if edge_pan and get_window().has_focus() and not _paused():
 			var mp := get_viewport().get_mouse_position()
 			var vs := get_viewport().get_visible_rect().size
 			if mp.x <= edge_px: pan.x -= 1.0
@@ -100,8 +100,7 @@ func step(dt: float) -> void:
 			elif mp.y >= vs.y - edge_px: pan.y += 1.0
 		if pan.length() > 0.0 and not _text_focus():
 			pan = pan.limit_length(1.0) * dist * pan_speed * dt
-			target_focus += _right() * pan.x + _forward() * -pan.y
-			target_focus = _clamp_focus(target_focus)
+			target_focus = _clamp_focus(target_focus + _right() * pan.x + _forward() * -pan.y, target_focus)
 		var rot := Input.get_action_strength(&"cam_rot_left") - Input.get_action_strength(&"cam_rot_right")
 		if invert_rotate:
 			rot = -rot
@@ -147,8 +146,7 @@ func _unhandled_input(e: InputEvent) -> void:
 	elif e is InputEventMouseMotion and _drag:
 		var mm := e as InputEventMouseMotion
 		var k := dist * 0.0021
-		target_focus -= (_right() * mm.relative.x + _forward() * -mm.relative.y) * k
-		target_focus = _clamp_focus(target_focus)
+		target_focus = _clamp_focus(target_focus - (_right() * mm.relative.x + _forward() * -mm.relative.y) * k, target_focus)
 		focus = focus.lerp(target_focus, 0.6)
 
 func _right() -> Vector3:
@@ -157,9 +155,20 @@ func _right() -> Vector3:
 func _forward() -> Vector3:
 	return Vector3(-sin(yaw), 0, -cos(yaw))
 
-func _clamp_focus(p: Vector3) -> Vector3:
+## Keeps the focus inside the open regions' box and, when the world knows
+## which land is reachable (World.camera_clamp), off locked land in between:
+## a pan into a locked region slides along its edge instead.
+func _clamp_focus(p: Vector3, from: Vector3 = Vector3.INF) -> Vector3:
 	var b := bounds()
-	return Vector3(clampf(p.x, b.position.x, b.end.x), p.y, clampf(p.z, b.position.z, b.end.z))
+	var q := Vector3(clampf(p.x, b.position.x, b.end.x), p.y, clampf(p.z, b.position.z, b.end.z))
+	var w := Game.world
+	if w != null and w.has_method(&"camera_clamp"):
+		q = w.camera_clamp(from if from.is_finite() else focus, q)
+	return q
+
+## Edge scrolling stops while the game is paused or a menu holds the clock.
+func _paused() -> bool:
+	return Clock.paused() or not Clock.running
 
 func _text_focus() -> bool:
 	var f := get_viewport().gui_get_focus_owner()

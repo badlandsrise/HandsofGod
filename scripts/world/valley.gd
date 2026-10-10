@@ -140,13 +140,102 @@ func base_height(x: float, z: float) -> float:
 		h = maxf(h, lerpf(-4.0, isl.z + n1 * 1.5, 1.0 - ss(10.0, 45.0, di)))
 	return h
 
+## The Pass Road (Era 2): a cutting through the Clearing's southern ridge,
+## from the village green down to the river flats (the farm district). Its
+## centre line, the road's own height at each point, and its half widths.
+const PASS: Array[Vector2] = [Vector2(-4.0, 31.0), Vector2(-5.5, 43.0), Vector2(-7.0, 52.0), Vector2(-9.0, 62.0), Vector2(-11.0, 74.0)]
+const PASS_ROAD_Y: Array[float] = [4.1, 5.6, 8.2, 6.4, 5.0]
+const PASS_FLAT := 3.6           # half width of the level road bed
+const PASS_CUT := 8.5            # half width where the cutting walls meet the hillside
+## Where the scree lies across the pass until Strength II clears it.
+const PASS_SCREE := Vector2(-7.0, 51.0)
+## The stream's gorge through the same ridge: too steep and fast to wade.
+const GORGE := Rect2(8.0, 40.0, 18.0, 22.0)
+
+## Distance from (x, z) to the pass centre line, and the road height there.
+static func pass_info(x: float, z: float) -> Vector2:
+	var p := Vector2(x, z)
+	var best := INF
+	var y := 0.0
+	for i in PASS.size() - 1:
+		var a := PASS[i]
+		var b := PASS[i + 1]
+		var ab := b - a
+		var t := clampf((p - a).dot(ab) / ab.length_squared(), 0.0, 1.0)
+		var d := p.distance_to(a + ab * t)
+		if d < best:
+			best = d
+			var s := t * t * (3.0 - 2.0 * t)
+			y = lerpf(PASS_ROAD_Y[i], PASS_ROAD_Y[i + 1], lerpf(t, s, 0.5))
+	return Vector2(best, y)
+
+## The cutting: the hillside is lowered to the road bed near the centre line,
+## with steep walls out to PASS_CUT (never raised).
+static func pass_carve(x: float, z: float, h: float) -> float:
+	if x < -26.0 or x > 12.0 or z < 24.0 or z > 82.0:
+		return h
+	var info := pass_info(x, z)
+	if info.x > PASS_CUT + 6.0:
+		return h
+	var wall := 1.0 - ss(PASS_FLAT, PASS_CUT, info.x)
+	return minf(h, lerpf(h, info.y, wall))
+
 func height_at(x: float, z: float) -> float:
-	var h := base_height(x, z)
+	var h := pass_carve(x, z, base_height(x, z))
 	var zr := river_z(stream_x(z))
 	if z > STREAM_HEAD_Z - 1.0 and z < zr:
 		var ds := absf(x - stream_x(z))
 		h -= 1.2 * (1.0 - ss(1.0, 3.2, ds)) * ss(STREAM_HEAD_Z - 1.0, STREAM_HEAD_Z + 1.5, z)
 	return h
+
+## Build pads: levels the ground under each authored build spot so a field or
+## a cottage sits flush instead of floating over a slope. Each pad is
+## [centre Vector2, half size Vector2, yaw]; the ground inside the footprint
+## (plus 0.8 m) is set to the centre's height, blending back to the natural
+## slope over PAD_BLEND metres. Run once, after generate().
+const PAD_BLEND := 4.0
+var pads: Array = []
+
+func apply_pads(list: Array) -> void:
+	pads = list
+	if heights.size() != N * N:
+		return
+	for pad in list:
+		var c: Vector2 = pad[0]
+		var half: Vector2 = pad[1] + Vector2(0.8, 0.8)
+		var yaw: float = pad[2]
+		var y0 := ground_y(c.x, c.y)
+		var reach := half.length() + PAD_BLEND
+		var i0 := clampi(floori((c.x - reach + HALF) / CELL), 0, N - 1)
+		var i1 := clampi(ceili((c.x + reach + HALF) / CELL), 0, N - 1)
+		var j0 := clampi(floori((c.y - reach + HALF) / CELL), 0, N - 1)
+		var j1 := clampi(ceili((c.y + reach + HALF) / CELL), 0, N - 1)
+		var cs := cos(-yaw)
+		var sn := sin(-yaw)
+		for j in range(j0, j1 + 1):
+			for i in range(i0, i1 + 1):
+				var dx := -HALF + i * CELL - c.x
+				var dz := -HALF + j * CELL - c.y
+				var lx := absf(dx * cs - dz * sn) - half.x
+				var lz := absf(dx * sn + dz * cs) - half.y
+				var out := Vector2(maxf(lx, 0.0), maxf(lz, 0.0)).length()
+				var w := 1.0 - ss(0.0, PAD_BLEND, out)
+				if w <= 0.0:
+					continue
+				var k := j * N + i
+				heights[k] = lerpf(heights[k], y0, w)
+
+## Is the ground at (x, z) level enough to build a `size` footprint on?
+## (Height range over the footprint, in metres.)
+func flatness(c: Vector2, size: Vector2) -> float:
+	var lo := INF
+	var hi := -INF
+	for fx in [-0.5, -0.25, 0.0, 0.25, 0.5]:
+		for fz in [-0.5, -0.25, 0.0, 0.25, 0.5]:
+			var y := ground_y(c.x + size.x * fx, c.y + size.y * fz)
+			lo = minf(lo, y)
+			hi = maxf(hi, y)
+	return hi - lo
 
 ## Water surface height of the stream at depth z.
 func stream_level(z: float) -> float:

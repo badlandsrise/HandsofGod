@@ -54,6 +54,7 @@ static func register_globals() -> void:
 	add.call(&"hog_wet", RenderingServer.GLOBAL_VAR_TYPE_FLOAT, 0.0)
 	add.call(&"hog_wind", RenderingServer.GLOBAL_VAR_TYPE_FLOAT, 0.6)
 	add.call(&"hog_map_rect", RenderingServer.GLOBAL_VAR_TYPE_VEC4, Vector4(-Valley.HALF, -Valley.HALF, Valley.HALF * 2.0, Valley.HALF * 2.0))
+	Paths.register_globals()
 	if not ProjectSettings.has_setting("shader_globals/hog_region_mask"):
 		var img := Image.create(4, 4, false, Image.FORMAT_L8)
 		img.fill(Color.WHITE)

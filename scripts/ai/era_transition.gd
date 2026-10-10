@@ -78,8 +78,10 @@ func begin(era: int) -> void:
 	if w != null and is_instance_valid(w):
 		var rig = w.get("camera_rig")
 		if rig != null and is_instance_valid(rig) and rig.has_method("focus_on"):
-			var c: Vector3 = w.fire_position() if w.has_method("fire_position") else Vector3.ZERO
-			rig.focus_on(c + Vector3(-8, 0, 2), PULL_DIST)
+			var c: Vector3 = w.fire_position() + Vector3(-8, 0, 2) if w.has_method("fire_position") else Vector3.ZERO
+			if w.has_method("transition_focus"):
+				c = w.transition_focus(era)      # the middle of the village's homes
+			rig.focus_on(c, PULL_DIST)
 		var hand = w.get("hand")
 		if hand != null and is_instance_valid(hand) and hand.has_method("release_all"):
 			hand.release_all()
@@ -95,6 +97,9 @@ func _process(_delta: float) -> void:
 				_phase = 1
 				_t = 0.0
 				_season_from = Clock.season_t
+				var w = Game.world
+				if from_era == 1 and w != null and is_instance_valid(w) and w.has_method("rebuild_homes_on_screen"):
+					w.rebuild_homes_on_screen(LAPSE_S)     # huts become cottages while the season turns
 		1:
 			# Time-lapse: the season turns. Never past the season's end, so the
 			# winter count and season events stay with the clock.
@@ -139,23 +144,33 @@ static func turn_to_spring() -> void:
 	Clock.season_t = minf(Clock.season_t, 1.0)
 
 ## Every finished hut becomes a cottage in place: same family, more room.
+## (Those the on-screen rebuild already turned count too.)
 static func huts_to_cottages() -> int:
-	var cottage := Defs.building(&"cottage")
-	if cottage == null:
+	if Defs.building(&"cottage") == null:
 		return 0
-	var n := 0
+	var w = Game.world
+	if w != null and is_instance_valid(w) and w.has_method("finish_home_rebuild"):
+		w.finish_home_rebuild()
+	var n := int(Village.stats.get("cottages_rebuilt", 0))
 	for s in Village.sites.duplicate():
-		if not is_instance_valid(s) or s.building == null or s.building.id != &"hut" or s.state != Site.State.FINISHED:
-			continue
-		s.building = cottage
-		s.build_done = cottage.build_work
-		s.delivered = cottage.cost.duplicate()
-		s.rebuild_visual()
-		n += 1
-		var w = Game.world
-		if w != null and is_instance_valid(w) and w.has_method("_on_building_finished"):
-			w._on_building_finished(s)
+		if convert_hut(s):
+			n += 1
+	Village.stats.erase("cottages_rebuilt")
 	Village.stats["cottages_from_huts"] = n
 	if n > 0:
 		Flags.remember("We rebuilt our huts as cottages, with stone footings and room for a family")
 	return n
+
+## One finished hut becomes a cottage where it stands. False if `s` is not one.
+static func convert_hut(s) -> bool:
+	var cottage := Defs.building(&"cottage")
+	if cottage == null or not is_instance_valid(s) or s.building == null or s.building.id != &"hut" or s.state != Site.State.FINISHED:
+		return false
+	s.building = cottage
+	s.build_done = cottage.build_work
+	s.delivered = cottage.cost.duplicate()
+	s.rebuild_visual()
+	var w = Game.world
+	if w != null and is_instance_valid(w) and w.has_method("_on_building_finished"):
+		w._on_building_finished(s)
+	return true

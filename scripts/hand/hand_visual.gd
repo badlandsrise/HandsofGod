@@ -89,6 +89,9 @@ var _trail_mat: StandardMaterial3D
 var _dot_mat: StandardMaterial3D
 var _ghost_mat: StandardMaterial3D
 var _ghost_ring_mat: ShaderMaterial
+var _ghost_bad_mat: StandardMaterial3D        # red: they can't be set down there
+var _ghost_bad_ring: ShaderMaterial
+var _ghost_red := false
 var _pip_full: StandardMaterial3D
 var _pip_new: StandardMaterial3D
 var _pip_empty: StandardMaterial3D
@@ -145,6 +148,13 @@ func _build_ghosts() -> void:
 	_ghost_mat.no_depth_test = false
 	_ghost_ring_mat = _gmat(Color(1.0, 0.95, 0.75, 0.9), 0.7)
 	_ghost_ring_mat.set_shader_parameter(&"ring_width", 0.12)
+	_ghost_bad_mat = _ghost_mat.duplicate()
+	_ghost_bad_mat.albedo_color = Color(1.0, 0.2, 0.14, 0.62)
+	_ghost_bad_mat.no_depth_test = true          # reads through the mist over locked land
+	_ghost_bad_mat.render_priority = 10
+	_ghost_bad_ring = _gmat(Color(1.0, 0.22, 0.15, 1.0), 0.7)
+	_ghost_bad_ring.set_shader_parameter(&"ring_width", 0.2)
+	_ghost_bad_ring.render_priority = 10
 	var root := Node3D.new()
 	root.name = "Ghosts"
 	root.top_level = true
@@ -561,8 +571,18 @@ func _update_ghosts(hand: Hand) -> void:
 		while n > 0 and not s.can_accept(n):
 			n -= 1
 		spots = hand.site_spots(s, n)
-	elif not hand.held.is_empty() and hand.mouse_on_ground and hand.held.size() > 1:
+	var bad := hand.aim_drop_reason() != "" if hand.has_method(&"aim_drop_reason") else false
+	if bad and not show_pips:
 		spots = hand.ground_spots(hand.ground, hand.held.size())
+	elif not show_pips and not hand.held.is_empty() and hand.mouse_on_ground and hand.held.size() > 1:
+		spots = hand.ground_spots(hand.ground, hand.held.size())
+	if bad != _ghost_red:
+		_ghost_red = bad
+		for g in ghosts:
+			for c in (g as Node3D).get_children():
+				if c is MeshInstance3D:
+					var ring: bool = (c as MeshInstance3D).mesh is PlaneMesh
+					(c as MeshInstance3D).material_override = (_ghost_bad_ring if ring else _ghost_bad_mat) if bad else (_ghost_ring_mat if ring else _ghost_mat)
 	for i in ghosts.size():
 		var g: Node3D = ghosts[i]
 		g.visible = i < spots.size()
