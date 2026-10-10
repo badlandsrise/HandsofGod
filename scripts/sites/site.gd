@@ -329,12 +329,14 @@ func hover_text() -> String:
 		if group_running:
 			t += "  working %d%%" % int(progress * 100.0)
 		else:
-			t += "  needs %d at once" % job.min_people
+			t += "  needs %d at once, about %ds" % [job.min_people, int(job.work_time)]   # [polish] how long it takes
 	if job.needs_power != &"" and not Faith.has(job.needs_power):
 		var pd := Defs.power(job.needs_power)
 		t += "  (needs %s)" % (pd.title if pd else str(job.needs_power))
 	elif not discovered():
 		t += "  (%s)" % DISCOVERY_NOTES.get(job.needs_discovery, "needs stone tools")
+	elif job.id == &"hunt" and not has_drying_rack():
+		t += "  (%s)" % NEEDS_RACK   # [polish]
 	if building != null and burn > 0.0:
 		t += "  ON FIRE"
 	elif building != null and damage > 0.0:
@@ -359,6 +361,16 @@ func hover_text() -> String:
 	if is_fire():
 		t += "  lit" if lit() else "  out"
 	return t
+
+## [polish] The hunt needs a drying rack first: the meat must keep.
+const NEEDS_RACK := "needs a drying rack first, so the meat keeps"
+
+## [polish] A finished drying rack stands (the hunt and the hunting lodge need one).
+static func has_drying_rack() -> bool:
+	for s in Village.sites:
+		if is_instance_valid(s) and s.building != null and s.state == State.FINISHED and s.building.id in [&"drying_rack", &"temple", &"great_hall"]:
+			return true
+	return Village.era >= 2
 
 const DISCOVERY_NOTES := {&"stone_tools": "needs stone tools", &"ship": "the ship must be on the sea first"}
 
@@ -624,7 +636,8 @@ func materials_done() -> bool:
 ## becomes a fire_circle plot in place. It keeps its tend_fire job, so it is
 ## still the fire (and keeps burning) while the stones are set round it.
 func ring_fire(bd: BuildingDef) -> void:
-	for p in _valid_workers().duplicate():
+	var tenders := _valid_workers().duplicate()
+	for p in tenders:
 		p.go_idle()
 	workers.clear()
 	building = bd
@@ -639,6 +652,9 @@ func ring_fire(bd: BuildingDef) -> void:
 	if fuel_t > 0.0:
 		fuel_t = maxf(fuel_t, 240.0)       # a burning fire is kept in while they work
 	rebuild_visual()
+	for p in tenders:   # [polish] the fire's tenders set the stones, rather than standing idle
+		if is_instance_valid(p) and not p.join(self, false) and "idle_why" in p:
+			p.idle_why = "the fire is being ringed with stones"
 
 ## A bridge plot still waiting for timbers the hand carries (Strong Arms).
 func wants_timber() -> bool:
@@ -694,6 +710,8 @@ func _finish(silent: bool) -> void:
 	for p in builders:
 		if is_instance_valid(p) and p.has_method("go_idle"):
 			p.go_idle()
+			if "idle_why" in p:
+				p.idle_why = "finished building the %s" % building.title.to_lower()   # [polish]
 	if is_inside_tree():
 		_spawn_extra_job_sites()
 		if not silent:
@@ -848,6 +866,8 @@ func _complete_group(present: Array) -> void:
 	if amount == 0 and job.regrow_time <= 0.0:
 		for p in _valid_workers().duplicate():
 			p.go_idle()
+			if "idle_why" in p:
+				p.idle_why = "that work is all done (%s)" % job.title.to_lower()   # [polish]
 		workers.clear()
 		Village.unregister_site(self)
 		queue_free()

@@ -1,7 +1,7 @@
 class_name LayoutEra2 extends RefCounted
 ## Where Era 2 (Village) happens: the authored build spots of the village's new
 ## buildings, and what each new region holds when it opens (doc 10.1):
-##   East Bank (Reach)          a camp, clay pits, copper ore, a bear's den
+##   East Bank (Strong Arms)    a camp, clay pits, copper ore (the bears live at the quarry)
 ##   Southern Plains (Rain)     a camp and the big dry fields
 ##   Hill Quarry (Strength II)  a camp and quarry ledges behind the rockfall
 ## The great bridge crosses the river from the Valley Floor to the East Bank.
@@ -83,8 +83,6 @@ const ROCKFALL := Vector2(181.0, -46.0)
 const BOULDERS: Array[Vector2] = [Vector2(180.0, -52.0), Vector2(182.5, -45.5), Vector2(179.5, -39.0)]
 const BOULDER_WEIGHT := 10.0
 const ROCKFALL_CLEAR := 7.0
-## The bear's den on the East Bank.
-const BEAR_DEN := Vector2(236.0, 214.0)
 ## The harvest festival is held between the fields and the barn.
 const FESTIVAL_SPOT := Vector2(-6.0, 70.0)
 

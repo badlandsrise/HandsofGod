@@ -243,6 +243,10 @@ func _on_era(era: int) -> void:
 	_mark_era(era)
 	if era > 1:
 		BookData.add_entry("era", "%s %s began." % [BookData.on_day(Clock.day), BookData.ERA_AGES.get(era, "a new age")])
+		var prev: Dictionary = BookData.journal()["era_marks"].get(str(era - 1), {})
+		var gen := EraCard.new_generation(int(prev.get("day", 1)))   # [polish] the new generation, by name
+		if not gen.is_empty():
+			BookData.add_entry("era", "Our new generation: %s." % BookData.join_names(gen))
 
 ## The root of the tree: the first two (the storm-night pair) even if nobody
 ## asked the hand to name them. They are the two lowest-uid people with no

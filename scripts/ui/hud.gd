@@ -509,11 +509,18 @@ func _refresh_stores() -> void:
 	for k in kinds:
 		stores_box.add_child(_store_item(k, String(k).capitalize(), Village.store(k)))
 	var pop := Village.population()
-	var days := float(food) / maxf(float(pop) * FOOD_PER_PERSON_PER_DAY, 1.0)
+	var days := float(food) / maxf(float(pop) * food_per_person_per_day(), 0.5)
 	var nd := int(floor(days))
 	var dl := _label(("%s day of food" if nd == 1 else "%s days of food") % (str(nd) if nd < 99 else "99+"), 15,
 		UiTheme.WARN if days < 2.0 else UiTheme.TEXT_DIM)
 	stores_box.add_child(dl)
+
+## [polish] What one person really eats in a day and a night: the food need
+## drains (Person.DECAY, slower in Era 1) and each meal refills 0.6.
+static func food_per_person_per_day() -> float:
+	var k := Person.ERA1_NEEDS if Village.era == 1 else 1.0
+	var per_s: float = float(Person.DECAY[&"food"]) * k * Flags.diff_k(&"food")
+	return maxf(per_s * (Clock.day_seconds + Clock.night_seconds) / 0.6, 0.1)
 
 func _store_item(kind: StringName, title: String, n: int) -> Control:
 	var h := HBoxContainer.new()
@@ -525,8 +532,11 @@ func _store_item(kind: StringName, title: String, n: int) -> Control:
 	var cc := CenterContainer.new()
 	cc.add_child(dot)
 	h.add_child(cc)
-	h.add_child(_label("%s %d" % [title, n], 17))
+	var full := kind != &"food" and n >= Village.store_cap   # [polish] the stores are full
+	h.add_child(_label(("%s %d/%d full" % [title, n, Village.store_cap]) if full else "%s %d" % [title, n], 17, UiTheme.WARN if full else UiTheme.TEXT))
 	var note := PersonInfo.store_note(kind)
+	if full:
+		note = ("The stores hold no more %s: build a food store or a granary, or use some up. " % String(kind)) + note
 	if note != "":
 		h.mouse_filter = Control.MOUSE_FILTER_PASS
 		h.tooltip_text = note

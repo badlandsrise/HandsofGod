@@ -82,6 +82,8 @@ static func need(t: Site) -> float:
 			&"sow": return 4.0
 			&"water": return 2.0 if Village.store(&"water") > 1 else 0.0
 		return 0.0
+	if t.job != null and t.job.id == &"hunt" and not Site.has_drying_rack():
+		return 0.0     # [polish] no hunting before the drying rack
 	return 3.0 if t.can_work_now() and t.discovered() else 0.0
 
 static func task_cap(t: Site) -> int:
@@ -157,6 +159,8 @@ static func idle_reason(w: Site) -> StringName:
 		return &"growing" if Site.sowing_season() else &"spring"
 	if ts.is_empty():
 		return &"nothing near"
+	if w.building.work_jobs.has(&"hunt") and not Site.has_drying_rack():
+		return &"a drying rack"     # [polish]
 	return &"regrowth"
 
 # ---------------------------------------------------------------- the bin
@@ -295,6 +299,8 @@ static func hover(s: Site) -> String:
 				t += "  (no carter: set someone on the cart)"
 		if not s.discovered():
 			t += "  (needs stone tools)"
+		elif b.work_jobs.has(&"hunt") and not Site.has_drying_rack():
+			t += "  (%s)" % Site.NEEDS_RACK   # [polish]
 		return t
 	if s.job != null and s.job.id == &"cart_haul":
 		var w := Site.by_uid(s.parent_uid)
@@ -312,6 +318,8 @@ static func hover(s: Site) -> String:
 			line = "  being cleared %d%%" % int(100.0 * s.build_progress())
 		elif s.job != null and s.job.node_amount > 1 and s.amount >= 0:
 			line = "  %d left" % s.amount
+		if s.job != null and s.job.id == &"hunt" and not Site.has_drying_rack():
+			line += "  (%s)" % Site.NEEDS_RACK   # [polish]
 		if w2 != null:
 			return "%s%s  (worked by the %s crew)" % [what, line, w2.building.title.to_lower()]
 		var by := "farmhouse" if (s.is_field() or s.is_plot()) else ("hunting lodge" if s.job != null and s.job.id == &"hunt" else "workplace")

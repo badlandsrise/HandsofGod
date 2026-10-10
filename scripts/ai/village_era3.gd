@@ -180,7 +180,7 @@ func _wishes() -> void:
 	if Dreams.is_done(&"school") or t > 900.0:
 		_wish("printing", &"printing_house", "The teachers want their words written down. They want a printing house")
 	if t > 600.0:
-		_wish("watermill", &"watermill", "They want a watermill on the stream to grind more flour")
+		_wish("watermill", &"watermill", "They want a watermill on the Stream to grind more flour")
 	if t > 780.0 or int(Village.stats.get("threat_town_fire", 0)) > 0:
 		_wish("fire_station", &"fire_station", "They want a fire station with a bell, and a crew to watch for smoke")
 	if t > 1080.0 or int(Village.stats.get("threat_sickness", 0)) > 0:

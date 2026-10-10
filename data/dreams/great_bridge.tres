@@ -6,7 +6,7 @@
 script = ExtResource("1_def")
 id = &"great_bridge"
 era = 2
-text = "A bridge over the great river, so we can walk home at night."
+text = "A bridge over the Great River, so we can walk home at night."
 voice = "Our people work on the far bank and sleep there alone. We dream of a great bridge, so every night we can come home."
 needs_buildings = {&"bridge": 1}
 needs_population = 26

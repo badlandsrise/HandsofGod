@@ -5,12 +5,9 @@ class_name SiteVisual extends Node3D
 ## Slot pips and hover rings are drawn by the hand.
 
 ## BuildingDef id -> catalog id, when the names differ.
-const BUILDING_ART := {&"camp": &"era2_shed", &"market": &"market_stall", &"farmhouse": &"era2_longhouse",
-	&"hunting_lodge": &"hut", &"woodcutter_camp": &"era2_shed", &"footbridge": &"bridge"}
-## Placeholder art ids worker B or later polish can give their own models:
-## hunting_lodge, woodcutter_camp, footbridge (now a scaled great bridge),
-## bridge_timber (a log). Composed here from kit pieces until then.
-const FOOTBRIDGE_SCALE := 1.0
+## hunting_lodge, woodcutter_camp, footbridge and bridge_timber have their own
+## art (scripts/assets/tools/build_workplaces.gd), each building in three stages.
+const BUILDING_ART := {&"camp": &"era2_shed", &"market": &"market_stall", &"farmhouse": &"era2_longhouse"}
 ## Moving parts in the Era 2 and 3 kits (scripts/assets/spinner.gd) turn while
 ## someone works: mill sails and wheels, the well's windlass, the school bell,
 ## the observatory dome, the harbour crane. The clock's hands always turn; the
@@ -265,6 +262,9 @@ func _plot(s: Site, seed_v: int) -> void:
 		_art(&"field_stubble", 0, Vector3.ZERO, 0.0, 1.0)
 		_ghost(_art(&"field_tilled", 0, Vector3(0, 0.02, 0), 0.0, 1.0))
 		return
+	if bid == &"footbridge":
+		_footbridge(s)
+		return
 	if id != &"" and AssetCatalog.has(StringName(str(id) + "_plot")):
 		_staged_plot(s, id, seed_v)
 		_material_piles(s, span)
@@ -304,8 +304,6 @@ func _staged_plot(s: Site, id: StringName, seed_v: int) -> void:
 	# Era 3 buildings may be drawn smaller than their kit model (the great hall
 	# over the old temple): plot, frame and building all scale together.
 	var k := _fit(id, s.building.footprint) if s.building.era >= 3 else 1.0
-	if s.building.id == &"footbridge":
-		k = FOOTBRIDGE_SCALE
 	if s.state == Site.State.PLOT:
 		_hut_stage = 0
 		_art(plot_id, 0, Vector3.ZERO, 0.0, k)
@@ -359,7 +357,7 @@ func _field(s: Site) -> void:
 ## temple doors"): once the village loves the hand, its buildings carry the
 ## sign above their doors.
 func _hand_symbol(s: Site) -> void:
-	if s.building == null or s.building.camp or s.building.id == &"temple" or s.building.id == &"field":
+	if s.building == null or s.building.camp or s.building.id in [&"temple", &"field", &"footbridge"]:
 		return
 	var fp := s.building.footprint
 	if s.building.id == &"observatory" or s.building.id == &"great_hall":
@@ -429,7 +427,7 @@ func _building(bid: StringName, fp: Vector2, seed_v: int) -> void:
 			_art(&"hut", seed_v, Vector3.ZERO, 0.0)
 			return
 		&"footbridge":
-			_art(&"bridge", 0, Vector3.ZERO, 0.0, FOOTBRIDGE_SCALE)
+			_footbridge(site)
 			return
 		&"farmhouse":
 			# the longhouse, its hay, and the bin: grain sacks stacked as the crew brings the harvest in
@@ -440,28 +438,68 @@ func _building(bid: StringName, fp: Vector2, seed_v: int) -> void:
 				_fill_nodes.append(_art(&"grain_sacks", i, Vector3(fp.x * 0.5 + 0.9 + (i % 3) * 0.7, 0, fp.y * 0.2 + (i / 3) * 0.8), i * 0.7, 0.55))
 			_art(&"tool_pitchfork", 0, Vector3(fp.x * 0.5 + 0.4, 0, fp.y * 0.45), 0.3)
 			return
-		&"hunting_lodge":
-			# a hide-roofed lodge, a drying rack of hides and a pair of antlers by the door
-			_art(&"hut", seed_v, Vector3.ZERO, 0.0, 1.1)
-			_art(&"drying_rack", 0, Vector3(fp.x * 0.5 + 1.2, 0, 0.6), 1.3)
-			_art(&"firewood_pile", 0, Vector3(-fp.x * 0.5 - 0.8, 0, 0.8), 0.2, 0.7)
-			_art(&"log_fallen", 1, Vector3(0.4, 0, fp.y * 0.5 + 1.2), 0.1, 0.45)
-			_art(&"deer", 2, Vector3(fp.x * 0.5 + 1.0, 0, -1.6), 2.0, 0.55)
-			return
-		&"woodcutter_camp":
-			# a lean-to shed, stacked logs and an axe in the block
-			_art(&"era2_shed", seed_v, Vector3.ZERO, 0.0, 0.9)
-			_art(&"firewood_pile", 0, Vector3(fp.x * 0.5 + 1.0, 0, 0.4), 0.3, 0.9)
-			_art(&"log_fallen", 0, Vector3(-fp.x * 0.5 - 1.2, 0, 0.6), 0.4, 0.7)
-			_art(&"log_fallen", 1, Vector3(-fp.x * 0.5 - 1.3, 0.35, 0.9), 0.5, 0.6)
-			_art(&"stump", seed_v, Vector3(1.2, 0, fp.y * 0.5 + 1.0), 0.0)
-			_art(&"tool_axe", 0, Vector3(1.3, 0.45, fp.y * 0.5 + 1.0), 0.6)
-			return
 	var id := _art_id(bid)
 	if id != &"":
 		_art(id, seed_v, Vector3.ZERO, 0.0, _fit(id, fp))
 	else:
 		_art(&"hut_plot", 0, Vector3.ZERO, 0.0, maxf(fp.x, fp.y) / 4.0)
+
+# ---------------------------------------------------------------- the footbridge
+
+## The people's footbridge (Strong Arms) over the great river's shallows. Its
+## art is drawn along x with the deck's top on the walkable crossing deck
+## (Era2World.add_crossing: `base` + 0.3 + 0.4 camber over half_l = 9 m): here it
+## is lowered from the site's bank height onto that base and stretched to the
+## water's width, so the people walk on the planks. Pegged out with a ghost
+## (and the timbers the hand has brought lying on the near bank), then the
+## trestles and stringers waiting for the raising crew, then the bridge.
+func _footbridge(s: Site) -> void:
+	var holder := Node3D.new()
+	holder.name = "Span"
+	var fit := _footbridge_fit(s)
+	holder.position = Vector3(fit.z, fit.x, 0.0)
+	holder.scale = Vector3(fit.y, 1.0, 1.0)
+	add_child(holder)
+	var stage: StringName = &"footbridge"
+	if s.state == Site.State.PLOT:
+		stage = &"footbridge_plot"
+	elif s.state != Site.State.FINISHED:
+		stage = &"footbridge_frame"
+	var n := AssetCatalog.instance(stage)
+	holder.add_child(n)
+	if s.state == Site.State.PLOT:
+		var g := AssetCatalog.instance(&"footbridge")
+		holder.add_child(g)
+		_ghost(g)
+		# the timbers the hand has set on the plot, side by side on the village bank
+		for i in mini(s.timbers_in, maxi(s.building.timbers, 1)):
+			var at := Vector3(fit.z + 9.0 * fit.y + 4.2, 0.0, -0.9 + 1.8 * i)
+			var w := s.to_global(at)
+			at.y = Site.ground(w.x, w.z) - s.global_position.y
+			_art(&"bridge_timber", i, at, PI * 0.5 + (i - 0.5) * 0.08)
+
+## (height offset, x stretch, x shift to the water's middle) that puts the art on the crossing deck: the same
+## reckoning as Era2World.add_crossing, from the water either side of the site.
+func _footbridge_fit(s: Site) -> Vector3:
+	var w = Game.world
+	if w == null or not is_instance_valid(w) or w.get("valley") == null:
+		return Vector3(0.0, 1.0, 0.0)
+	var v = w.valley
+	var c := Vector2(s.global_position.x, s.global_position.z)
+	var along := s.global_basis * Vector3(1, 0, 0)
+	var d := Vector2(along.x, along.z).normalized()
+	var a := 0.0
+	while a < 30.0 and v.is_water(c.x + d.x * a, c.y + d.y * a):
+		a += 0.5
+	var b := 0.0
+	while b < 30.0 and v.is_water(c.x - d.x * b, c.y - d.y * b):
+		b += 0.5
+	if a <= 0.0 and b <= 0.0:
+		return Vector3(0.0, 1.0, 0.0)    # not over water (a test bench): stand as built
+	var e0 := c + d * (a + 1.0)
+	var e1 := c - d * (b + 1.0)
+	var base := maxf(maxf(v.ground_y(e0.x, e0.y), v.ground_y(e1.x, e1.y)), Valley.river_level(c.x) + 0.45)
+	return Vector3(base - s.global_position.y, clampf((a + b + 2.0) * 0.5 / 9.0, 0.7, 1.5), (a - b) * 0.5)
 
 # ---------------------------------------------------------------- the aqueduct
 

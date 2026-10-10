@@ -81,7 +81,24 @@ static func summary(e: int) -> Dictionary:
 		"gifts": gifts.map(func(g): return str(g.get("kind", "gift"))),
 		"memory": memory,
 		"first_two": EraCard.first_two(),
+		"new_generation": EraCard.new_generation(int(mark.get("day", 1))),
 	}
+
+## [polish] Each era is closed by naming its new generation (doc 3, 5): the
+## living people born since `from_day`.
+static func new_generation(from_day: int) -> Array:
+	var out: Array = []
+	for r in BookData.all_records():
+		if bool(r.get("alive", false)) and int(r.get("born_day", -1)) >= from_day and not bool(r.get("wanderer", false)) and not bool(r.get("first_two", false)):
+			out.append(str(r.get("name", "?")))
+	return out
+
+static func new_generation_line(names: Array) -> String:
+	if names.is_empty():
+		return ""
+	if names.size() > 8:
+		return "A new generation: %s and %d more" % [", ".join(names.slice(0, 8)), names.size() - 8]
+	return "A new generation: %s" % BookData.join_names(names)
 
 ## The two people of the storm night, alive or remembered: [{name, alive}].
 static func first_two() -> Array:
@@ -181,6 +198,11 @@ func _build() -> void:
 		var fl := UiTheme.wrap(UiTheme.ink_label(ftl, 18, &"italic", UiTheme.INK_SOFT))
 		fl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		v.add_child(fl)
+	var ngl := EraCard.new_generation_line(d.get("new_generation", []))   # [polish]
+	if ngl != "":
+		var gl := UiTheme.wrap(UiTheme.ink_label(ngl, 18, &"italic", UiTheme.INK_SOFT))
+		gl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		v.add_child(gl)
 	# dreams
 	if not (d["dreams"] as Array).is_empty():
 		var dh := UiTheme.ink_label("Dreams that came true", 22, &"title", UiTheme.INK_RED)

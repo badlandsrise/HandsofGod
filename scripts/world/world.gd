@@ -92,6 +92,12 @@ func _ready() -> void:
 		var ws: Node = load(WORLD_SHOTS_SCRIPT).new()
 		ws.name = "WorldShots"
 		add_child(ws)
+	elif Game.flags.has("polish-shots") and ResourceLoader.exists("res://tests/shots/fb_polish_shots.gd"):   # [polish]
+		new_game()
+		Clock.running = true
+		var ps: Node = load("res://tests/shots/fb_polish_shots.gd").new()
+		ps.name = "PolishShots"
+		add_child(ps)
 	elif Game.flags.has("capture") and ResourceLoader.exists(CAPTURE_SCRIPT):
 		# [capture] developer-only marketing capture mode (scripts/capture/)
 		add_child(load(CAPTURE_SCRIPT).new())
@@ -127,6 +133,7 @@ func build() -> void:
 	terrain = Terrain.new()
 	add_child(terrain)
 	terrain.build(valley)
+	terrain.add_child(RiverNames.make(valley, regions))   # [polish] the waters' names
 	foliage = Foliage.new()
 	add_child(foliage)
 	foliage.build(valley, terrain, _keep_out_zones())

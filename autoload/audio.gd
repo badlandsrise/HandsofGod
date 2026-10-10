@@ -100,6 +100,7 @@ func _ready() -> void:
 	Events.era_changed.connect(_on_era)
 	Events.hand_lifted.connect(_on_hand_lifted)
 	Events.hand_placed.connect(_on_hand_placed)
+	Events.job_started.connect(_on_job_started)
 
 func _player() -> AudioStreamPlayer:
 	var p := AudioStreamPlayer.new()
@@ -403,7 +404,26 @@ func _on_hand_lifted(people: Array) -> void:
 		set_layer(&"melody", 1.0)   # at once; the director turns it off once the hand is empty
 	var p = people[randi() % people.size()]
 	var t := int(p.get("trust")) if p.get("trust") != null else 2
-	voice(p, &"worry" if t <= 0 else (&"question" if t <= 1 else &"happy"))
+	var st = p.get("stage")
+	# [polish] children giggle and elders grumble (doc 2)
+	if st != null and int(st) == 1 and t > 0:
+		voice(p, &"cheer")
+	elif st != null and int(st) == 3 and t > 0:
+		voice(p, &"sad")
+	else:
+		voice(p, &"worry" if t <= 0 else (&"question" if t <= 1 else &"happy"))
+
+## [polish] A soft chime when a job starts (doc 2); a little higher for group work.
+const CHIME := "res://assets/audio/sfx/gift.ogg"
+var _chime_t: float = -10.0
+
+func _on_job_started(site, _people) -> void:
+	var now := Time.get_ticks_msec() / 1000.0
+	if now - _chime_t < 0.6 or not ResourceLoader.exists(CHIME):
+		return
+	_chime_t = now
+	var group: bool = site != null and is_instance_valid(site) and site.has_method(&"is_group") and site.is_group()
+	sfx(load(CHIME), site.global_position if site is Node3D and is_instance_valid(site) and site.is_inside_tree() else Vector3.INF, 1.5 if group else 1.25, -9.0)
 
 func _on_hand_placed(people: Array, target) -> void:
 	if people.is_empty():

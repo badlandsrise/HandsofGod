@@ -36,8 +36,9 @@ const JOBS := [
 const PLOT_SPOTS := {
 	# Home lots: each is sized for the cottage the hut becomes in Era 2 (7 x 5.5 m)
 	# with at least 4 m to the next lot, clear of the green round the fire, the
-	# lanes to the gaps and the pass, and well back from the stream.
-	&"hut": [Vector2(-10.0, 4.0), Vector2(-24.0, 13.0), Vector2(4.0, 22.0), Vector2(31.0, -8.0), Vector2(-24.0, 23.0), Vector2(-35.0, 8.0)],
+	# lanes to the gaps and the pass, and well back from the stream. All on the
+	# home (west) side of the Stream: none needs the ford [polish].
+	&"hut": [Vector2(-10.0, 4.0), Vector2(-24.0, 13.0), Vector2(4.0, 22.0), Vector2(-36.0, 20.0), Vector2(-24.0, 23.0), Vector2(-35.0, 8.0)],
 	&"fire_circle": [Vector2(-1.5, -4.5)],
 	&"shrine": [Vector2(6.5, -22.5)],
 	&"cairn": [Vector2(6.5, -22.5)],

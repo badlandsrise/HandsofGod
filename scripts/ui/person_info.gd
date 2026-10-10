@@ -20,13 +20,42 @@ static func tune(key: StringName, fallback: int) -> int:
 static func years(p) -> int:
 	return int(float(p.age) / 60.0)
 
-## "Kai · child, 8", "Ona", "Bo · elder".
+## "Kai · child, 8", "Ona", "Bo · elder", "Teo, Master of Building".
 static func header(p: Person) -> String:
 	match p.stage:
 		Person.Stage.BABY: return "%s · baby" % p.given_name
 		Person.Stage.CHILD: return "%s · child, %d" % [p.given_name, PersonInfo.years(p)]
-		Person.Stage.ELDER: return "%s · elder" % p.given_name
-	return p.given_name
+	var n := p.given_name
+	var t := PersonInfo.title(p)
+	if t != "":
+		n += ", " + t
+	return n + (" · elder" if p.stage == Person.Stage.ELDER else "")
+
+## [polish] Five-star specialists get a title (doc 3): "Master of Building".
+static func title(p) -> String:
+	var best := ""
+	for k in Person.SKILLS:
+		if p.stars(k) >= 5:
+			best = "Master of %s" % BookData.SKILL_TITLES.get(str(k), str(k).capitalize())
+			break
+	return best
+
+## [polish] Trust and their best skill for the hover card (doc 7): "Fond of the
+## hand · best at Gathering (3 of 5 stars)".
+static func trust_line(p) -> String:
+	var t: String = BookData.TRUST_NAMES[clampi(int(p.trust), 0, BookData.TRUST_NAMES.size() - 1)]
+	if p.stage == Person.Stage.BABY or p.stage == Person.Stage.CHILD:
+		return t
+	var best: StringName = &""
+	var bs := 1
+	for k in Person.SKILLS:
+		var n: int = p.stars(k)
+		if n > bs:
+			bs = n
+			best = k
+	if best == &"":
+		return t
+	return "%s · best at %s (%d of 5 stars)" % [t, BookData.SKILL_TITLES.get(str(best), str(best).capitalize()), bs]
 
 ## Can this child (or anyone) do any work in this age? Children help with
 ## light work from the Village age (Person.can_do).
@@ -57,13 +86,15 @@ static func idle_reason(p: Person) -> String:
 	if p.has_method(&"is_sick") and p.is_sick():
 		return "sick: carry them to the clinic"
 	if p.needs[&"warmth"] < 0.3 and p._is_cold():
-		return "cold: looking for a fire"
+		return "cold: off to warm up by a fire or in a hut"
 	if p.needs[&"food"] < 0.3 and Village.food() <= 0:
 		return "hungry, and the stores are empty"
 	if p.needs[&"water"] < 0.3 and Village.store(&"water") <= 0 and Village.era >= 2:
 		return "thirsty, and the water jars are empty"
 	if Clock.is_night:
 		return "resting for the night"
+	if p.idle_why != "":
+		return p.idle_why   # [polish] what ended their work
 	if p.stage == Person.Stage.CHILD:
 		return "playing (set them on light work: berries or water)"
 	return "idle: no work. Set them on a job"
@@ -103,7 +134,7 @@ static func status(p: Person) -> String:
 
 ## The hand's tooltip over a person.
 static func tooltip(p: Person) -> String:
-	var lines: Array = [PersonInfo.header(p), PersonInfo.status(p)]
+	var lines: Array = [PersonInfo.header(p), PersonInfo.status(p), PersonInfo.trust_line(p)]
 	var w := Wants.line(p)
 	if w != "":
 		lines.append(w + " (bonus faith)")
@@ -128,7 +159,7 @@ static func site_note(s: Site) -> String:
 	var jid: StringName = s.job.id if s.job != null else &""
 	match bid:
 		&"drying_rack":
-			return "Dries meat and berries so they keep: the stores hold more food for the winter."
+			return "Dries meat and berries so they keep: the stores hold more food for the winter. The hunt needs one first."
 		&"food_store":
 			return "A store: the village can keep more food."
 		&"hut", &"cottage", &"townhouse":

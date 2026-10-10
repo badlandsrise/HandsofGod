@@ -202,6 +202,12 @@ the ground at their footprint centre and face +Z.
 - Era 2 buildings, each with `_plot` and `_frame`: `cottage` (2 variants) `granary mill bakery
   kiln smelter smithy weaver workshop barn temple bridge well watchtower sheep_pen`; plus
   `market_stall` (3 awnings) `market_stall_frame charcoal_clamp jetty`
+- Workplaces and the footbridge (`scripts/assets/tools/build_workplaces.gd`, `scenes/props/work/`),
+  each with `_plot` and `_frame`: `hunting_lodge` (Era 1: hide-covered pole lodge, antlers over the
+  door, stretched hides, meat on a smoke rack, spears) `woodcutter_camp` (Era 1: bark-roofed
+  lean-to, cordwood stack, chopping block, log on trestles) `footbridge` (Era 2: split-plank deck
+  on squared stringers and two log trestles, pole handrails; 18 m over the water plus the bank
+  seats); and `bridge_timber` (the squared 6 m beam the hand carries to it)
 - Era 2 farming: `field` (variants: tilled, sprouts, growing, ripe, stubble) and the single states
   `field_tilled field_sprouts field_growing field_ripe field_stubble field_blighted field_parched`,
   `garden_plot sheaves haystack scarecrow`

@@ -19,7 +19,9 @@ extends Node3D
 const SPECIES := {
 	&"wolf": {
 		"path": "res://assets/models/animals/wild/Wolf_Q.glb", "fwd": Vector3(1, 0, 0), "height": 0.98,
-		"colour": "#6a655f", "light": "#bfb6a8", "dark": "#3d3936",
+		# [polish] a cool blue-grey, kept out of the era palette pull: Era 1's warm
+		# grade turned the old warm grey tan (Austin: "the wolf looks tan")
+		"colour": "#59606a", "light": "#cfd3d8", "dark": "#2b2f36", "pull": 0.0,
 		"root": "Bone", "spine": ["Bone", "Bone.001"], "neck": ["Bone.002", "Bone.003"], "head": "Bone.003",
 		"tail": ["Bone.004", "Bone.005", "Bone.006", "Bone.007"],
 		"legs": [["Bone.017", "Bone.018", "Bone.019", true, true], ["Bone.014", "Bone.015", "Bone.016", true, false],
@@ -360,7 +362,7 @@ func _shade() -> void:
 			var mat := ShaderMaterial.new()
 			mat.shader = ArtPalette.SHADER_VC
 			mat.set_shader_parameter("albedo_color", Color(own) if own != "" else Color.WHITE)
-			mat.set_shader_parameter("palette_pull", 0.08)
+			mat.set_shader_parameter("palette_pull", float(_cfg.get("pull", 0.08)))
 			ArtPalette.register(mat)
 			out.surface_set_material(si, mat)
 		m.mesh = out

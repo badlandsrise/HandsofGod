@@ -19,11 +19,14 @@ func _ready() -> void:
 	super._ready()
 	add_to_group("timbers")
 	if get_node_or_null("Visual") == null:
-		build_log_visual(6.0, 0.28, false)
+		build_log_visual(6.0, 0.28, false)      # length and the pick body
 		var v := get_node_or_null("Visual")
 		if v != null:
-			for mi in v.find_children("*", "GeometryInstance3D", true, false):
-				(mi as GeometryInstance3D).set_instance_shader_parameter(&"instance_tint", Color(0.95, 0.8, 0.6))   # fresh-hewn
+			# the squared, adzed beam (build_workplaces.gd) in place of a round log
+			for c in v.get_children():
+				v.remove_child(c)
+				c.queue_free()
+			v.add_child(AssetCatalog.instance(&"bridge_timber", key))
 
 func hover_text() -> String:
 	if Faith.strength < weight:
@@ -49,7 +52,7 @@ func on_placed(at: Vector3) -> void:
 	var plot := Timber.wanting_plot(global_position, DROP_RADIUS)
 	if plot != null and plot.add_timber():
 		Events.alert.emit("A timber for the %s (%d/%d)" % [plot.building.title.to_lower().trim_prefix("the "), plot.timbers_in, plot.building.timbers], plot.global_position)
-		Flags.remember("The hand carried a great timber to the river for our bridge.")
+		Flags.remember("The hand carried a great timber to the Great River for our bridge.")
 		_forget()
 		queue_free()
 		return

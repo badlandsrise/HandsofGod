@@ -125,11 +125,19 @@ func _family_plots() -> void:
 			Events.alert.emit("They want a rack to dry the meat for winter", r.global_position)
 	var w = Game.world
 	var valley_open: bool = Village.era == 1 and w != null and is_instance_valid(w) and w.is_region_open(&"valley_floor")
-	if not Village.stats.get("wish_lodge", false) and valley_open and Faith.has(&"grip_2"):
+	# [polish] The drying rack comes before the hunt (Austin: "unclear if drying
+	# rack was needed first"): with the deer in reach they first want the rack,
+	# and the lodge plot only once it stands.
+	if not Village.stats.get("wish_drying_rack", false) and valley_open and Faith.has(&"grip_2"):
+		Village.stats["wish_drying_rack"] = true
+		var r2 := _add_plot(&"drying_rack")
+		if r2 != null:
+			Events.alert.emit("Deer in the Valley Floor! Before they hunt, they want a rack to dry the meat", r2.global_position)
+	if not Village.stats.get("wish_lodge", false) and valley_open and Faith.has(&"grip_2") and Site.has_drying_rack():
 		Village.stats["wish_lodge"] = true
 		var l := _spawn_plot(&"hunting_lodge", LODGE_SPOT)
 		if l != null:
-			Events.alert.emit("Deer in the Valley Floor. They want a hunting lodge: its hunters go out to the herds on their own", l.global_position)
+			Events.alert.emit("The meat rack stands. Now they want a hunting lodge: its hunters go out to the herds on their own", l.global_position)
 	if not Village.stats.get("wish_woodcutter", false) and valley_open and Flags.has(&"stone_tools"):
 		Village.stats["wish_woodcutter"] = true
 		var c := _spawn_plot(&"woodcutter_camp", WOODCUTTER_SPOT)

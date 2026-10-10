@@ -12,5 +12,5 @@ season = -1
 min_population = 16
 chance_per_day = 0.12
 needs_region = &"east_bank"
-warning_text = "Rain clouds pile up over the hills. The great river is rising."
-start_text = "The river floods its banks! Lift people out of the water to high ground."
+warning_text = "Rain clouds pile up over the hills. The Great River is rising."
+start_text = "The Great River floods its banks! Lift people out of the water to high ground."

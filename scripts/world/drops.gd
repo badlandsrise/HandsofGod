@@ -81,6 +81,8 @@ func check(p: Vector3, off_mesh: float = OFF_MESH) -> String:
 	var nav: Nav = world.nav
 	if nav == null or not nav.ready_for_paths() or not nav.is_inside_tree():
 		return ""
+	if not nav.synced():
+		return ""      # [polish] still baking (just after a load): don't refuse on the old mesh
 	var map: RID = nav.get_world_3d().navigation_map
 	var it := NavigationServer3D.map_get_iteration_id(map)
 	if it <= 0:

@@ -30,6 +30,8 @@ func run(t: SceneTree) -> int:
 	test_build()
 	test_save_load()
 	test_dreams_and_ai()
+	test_warmth()
+	test_idle_reasons()
 	return fails
 
 func get_nodes_in_group(g: String) -> Array:
@@ -351,6 +353,85 @@ func test_dreams_and_ai() -> void:
 
 var _ai: Node
 var _smoke_people: Array = []
+
+## [polish] Each warmth source visibly works (Austin: "people that want warmth
+## dont seem to be able to get it from anything, the fire, my hand").
+func test_warmth() -> void:
+	clear()
+	V.stores[&"berries"] = 20
+	V.stores[&"water"] = 20
+	var season0: int = Clock.season
+	Clock.season = Clock.Season.WINTER
+	# a lit fire
+	var fire := site(&"tend_fire", Vector3(0, 0, 0))
+	fire.fuel_t = 300.0
+	check(fire.warmth_radius() > 0.0, "the fire is lit and gives warmth")
+	var a := person(Vector3(1.5, 0, 0.5))
+	a.needs[&"warmth"] = 0.2
+	step(2.0)
+	check(a.needs[&"warmth"] > 0.25, "by a lit fire a cold person warms up (%.2f)" % a.needs[&"warmth"])
+	check(a.visual != null and a.visual._glow_want > 0.0, "and glows while warming")
+	step(20.0)
+	check(a.needs[&"warmth"] > 0.9 and a.visual._glow_want == 0.0, "warm again, the glow fades (%.2f)" % a.needs[&"warmth"])
+	# the hand's Warmth
+	var b := person(Vector3(40, 0, 0))
+	b.needs[&"warmth"] = 0.1
+	check(PersonInfo.idle_reason(b).begins_with("cold"), "a chilled person says they are cold")
+	check(HandPowers.warm_at(b.global_position + Vector3(1.5, 0, 0)) == 1, "the hand's Warmth over the ground near them reaches them")
+	check(b.needs[&"warmth"] >= 0.5 and not b.status_text().contains("cold") and not PersonInfo.idle_reason(b).begins_with("cold"), "one touch clears \"cold\" (%.2f)" % b.needs[&"warmth"])
+	check(b.visual._glow_want >= 1.0, "and they glow warm")
+	step(3.0)
+	check(b.needs[&"warmth"] > 0.6, "and keep warming while the touch lasts (%.2f)" % b.needs[&"warmth"])
+	# a hut: a cold idle person goes in and warms up inside
+	var hut := plot(&"hut", Vector3(-40, 0, 6))
+	hut._finish(true)
+	var c := person(Vector3(-40, 0, 0))
+	c.needs[&"warmth"] = 0.15
+	c._decide_t = 0.0
+	var inside := false
+	for i in 30:
+		step(1.0)
+		if c.state == Person.S.SHELTER and c._phase == "inside":
+			inside = true
+	check(inside, "a cold idle person with no fire near goes into a hut")
+	check(c.needs[&"warmth"] > 0.6, "and is warmed inside it (%.2f)" % c.needs[&"warmth"])
+	Clock.season = season0
+
+## [polish] People don't drop work they could keep doing, and say why when they do.
+func test_idle_reasons() -> void:
+	clear()
+	V.stores[&"berries"] = 20
+	V.stores[&"water"] = 20
+	var a := site(&"gather_berries", Vector3(10, 0, 0))
+	var b := site(&"gather_berries", Vector3(14, 0, 3))
+	var p := person(Vector3(9, 0, 1))
+	var others: Array = []
+	while a.can_accept(1):
+		var o := person(Vector3(11, 0, 1))
+		o.join(a, false)
+		others.append(o)
+	p._rejoin(a)
+	check(p.job_site == b and p.state == Person.S.WORK, "back from a meal to a full bush: they take the next bush instead of going idle")
+	p.go_idle()
+	for o in others:
+		o.go_idle()
+	b.free()
+	var full: Array = []
+	while a.can_accept(1):
+		var o2 := person(Vector3(11, 0, 2))
+		o2.join(a, false)
+		full.append(o2)
+	p._rejoin(a)
+	check(p.state == Person.S.IDLE and PersonInfo.idle_reason(p).contains("taken"), "with nowhere to go they say why: " + PersonInfo.idle_reason(p))
+	p.join(a if a.can_accept(1) else site(&"gather_berries", Vector3(-10, 0, 0)), false)
+	check(p.idle_why == "", "a new job clears the reason")
+	# a lone hauler gives up waiting for help, and says so
+	var log := site(&"haul_log", Vector3(-20, 0, 0))
+	var q := person(Vector3(-19, 0, 1))
+	Faith.grant(&"grip_2")
+	check(q.join(log, false), "one person waits at the log")
+	step(log.job.wait_before_wander + 2.0)
+	check(q.job_site == null and PersonInfo.idle_reason(q).contains("helpers"), "alone too long they give up and say why: " + PersonInfo.idle_reason(q))
 
 func smoke_setup() -> void:
 	clear()
