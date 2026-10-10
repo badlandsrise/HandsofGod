@@ -167,7 +167,7 @@ func _job(id: StringName, seed_v: int) -> void:
 				var a := TAU * i / 3.0 + 0.5
 				_art(&"log_fallen", i, Vector3(cos(a), 0, sin(a)) * 2.7, -a + PI * 0.5, 0.5)
 		&"carry_log":
-			_art(&"log_fallen", seed_v, Vector3.ZERO, 0.0, 0.85)
+			add_child(LogCarry.make(site, seed_v))   # lies here; rides on the carriers' shoulders
 		&"haul_log":
 			pass    # the world's fallen trunk (a Blocker) is the visual and rolls with the haulers
 		&"hunt":

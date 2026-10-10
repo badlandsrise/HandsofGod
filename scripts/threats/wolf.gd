@@ -1,7 +1,8 @@
 class_name Wolf extends Node3D
-## Placeholder Era 1 wolf. Slinks in from the treeline at night, stalks the
+## The Era 1 wolf. Slinks in from the treeline at night, stalks the
 ## nearest person outside the firelight, bites once and retreats. Flees from
-## fire and from the hand (Wolves.scare). Art lives under "Visual".
+## fire and from the hand (Wolves.scare). Art lives under "Visual" (WildAnimalVisual:
+## it reads its own speed for walk and gallop; this script asks for the lunge and flight).
 
 enum S { APPROACH, STALK, FLEE }
 
@@ -14,9 +15,7 @@ var target: Node3D = null
 var home: Vector3 = Vector3.ZERO
 var flee_t: float = 0.0
 var _retarget: float = 0.0
-var _anim: float = 0.0
-var _legs: Array[Node3D] = []
-var _eyes: Array[MeshInstance3D] = []
+var _visual: Node3D = null
 var bites: int = 0
 
 func _ready() -> void:
@@ -29,22 +28,7 @@ func _build_visual() -> void:
 	v.name = "Visual"
 	v.scale = Vector3.ONE * 1.15
 	add_child(v)
-	for n in v.find_children("*", "MeshInstance3D", true, false):
-		var mi := n as MeshInstance3D
-		if absf(mi.position.y - 0.286) < 0.01 and absf(absf(mi.position.z) - 0.313) < 0.01:
-			_legs.append(mi)    # the four legs: swing them while trotting
-	var eye := StandardMaterial3D.new()
-	eye.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	eye.albedo_color = Color(1.0, 0.85, 0.25)
-	for x in [-0.065, 0.065]:
-		var e := MeshInstance3D.new()
-		var sm := SphereMesh.new(); sm.radius = 0.04; sm.height = 0.08; sm.radial_segments = 6; sm.rings = 3
-		e.mesh = sm
-		e.material_override = eye
-		e.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		e.position = Vector3(x, 0.98, 0.76)
-		v.add_child(e)
-		_eyes.append(e)
+	_visual = v.get_child(0) if v.get_child_count() == 1 and v.get_child(0).has_method(&"play") else v
 
 func scare(from: Vector3) -> void:
 	if state == S.FLEE:
@@ -53,6 +37,7 @@ func scare(from: Vector3) -> void:
 	state = S.FLEE
 	flee_t = 6.0
 	target = null
+	_anim_play(&"flee")
 	var away := global_position - from
 	away.y = 0.0
 	if away.length() < 0.1:
@@ -61,7 +46,6 @@ func scare(from: Vector3) -> void:
 	Audio.sfx("res://assets/audio/sfx/wolf_howl.ogg", global_position, 1.7, -8.0)
 
 func _process(delta: float) -> void:
-	_anim += delta
 	var w: Node = Game.world
 	if w == null or not is_instance_valid(w):
 		return
@@ -113,11 +97,12 @@ func _process(delta: float) -> void:
 			if state == S.STALK and dist <= BITE_RANGE:
 				_bite(target)
 	global_position.y = w.ground_y(global_position.x, global_position.z)
-	var sw := sin(_anim * 14.0) * 0.7 if moved else 0.0
-	for i in _legs.size():
-		_legs[i].rotation.x = (sw if i % 2 == 0 else -sw) * 0.6
-	for e in _eyes:
-		e.visible = Clock.is_night
+	if _visual != null and _visual.has_method(&"set_eyes"):
+		_visual.set_eyes(Clock.is_night)
+
+func _anim_play(st: StringName) -> void:
+	if _visual != null and _visual.has_method(&"play"):
+		_visual.play(st)
 
 func _pick_target(fire_p: Vector3, fire_r: float) -> Node3D:
 	var best: Node3D = null
@@ -140,6 +125,7 @@ func _pick_target(fire_p: Vector3, fire_r: float) -> Node3D:
 
 func _bite(p: Node3D) -> void:
 	bites += 1
+	_anim_play(&"attack")
 	if is_instance_valid(p):
 		if p.has_method("hurt"):
 			p.hurt(1.0, &"wolf")

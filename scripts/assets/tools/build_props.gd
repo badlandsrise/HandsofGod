@@ -33,9 +33,8 @@ func _init() -> void:
 	_stone_circle()
 	_cliff()
 	_cave_mouth()
-	_deer()
-	_wolf()
-	_bear()
+	# deer, wolf, bear: scenes/props/{deer,wolf,bear}.tscn are WildAnimalVisual roots
+	# (rigged models, procedural gait), written by hand, not built here
 	_farm_animal("sheep", "res://assets/models/animals/Sheep.fbx", 0.17)
 	_farm_animal("horse", "res://assets/models/animals/Horse.fbx", 0.25)
 	_era2_cottage()
@@ -422,69 +421,6 @@ func _cave_mouth() -> void:
 	_model(N + "Rock_5.fbx", Vector3(2.4, 0.0, 2.0), Vector3(0, 80, 0), 1.2)
 	_save("cave_mouth")
 
-
-# ------------------------------------------------------------------ placeholder wild animals (primitives)
-# Low-poly stand-ins until the Quaternius Animated Animals pack arrives. Face +Z.
-
-func _quadruped(body_r: float, body_len: float, leg_h: float, leg_r: float, coat: String, light: String) -> Node3D:
-	var body_y := leg_h + body_r * 0.7
-	var b := _group("Body")
-	_prim(_capsule(body_r, body_len), coat, Vector3(0, body_y, 0), Vector3(90, 0, 0), 1.0, b, "Torso")
-	_prim(_capsule(body_r * 0.8, body_len * 0.75), light, Vector3(0, body_y - body_r * 0.3, 0.02), Vector3(90, 0, 0), Vector3(0.9, 1, 0.8), b, "Belly")
-	var lx := body_r * 0.55
-	var lz := body_len * 0.5 - body_r * 0.9
-	for p in [Vector3(lx, 0, lz), Vector3(-lx, 0, lz), Vector3(lx, 0, -lz), Vector3(-lx, 0, -lz)]:
-		_prim(_cyl(leg_r, leg_r * 0.75, leg_h + body_r * 0.4, 5), coat, p + Vector3(0, (leg_h + body_r * 0.4) * 0.5, 0), Vector3.ZERO, 1.0, b, "Leg")
-	return b
-
-
-func _deer() -> void:
-	_begin("deer")
-	_root.set_script(ANIMAL)
-	var b := _quadruped(0.24, 1.15, 0.78, 0.045, "deer", "deer_light")
-	_prim(_cyl(0.07, 0.11, 0.55, 6), "deer", Vector3(0, 1.32, 0.5), Vector3(35, 0, 0), 1.0, b, "Neck")
-	var head := _group("Head", Vector3(0, 1.58, 0.68), 0.0, b)
-	_prim(_cyl(0.055, 0.11, 0.36, 6), "deer", Vector3(0, 0, 0.08), Vector3(80, 0, 0), 1.0, head)
-	_prim(_sphere(0.03, 5, 3), "charcoal", Vector3(0, -0.05, 0.27), Vector3.ZERO, 1.0, head)
-	for sx in [-1.0, 1.0]:
-		_prim(_cyl(0.0, 0.05, 0.16, 4), "deer", Vector3(sx * 0.1, 0.08, -0.06), Vector3(0, 0, -sx * 55), Vector3(1, 1, 0.5), head)
-		_prim(_cyl(0.015, 0.025, 0.42, 4), "antler", Vector3(sx * 0.08, 0.24, -0.04), Vector3(-15, 0, -sx * 20), 1.0, head)
-		_prim(_cyl(0.012, 0.02, 0.22, 4), "antler", Vector3(sx * 0.13, 0.36, 0.06), Vector3(40, 0, -sx * 30), 1.0, head)
-		_prim(_cyl(0.01, 0.018, 0.2, 4), "antler", Vector3(sx * 0.17, 0.42, -0.08), Vector3(-30, 0, -sx * 35), 1.0, head)
-	_prim(_cyl(0.03, 0.06, 0.18, 5), "deer_light", Vector3(0, 1.12, -0.66), Vector3(-130, 0, 0), 1.0, b, "Tail")
-	_save("deer")
-
-
-func _wolf() -> void:
-	_begin("wolf")
-	_root.set_script(ANIMAL)
-	var b := _quadruped(0.18, 0.95, 0.5, 0.04, "wolf", "wolf_light")
-	_prim(_cyl(0.09, 0.13, 0.3, 6), "wolf", Vector3(0, 0.82, 0.48), Vector3(55, 0, 0), 1.0, b, "Neck")
-	var head := _group("Head", Vector3(0, 0.92, 0.62), 0.0, b)
-	_prim(_sphere(0.13, 6, 4), "wolf", Vector3.ZERO, Vector3.ZERO, Vector3(1, 0.9, 1.1), head)
-	_prim(_cyl(0.035, 0.08, 0.24, 5), "wolf_light", Vector3(0, -0.04, 0.19), Vector3(90, 0, 0), 1.0, head)
-	_prim(_sphere(0.025, 5, 3), "charcoal", Vector3(0, -0.03, 0.31), Vector3.ZERO, 1.0, head)
-	for sx in [-1.0, 1.0]:
-		_prim(_cyl(0.0, 0.05, 0.13, 4), "wolf", Vector3(sx * 0.07, 0.15, -0.02), Vector3(0, 0, -sx * 12), 1.0, head)
-		_prim(_sphere(0.018, 4, 2), "charcoal", Vector3(sx * 0.06, 0.04, 0.1), Vector3.ZERO, 1.0, head)
-	_prim(_cyl(0.03, 0.07, 0.5, 5), "wolf", Vector3(0, 0.6, -0.68), Vector3(-140, 0, 0), 1.0, b, "Tail")
-	_save("wolf")
-
-
-func _bear() -> void:
-	_begin("bear")
-	_root.set_script(ANIMAL)
-	var b := _quadruped(0.42, 1.55, 0.5, 0.13, "wood_dark", "wood")
-	var head := _group("Head", Vector3(0, 1.1, 0.95), 0.0, b)
-	_prim(_sphere(0.28, 7, 4), "wood_dark", Vector3.ZERO, Vector3.ZERO, Vector3(1, 0.9, 1.05), head)
-	_prim(_cyl(0.09, 0.14, 0.22, 6), "wood", Vector3(0, -0.06, 0.26), Vector3(90, 0, 0), 1.0, head)
-	_prim(_sphere(0.04, 5, 3), "charcoal", Vector3(0, -0.04, 0.38), Vector3.ZERO, 1.0, head)
-	for sx in [-1.0, 1.0]:
-		_prim(_sphere(0.08, 5, 3), "wood_dark", Vector3(sx * 0.18, 0.22, -0.04), Vector3.ZERO, Vector3(1, 1, 0.6), head)
-	_save("bear")
-
-
-# ------------------------------------------------------------------ farm animals (Quaternius Farm Animals, rigged)
 
 func _farm_animal(scene_name: String, path: String, s: float) -> void:
 	_begin(scene_name)
