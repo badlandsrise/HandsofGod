@@ -11,3 +11,5 @@ class_name EraDef extends Resource
 @export var day_seconds: float = 75.0
 @export var night_seconds: float = 30.0
 @export var season_seconds: float = 240.0
+@export var playable: bool = true                 # false: placeholder era (free play, no dreams yet)
+@export var gate_min_minutes: float = 35.0        # pacing floor checked by the bot

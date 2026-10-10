@@ -12,19 +12,21 @@ const JOBS := [
 	[&"gather_berries", 6.0, 14.0, ""],
 	[&"fetch_water", 12.0, -8.0, ""],
 	[&"collect_sticks", -21.0, 5.0, ""],
+	[&"collect_sticks", -27.0, -9.0, ""],
 	[&"tend_fire", 0.0, -13.0, ""],
-	[&"carry_log", -14.0, 3.5, ""],
+	[&"fish_by_hand", 17.2, 22.0, ""],
 	[&"haul_log", 44.0, 2.0, "trunk"],
 	# Valley Floor
-	[&"hunt", 112.0, 12.0, ""],
-	[&"knap_flint", 92.0, -22.0, ""],
-	[&"gather_berries", 125.0, 35.0, ""],
+	[&"hunt", 60.0, 10.0, ""],
+	[&"knap_flint", 54.0, -16.0, ""],
+	[&"gather_berries", 66.0, 28.0, ""],
 	# Western Meadow
-	[&"gather_berries", -100.0, -14.0, "rich"],
-	[&"gather_berries", -108.0, -6.0, "rich"],
-	[&"knap_flint", -128.0, 26.0, ""],
-	[&"fell_tree", -140.0, -30.0, ""],
-	[&"fell_tree", 130.0, -30.0, ""],
+	[&"rich_berries", -56.0, -14.0, ""],
+	[&"rich_berries", -62.0, -4.0, ""],
+	[&"knap_flint", -66.0, 24.0, ""],
+	[&"knap_flint", -58.0, 32.0, ""],
+	[&"fell_tree", -74.0, -30.0, ""],
+	[&"fell_tree", 72.0, -30.0, ""],
 ]
 
 ## Authored build spots per BuildingDef id. Plots appear when a Village Dream
@@ -43,6 +45,10 @@ const PLOT_SPOTS := {
 ## The two people of the storm night, huddled outside the cave mouth.
 const HUDDLE := [Vector2(-1.3, -24.6), Vector2(1.1, -24.0)]
 const NAMES := ["Ona", "Tuk"]
+const SEXES := ["f", "m"]
+## The first two live long: their deaths fall early in Era 2, the first
+## generation passing (doc 3 life cycle, tuned so Era 1 keeps its founders).
+const FIRST_TWO_EXTRA_LIFE := 900.0
 
 static var warned: Dictionary = {}
 
@@ -65,7 +71,10 @@ static func spawn(world) -> Array:
 		if tag != "":
 			s.set_meta("layout_tag", tag)
 	for i in HUDDLE.size():
-		var p = world.spawn_person(Vector3(HUDDLE[i].x, 0, HUDDLE[i].y), NAMES[i])
+		var p = world.spawn_person(Vector3(HUDDLE[i].x, 0, HUDDLE[i].y), NAMES[i], {
+			"sex": SEXES[i], "first_two": true, "trust_f": 1.2,
+			"age": Person.STAGE_START[Person.Stage.ADULT] + 90.0 + i * 60.0,
+			"death_age": Person.DEATH_AGE + FIRST_TWO_EXTRA_LIFE})
 		if p != null:
 			p.rotation.y = PI     # facing out at the storm
 			people.append(p)

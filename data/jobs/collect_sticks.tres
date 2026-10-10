@@ -12,5 +12,5 @@ skill = &"woodcraft"
 max_people = 2
 outputs = {&"wood": 1}
 work_time = 6.0
-node_amount = 10
-regrow_time = 30.0
+node_amount = 12
+regrow_time = 8.0

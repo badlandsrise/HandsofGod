@@ -19,3 +19,8 @@ enum Kind { GATHER, CRAFT, BUILD, GROUP, TEND, HAUL, LEAD, DEVOTION }
 @export var regrow_time: float = 0.0             # GATHER: seconds to regrow one unit (0 = never)
 @export var winter_stops: bool = false
 @export var needs_power: StringName = &""        # job only available once this power is unlocked
+@export var needs_discovery: StringName = &""     # a Village.stats["flags"] entry (e.g. &"stone_tools")
+@export var needs_blessed: bool = false          # GROUP: only blessed workers make progress (the great elk hunt)
+@export var carry_to: StringName = &"store"       # GROUP hauls (node_amount 1): &"store" or &"fire"
+@export var faith_rate: float = 0.1              # DEVOTION: faith per second per worshipper at mood 1
+@export var once: bool = false                   # removed after one completion (festival, elk hunt)

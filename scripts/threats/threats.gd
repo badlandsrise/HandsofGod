@@ -26,6 +26,13 @@ func _ready() -> void:
 func _def(id: StringName) -> ThreatDef:
 	return Defs.threats.get(id) if "threats" in Defs else null
 
+## No new threat during the onboarding, or in the quiet stretch after a
+## milestone (doc 5 pacing rules: a quiet stretch after every milestone).
+func quiet() -> bool:
+	if not Flags.onboarding_done():
+		return true
+	return Clock.total_t < float(Village.stats.get("quiet_until", -1.0))
+
 func major_active() -> bool:
 	return wolves.active or wolves.warned or cold_active or cold_warned
 
@@ -41,7 +48,7 @@ func _process(delta: float) -> void:
 	if not Clock.is_night and not wolves.warned and Clock.phase_t >= Clock.day_seconds - warn_s and Village.era <= 2:
 		var min_pop := wd.min_population if wd else 3
 		var chance := wd.chance_per_day if wd else 0.55
-		if Village.population() >= min_pop and not cold_active and not cold_warned:
+		if Village.population() >= min_pop and not cold_active and not cold_warned and not quiet():
 			# the hunt for the dusk roll happens once per day
 			if not has_meta("rolled_day") or int(get_meta("rolled_day")) != Clock.day:
 				set_meta("rolled_day", Clock.day)
@@ -84,7 +91,7 @@ func _maybe_cold_snap() -> void:
 	var seasons := [Clock.Season.AUTUMN, Clock.Season.WINTER]
 	if cd != null and cd.season >= 0:
 		seasons = [cd.season]
-	if not (Clock.season in seasons) or Clock.day < 3 or major_active():
+	if not (Clock.season in seasons) or Clock.day < 3 or major_active() or quiet():
 		return
 	if Village.population() < (cd.min_population if cd else 3):
 		return

@@ -13,3 +13,32 @@ class_name PowerDef extends Resource
 @export var opens_jobs: Array[StringName] = []
 @export_multiline var what_it_does: String = ""
 @export_multiline var what_it_opens: String = ""
+@export var requires_regions: Array[StringName] = []   # regions that must be open before it can be bought
+@export var requires_dreams: Array[StringName] = []    # dreams that must be done first
+@export var min_population: int = 0
+
+## Gameplay prerequisites beyond other powers (Faith.can_buy asks this), so a
+## power can't be afforded long before its region or job is needed (doc 6).
+func prerequisites_met() -> bool:
+	for r in requires_regions:
+		if not Village.regions.has(r):
+			return false
+	var done: Array = Village.stats.get("dreams_done", [])
+	for d in requires_dreams:
+		if not done.has(str(d)):
+			return false
+	return min_population <= 0 or Village.population() >= min_population
+
+## Short reason for the HUD when prerequisites are not met ("" when met).
+func locked_reason() -> String:
+	for r in requires_regions:
+		if not Village.regions.has(r):
+			return "Open the %s first" % str(r).replace("_", " ").capitalize()
+	var done: Array = Village.stats.get("dreams_done", [])
+	for d in requires_dreams:
+		if not done.has(str(d)):
+			var dd = Defs.dream(d)
+			return "After \"%s\"" % (dd.text if dd else str(d))
+	if min_population > 0 and Village.population() < min_population:
+		return "Needs %d people" % min_population
+	return ""

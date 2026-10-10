@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="JobDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/defs/job_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"great_elk_hunt"
+title = "The great elk hunt"
+era = 1
+kind = 3
+skill = &"gathering"
+min_people = 5
+max_people = 6
+outputs = {&"meat": 16, &"hide": 4}
+work_time = 30.0
+node_amount = 1
+group_bonus = 0.1
+wait_before_wander = 25.0
+needs_power = &"blessing"
+needs_blessed = true
+once = true

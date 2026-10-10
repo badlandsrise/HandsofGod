@@ -27,6 +27,8 @@ func can_buy(id: StringName) -> bool:
 	for r in p.requires:
 		if not has(r):
 			return false
+	if p.has_method(&"prerequisites_met") and not p.prerequisites_met():
+		return false      # M2 hook: region/dream/population gates live in PowerDef
 	return p.era <= Village.era and available() >= p.cost
 
 func buy(id: StringName) -> bool:

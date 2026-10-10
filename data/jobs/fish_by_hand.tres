@@ -11,5 +11,5 @@ kind = 0
 skill = &"gathering"
 max_people = 2
 outputs = {&"fish": 1}
-work_time = 8.0
+work_time = 9.0
 needs_power = &"warmth"

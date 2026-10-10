@@ -6,7 +6,9 @@
 script = ExtResource("1_def")
 id = &"shelter_of_our_own"
 era = 1
-text = "A shelter of our own."
+text = "A shelter of our own, and a ring of stones for our fire."
+voice = "The cave is cold and it is not ours. We dream of a roof we built, and a fire we can sit around together."
 gate = false
-needs_buildings = {&"hut": 1}
-reward_faith = 10.0
+needs_buildings = {&"hut": 1, &"fire_circle": 1}
+wanderers = 1
+reward_faith = 15.0

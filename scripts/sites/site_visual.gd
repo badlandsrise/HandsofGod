@@ -11,7 +11,9 @@ var site: Site = null
 var _fill_nodes: Array[Node3D] = []   # berries, sticks, deer: shown in proportion to amount
 var _flame: Node3D = null             # the campfire's Fire node (flicker.gd)
 var _rising: Node3D = null            # building model that grows with build progress
-var _rising_h := 1.0
+var _rising_s := 1.0                  # the rising model's fitted scale
+var _rising_from := 0.15              # height fraction at progress 0
+var _hut_stage := -1                  # huts: 0 plot, 1 frame, 2 walls rising
 
 static func make(s: Site) -> SiteVisual:
 	var v := SiteVisual.new()
@@ -42,9 +44,14 @@ func _process(_dt: float) -> void:
 		var on := site.lit()
 		if _flame.visible != on:
 			_flame.set("burning", on)
+	if _hut_stage == 1 and site.state == Site.State.BUILDING and site.build_progress() >= HUT_WALLS_AT:
+		site.rebuild_visual.call_deferred()      # the frame gets its walls and roof
+		_hut_stage = 2
 	if _rising != null and site.state == Site.State.BUILDING:
 		var p := site.build_progress()
-		_rising.scale = Vector3(1.0, lerpf(0.15, 1.0, p), 1.0)
+		if _hut_stage == 2:
+			p = clampf((p - HUT_WALLS_AT) / (1.0 - HUT_WALLS_AT), 0.0, 1.0)
+		_rising.scale = Vector3(_rising_s, _rising_s * lerpf(_rising_from, 1.0, p), _rising_s)
 
 # ---------------------------------------------------------------- helpers
 
@@ -82,13 +89,16 @@ func _job(id: StringName, seed_v: int) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_v
 	match id:
-		&"gather_berries":
-			_art(&"berry_bush", seed_v, Vector3.ZERO, rng.randf() * TAU, 1.15)
+		&"gather_berries", &"rich_berries":
+			var rich := id == &"rich_berries"
+			var bs := 1.45 if rich else 1.15
+			_art(&"berry_bush", seed_v, Vector3.ZERO, rng.randf() * TAU, bs)
 			var berry := ArtPalette.material("berry")
-			for i in 9:
-				var a := TAU * i / 9.0 + rng.randf_range(-0.2, 0.2)
-				var h := rng.randf_range(0.55, 1.25)
-				var r := 0.82 * sqrt(maxf(0.0, 1.0 - pow((h - 0.7) / 0.8, 2.0)))
+			var nb := 14 if rich else 9
+			for i in nb:
+				var a := TAU * i / float(nb) + rng.randf_range(-0.2, 0.2)
+				var h := rng.randf_range(0.55, 1.25) * bs / 1.15
+				var r := 0.82 * bs / 1.15 * sqrt(maxf(0.0, 1.0 - pow((h * 1.15 / bs - 0.7) / 0.8, 2.0)))
 				_fill_nodes.append(_ball(0.09, berry, Vector3(cos(a) * r, h, sin(a) * r), 5))
 		&"fetch_water", &"fish_by_hand":
 			for i in 3:
@@ -127,6 +137,16 @@ func _job(id: StringName, seed_v: int) -> void:
 				_fill_nodes.append(_art(&"deer", i, Vector3(cos(a), 0, sin(a)) * 2.2, rng.randf() * TAU))
 		&"pray":
 			_art(&"cairn", 0)
+		&"great_elk_hunt":
+			# one great elk, half again the size of the deer, among the flint and ferns
+			_fill_nodes.append(_art(&"deer", 1, Vector3(0, 0, 0.4), rng.randf() * TAU, 1.7))
+			_art(&"fern", seed_v, Vector3(-1.6, 0, -0.8), rng.randf() * TAU)
+			_art(&"rock_small", seed_v, Vector3(1.7, 0, -1.1), rng.randf() * TAU, 1.3)
+		&"festival":
+			# a dancing ring marked with flowers
+			for i in 8:
+				var a := TAU * i / 8.0
+				_art(&"flowers", i + seed_v, Vector3(cos(a), 0, sin(a)) * 2.3, rng.randf() * TAU, 0.9)
 		_:
 			_art(&"rock_small", seed_v)
 
@@ -136,19 +156,42 @@ func _art_id(bid: StringName) -> StringName:
 	var id: StringName = BUILDING_ART.get(bid, bid)
 	return id if AssetCatalog.has(id) else &""
 
+const HUT_WALLS_AT := 0.5             # build progress where a hut's frame gets its walls
+const GHOST_ALPHA := 0.22
+
+## Plots show their stage (doc 4, Build): staked ground with a faint ghost of
+## what will stand there, then (huts) the pole frame, then walls and roof
+## rising; other buildings rise out of their staked plot. Fitted to the
+## footprint so a plot reads at the size of the finished building.
 func _plot(s: Site, seed_v: int) -> void:
 	var fp := s.building.footprint
 	var span := maxf(fp.x, fp.y)
-	if s.state == Site.State.BUILDING and s.building.id == &"hut":
-		_art(&"hut_frame", 0)
+	var bid := s.building.id
+	var id := _art_id(bid)
+	var is_hut := bid == &"hut"
+	var ks := 1.0 if is_hut else maxf(span / 3.9, 0.8)
+	if s.state == Site.State.PLOT:
+		_hut_stage = 0
+		_art(&"hut_plot", 0, Vector3.ZERO, 0.0, ks)
+		if id != &"":
+			_ghost(_art(id, seed_v, Vector3.ZERO, 0.0, 1.0 if is_hut else _fit(id, fp)))
+	elif is_hut:
+		if s.build_progress() < HUT_WALLS_AT:
+			_hut_stage = 1
+			_art(&"hut_frame", 0)
+		else:
+			_hut_stage = 2
+			_art(&"hut_plot", 0)
+			_rising_s = 1.0
+			_rising_from = 0.55
+			_rising = _art(&"hut", seed_v, Vector3.ZERO, 0.0, 1.0)
+			_rising.scale.y = _rising_from
 	else:
-		var k := maxf(span / 4.0, 0.75)
-		_art(&"hut_plot", 0, Vector3.ZERO, 0.0, k)
-		if s.state == Site.State.BUILDING:
-			var id := _art_id(s.building.id)
-			if id != &"":
-				_rising = _art(id, seed_v, Vector3.ZERO, 0.0, _fit(id, fp))
-				_rising.scale.y = lerpf(0.15, 1.0, s.build_progress())
+		_art(&"hut_plot", 0, Vector3.ZERO, 0.0, ks)
+		if id != &"":
+			_rising_s = _fit(id, fp)
+			_rising = _art(id, seed_v, Vector3.ZERO, 0.0, _rising_s)
+			_rising.scale.y = _rising_s * lerpf(_rising_from, 1.0, s.build_progress())
 	# Material piles grow as builders deliver.
 	var i := 0
 	for k in s.building.cost:
@@ -162,6 +205,22 @@ func _plot(s: Site, seed_v: int) -> void:
 			else:
 				_art(&"rock_small", i, at, 0.0, lerpf(0.8, 1.6, f))
 		i += 1
+
+## A see-through preview of the building to come, so a plot never reads as a blob.
+func _ghost(n: Node3D) -> void:
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.albedo_color = Color(1.0, 0.92, 0.75, GHOST_ALPHA)
+	m.cull_mode = BaseMaterial3D.CULL_BACK
+	m.no_depth_test = false
+	for c in n.find_children("*", "GeometryInstance3D", true, false):
+		var gi := c as GeometryInstance3D
+		gi.material_override = m
+		gi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	for c in n.find_children("*", "Light3D", true, false):
+		c.queue_free()
+	n.name = "Ghost"
 
 ## Scale that fits a catalog model into a building's footprint (never above 1.15).
 func _fit(id: StringName, fp: Vector2) -> float:

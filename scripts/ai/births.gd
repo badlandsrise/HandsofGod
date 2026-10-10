@@ -11,8 +11,11 @@ const BIRTH_COOLDOWN := 300.0      # game seconds between a pair's children
 const BIRTH_CHANCE := 0.25         # per check, once every condition holds
 const SURPLUS_PER_PERSON := 2      # food units per person at dawn for a "surplus" day
 const MIN_MOOD := 0.5
+const PRAYER_CHANCE := 0.4         # a new baby's parents pray at the shrine for the hand to name it
+const PRAYER_WAIT := 30.0          # the name box comes once they kneel, or after this long
 
 var _acc: float = 0.0
+var _prayers: Array = []           # [{baby, parent, site, t}]
 
 func _ready() -> void:
 	Events.sim_tick.connect(_on_tick)
@@ -33,6 +36,7 @@ func _on_tick(dt: float) -> void:
 	_acc = 0.0
 	update_bonds(CHECK)
 	try_births()
+	_update_prayers(CHECK)
 
 static func _adults() -> Array:
 	return Village.alive().filter(func(p): return p.stage == Person.Stage.ADULT)
@@ -113,7 +117,41 @@ func try_births() -> void:
 		if b == null or not b.alive():
 			continue
 		if Births.can_have_child(a, b) and Game.rng.randf() < BIRTH_CHANCE:
-			Births.have_child(a, b)
+			var baby := Births.have_child(a, b)
+			maybe_pray_for_name(baby, a)
+
+## The baby-naming prayer (Austin's ruling on section 3): now and then a new
+## baby's parent goes to the shrine and prays "for the hand to name our baby".
+## The first baby born after the shrine stands always prays.
+func maybe_pray_for_name(baby: Person, parent: Person) -> bool:
+	if baby == null or parent == null or not is_instance_valid(parent):
+		return false
+	var shrine := Site.nearest_shrine(parent.global_position)
+	if shrine == null:
+		return false
+	var first: bool = not Village.stats.get("baby_prayer_done", false)
+	if not first and Game.rng.randf() >= PRAYER_CHANCE:
+		return false
+	Village.stats["baby_prayer_done"] = true
+	if shrine.can_accept(1):
+		parent.join(shrine, false)
+	_prayers.append({"baby": baby, "parent": parent, "site": shrine, "t": 0.0})
+	Events.alert.emit("%s prays at the shrine for the hand to name the baby" % parent.given_name, shrine.global_position)
+	return true
+
+func _update_prayers(dt: float) -> void:
+	for pr in _prayers.duplicate():
+		var baby = pr["baby"]
+		var parent = pr["parent"]
+		if not is_instance_valid(baby) or not baby.alive():
+			_prayers.erase(pr)
+			continue
+		pr["t"] = float(pr["t"]) + dt
+		var kneeling: bool = is_instance_valid(parent) and is_instance_valid(pr["site"]) and parent.is_present_at(pr["site"], 1.2)
+		if kneeling or float(pr["t"]) >= PRAYER_WAIT:
+			_prayers.erase(pr)
+			Village.stats["baby_prayers"] = int(Village.stats.get("baby_prayers", 0)) + 1
+			Events.name_requested.emit([baby], &"baby_prayer")
 
 static func have_child(a: Person, b: Person) -> Person:
 	var home: Site = a.home if a.home != null and is_instance_valid(a.home) else b.home

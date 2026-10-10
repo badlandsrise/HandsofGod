@@ -14,3 +14,4 @@ music = &"launch"
 day_seconds = 80.0
 night_seconds = 25.0
 season_seconds = 240.0
+playable = false

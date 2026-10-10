@@ -6,8 +6,12 @@
 script = ExtResource("1_def")
 id = &"stone_circle"
 era = 1
-text = "A circle of stones that points at the sky."
+text = "A circle of stones that points at the sky, where all of us can stand."
+voice = "We are many now. We want a circle of great stones, and a feast under it, so the sky knows we are here."
 gate = true
 needs_buildings = {&"stone_circle": 1}
 needs_population = 12
+needs_winters = 2
+needs_flags = Array[StringName]([&"festival"])
+quiet_before = 120.0
 reward_faith = 15.0

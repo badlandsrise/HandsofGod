@@ -11,7 +11,7 @@ enum State { JOB, PLOT, BUILDING, FINISHED }
 
 const DEFAULT_SCENE := "res://scenes/sites/site.tscn"
 const FIRE_MAX_FUEL := 150.0        # seconds of burn a fire can hold
-const FIRE_FUEL_PER_WOOD := 45.0
+const FIRE_FUEL_PER_WOOD := 75.0
 const FIRE_PIT_RADIUS := 5.0        # warmth of a bare fire pit (a tend_fire site with no building)
 const STORE_CAP_PER_STORE := 20
 
@@ -35,6 +35,7 @@ var inside: Array = []                  # Person nodes sheltering inside
 var parent_uid: int = 0                 # extra job sites spawned by a finished building
 var children_spawned: bool = false
 var origin: Vector3 = Vector3.INF       # moving group jobs (log hauls) start here
+var evergreen: bool = false             # safety net (doc 8.1): in a food crisis this bush never runs dry or sleeps
 
 var visual: Node3D
 var bar: SiteBar
@@ -99,9 +100,19 @@ func work_job() -> JobDef:
 		return Defs.job(&"build")
 	return job
 
-## Group hauls (single-use logs) travel to the store while the group works.
+## Group hauls (single-use logs) travel to the store (or the fire) while the group works.
 func moves_to_store() -> bool:
-	return is_group() and job.node_amount == 1
+	return is_group() and job.node_amount == 1 and (job.outputs.size() > 0 or job.carry_to == &"fire") and not job.needs_blessed
+
+## Where a moving group job is heading.
+func carry_target() -> Vector3:
+	if job != null and job.carry_to == &"fire":
+		var f := Site.nearest(origin, 120.0, func(o): return o != self and o.is_fire())
+		if f != null:
+			var away := origin - f.global_position
+			away.y = 0.0
+			return f.global_position + away.normalized() * 2.4
+	return Site.store_point(origin)
 
 func is_finished_building(id: StringName) -> bool:
 	return state == State.FINISHED and building != null and building.id == id
@@ -140,7 +151,9 @@ func can_accept(n: int = 1) -> bool:
 	if job != null and not is_plot():
 		if job.needs_power != &"" and not Faith.has(job.needs_power):
 			return false
-		if amount == 0 and job.regrow_time <= 0.0:
+		if not discovered():
+			return false
+		if amount == 0 and job.regrow_time <= 0.0 and not (evergreen and Site.food_crisis()):
 			return false
 	return free_slots() >= n
 
@@ -189,6 +202,10 @@ func hover_text() -> String:
 	if job.needs_power != &"" and not Faith.has(job.needs_power):
 		var pd := Defs.power(job.needs_power)
 		t += "  (needs %s)" % (pd.title if pd else str(job.needs_power))
+	elif not discovered():
+		t += "  (needs stone tools)"
+	if job.needs_blessed and _blessed_present() < job.min_people:
+		t += "  (only the blessed can do this)"
 	if amount >= 0 and job.node_amount > 1:
 		t += "  %d left" % amount
 	if not can_work_now():
@@ -204,7 +221,8 @@ func pick_radius() -> float:
 	if job != null:
 		match job.id:
 			&"fetch_water", &"fish_by_hand": return 2.0
-			&"hunt": return 2.2
+			&"hunt", &"great_elk_hunt": return 2.2
+			&"festival": return 2.4
 			&"haul_log", &"carry_log": return 1.4
 	return 1.2
 
@@ -245,6 +263,13 @@ func _valid_workers() -> Array:
 	workers = workers.filter(func(x): return is_instance_valid(x) and x.alive())
 	return workers
 
+func _blessed_present() -> int:
+	var n := 0
+	for p in _present():
+		if p.is_blessed():
+			n += 1
+	return n
+
 func _present() -> Array:
 	var out: Array = []
 	for p in _valid_workers():
@@ -255,7 +280,22 @@ func _present() -> Array:
 # --- gather / work ------------------------------------------------------------------
 
 func _winter_stopped() -> bool:
+	if evergreen and Site.food_crisis():
+		return false
 	return job != null and job.winter_stops and Clock.season == Clock.Season.WINTER
+
+## Food is nearly gone: the evergreen bushes by the cave keep giving (doc 8.1).
+static func food_crisis() -> bool:
+	return Village.food() < maxi(Village.population(), 2)
+
+func set_evergreen(on: bool) -> void:
+	evergreen = on
+
+## True when this job's discovery (stone tools for felling) has been made.
+func discovered() -> bool:
+	if job == null or job.needs_discovery == &"":
+		return true
+	return Flags.has(job.needs_discovery)
 
 ## Whether work can happen here right now (not depleted, not stopped by winter).
 func can_work_now() -> bool:
@@ -263,12 +303,14 @@ func can_work_now() -> bool:
 		return false
 	if _winter_stopped():
 		return false
-	return amount != 0
+	return amount != 0 or (evergreen and Site.food_crisis())
 
 ## Takes one unit from a gather node. False when depleted.
 func take_one() -> bool:
 	if amount < 0:
 		return true
+	if evergreen and Site.food_crisis():
+		return true                      # the evergreen bushes never run dry when food is gone
 	if amount == 0:
 		return false
 	amount -= 1
@@ -368,6 +410,8 @@ func _finish(silent: bool) -> void:
 		fuel_t = maxf(fuel_t, 60.0)     # they light it as soon as it is built
 	if building.id == &"food_store":
 		Village.store_cap += STORE_CAP_PER_STORE
+	elif building.id == &"drying_rack":
+		Village.store_cap += STORE_CAP_PER_STORE / 2
 	for p in builders:
 		if is_instance_valid(p) and p.has_method("go_idle"):
 			p.go_idle()
@@ -444,13 +488,15 @@ func _sim_group(dt: float) -> void:
 		return
 	var rate := 0.0
 	for p in present:
+		if job.needs_blessed and not p.is_blessed():
+			continue      # only blessed people can win the great elk hunt, or dance the festival
 		rate += p.rate()
 	rate /= float(present.size())
 	var bonus := 1.0 + job.group_bonus * float(present.size() - job.min_people)
 	progress += dt * rate * bonus / maxf(job.work_time, 0.1)
 	if moves_to_store():
-		var to := Site.store_point(origin)
-		var p3 := origin.lerp(to, minf(progress, 1.0) * 0.85)
+		var to := carry_target()
+		var p3 := origin.lerp(to, minf(progress, 1.0) * (1.0 if job.carry_to == &"fire" else 0.85))
 		p3.y = Site.ground(p3.x, p3.z)
 		global_position = p3
 	if progress >= 1.0:
@@ -466,6 +512,10 @@ func _complete_group(present: Array) -> void:
 	group_running = false
 	for k in job.outputs:
 		Village.add_store(k, int(job.outputs[k]))
+	if job.carry_to == &"fire":
+		var f := Site.nearest(global_position, 30.0, func(o): return o != self and o.is_fire())
+		if f != null:
+			f.add_fuel(FIRE_MAX_FUEL)
 	for p in present:
 		p.on_group_done(self)
 	Events.job_completed.emit(self)
@@ -599,6 +649,7 @@ func save_state() -> Dictionary:
 		"build_done": build_done,
 		"fuel_t": fuel_t,
 		"parent_uid": parent_uid,
+		"evergreen": evergreen,
 		"children_spawned": children_spawned,
 		"origin": [origin.x, origin.y, origin.z] if origin != Vector3.INF else [],
 	}
@@ -635,6 +686,7 @@ func load_state(d: Dictionary) -> void:
 	build_done = float(d.get("build_done", 0.0))
 	fuel_t = float(d.get("fuel_t", 0.0))
 	parent_uid = int(d.get("parent_uid", 0))
+	evergreen = bool(d.get("evergreen", false))
 	children_spawned = bool(d.get("children_spawned", false))
 	var o: Array = d.get("origin", [])
 	origin = Vector3(float(o[0]), float(o[1]), float(o[2])) if o.size() == 3 else pos

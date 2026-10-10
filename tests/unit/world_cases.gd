@@ -64,14 +64,15 @@ func run() -> void:
 	for s in Village.sites:
 		if s.job: ids[s.job.id] = true
 		if s.building: ids[s.building.id] = true
-	for id in [&"gather_berries", &"fetch_water", &"collect_sticks", &"tend_fire", &"carry_log", &"haul_log", &"hunt"]:
+	for id in [&"gather_berries", &"fetch_water", &"collect_sticks", &"tend_fire", &"haul_log", &"hunt", &"fish_by_hand", &"knap_flint", &"fell_tree"]:
 		check(ids.has(id), "layout has %s" % id)
 	var n_plots: int = w.ensure_plots_for_dream(&"shelter_of_our_own") + Village.sites.filter(func(s): return s.building != null and s.building.id == &"hut").size()
 	check(n_plots >= 1, "a hut plot exists for the first dream")
 	check(w.ensure_plots_for_dream(&"shrine_to_the_hand") == 1, "the shrine dream adds a shrine plot")
 	check(w.ensure_plots_for_dream(&"shrine_to_the_hand") == 0, "and does not add it twice")
 	var ever := Village.sites.filter(func(s): return s.has_meta("evergreen"))
-	check(ever.size() == 3 and ever.all(func(s): return s.amount == -1 and not s.job.winter_stops), "3 evergreen bushes by the cave never run dry")
+	check(ever.size() == 3 and ever.all(func(s): return s.evergreen), "3 evergreen bushes by the cave (the safety net)")
+	check(not Village.sites.any(func(s): return s.job != null and s.job.id == &"carry_log"), "the fire log waits for its onboarding beat")
 	check(w.site_near(Vector3(0, 0, -13), 2.0, func(s): return s.is_fire()) != null, "site_near finds the fire")
 	# ---- storm opening
 	check(w.storm.active() and Clock.is_night and w.look.raining(), "a new game opens on the storm night")

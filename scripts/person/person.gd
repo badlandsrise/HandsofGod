@@ -28,6 +28,8 @@ const ARRIVE := 0.35
 const SKILL_PER_CYCLE := 0.04
 const LIGHT_JOBS: Array[StringName] = [&"gather_berries", &"fetch_water"]   # children, from Era 2
 const WISH_LIFETIME := 90.0
+const WISH_GAP := Vector2(240.0, 480.0)    # game seconds between a granted wish and the next
+const WISH_FAITH := Vector2(4.0, 6.0)     # faith for a granted wish (doc 6: +4 to +10)
 const CARGO_COLOURS: Dictionary = {&"berries": Color(0.8, 0.15, 0.3), &"wood": Color(0.5, 0.33, 0.18),
 	&"water": Color(0.3, 0.55, 0.95), &"stone": Color(0.6, 0.6, 0.62), &"meat": Color(0.7, 0.3, 0.25),
 	&"fish": Color(0.7, 0.75, 0.8), &"hide": Color(0.6, 0.45, 0.3)}
@@ -62,6 +64,10 @@ var warmed_t: float = 0.0
 var look: Dictionary = {"skin": 0, "hair": 0, "height": 1.0}
 var bonds: Dictionary = {}              # other uid -> bond progress (births.gd)
 var last_birth_age: float = -1000.0
+var named_by_hand: bool = false         # the hand chose this name (first two, baby prayers): a hand mark in the Book
+var first_two: bool = false             # one of the two people of the storm night
+var _cold_t: float = 0.0                # seconds spent frozen (warmth 0): a cold makes them sick
+var _sick_cd: float = 0.0
 
 var visual: PersonVisual
 var nav: NavigationAgent3D
@@ -95,6 +101,9 @@ var _hand_ref: WeakRef = null
 var _hand_search_t: float = 0.0
 var _started_working := false
 var _waiting_for: StringName = &""
+var _stuck_ref := Vector3.INF
+var _stuck_t: float = 0.0
+var _no_nav_t: float = 0.0
 
 static func stage_for_age(a: float) -> int:
 	var s := Stage.BABY
@@ -146,11 +155,14 @@ func _generate() -> void:
 		"height": rng.randf_range(0.92, 1.08), "outfit": (rng.randi() % 4) * 2 + (1 if sex == "f" else 0)}
 	age = rng.randf_range(STAGE_START[Stage.ADULT] + 60.0, STAGE_START[Stage.ADULT] + 600.0)
 	death_age = DEATH_AGE + rng.randf_range(-DEATH_JITTER, DEATH_JITTER)
-	wish_t = rng.randf_range(30.0, 70.0)
+	wish_t = rng.randf_range(60.0, 200.0)
 
 func _apply_opts() -> void:
 	var o := _opts
-	if o.has("sex"): sex = o["sex"]
+	if o.has("sex"):
+		sex = o["sex"]
+		if look.has("outfit"):
+			look["outfit"] = (int(look["outfit"]) / 2) * 2 + (1 if sex == "f" else 0)
 	if o.has("age"): age = float(o["age"])
 	if o.has("parents"):
 		parents.clear()
@@ -162,6 +174,8 @@ func _apply_opts() -> void:
 		for t in o["traits"]: traits.append(StringName(t))
 	if o.has("wanderer"): wanderer = bool(o["wanderer"])
 	if o.has("home") and o["home"] is Site: home = o["home"]
+	if o.has("first_two"): first_two = bool(o["first_two"])
+	if o.has("death_age"): death_age = float(o["death_age"])
 	given_name = o.get("name", "")
 	if given_name == "":
 		given_name = Names.pick(sex, Village.era, Game.rng, Names.taken_names())
@@ -246,7 +260,12 @@ func on_placed(at: Vector3, site: Site) -> void:
 	placed_by_hand = true
 
 ## [hand] while held, the hand moves the person with this each frame.
-func held_follow(world_pos: Vector3) -> void: global_position = world_pos
+## Held people hang from the fingertips by the scruff: lift the feet so the
+## head sits just under the fingers instead of a body-length below them.
+const HELD_LIFT := 0.75
+
+func held_follow(world_pos: Vector3) -> void:
+	global_position = world_pos + Vector3(0, HELD_LIFT, 0)
 
 ## [ui] one line under the name, e.g. "Gathering berries · hungry · wants: tend the fire".
 func status_text() -> String:
@@ -283,6 +302,8 @@ func rate() -> float:
 	var jd := _job_def()
 	if jd != null:
 		r *= 1.0 + 0.1 * float(stars(_family(jd.skill)) - 1)
+		if jd.kind == JobDef.Kind.GATHER and Flags.has(&"stone_tools"):
+			r *= 1.25          # stone tools: +25% gather speed (doc 4)
 	return r
 
 func adjust_trust(d: float) -> void:
@@ -305,7 +326,29 @@ func warm(seconds: float = 10.0) -> void:
 
 ## Blessing power: works 2x for `seconds`.
 func bless(seconds: float = 30.0) -> void:
+	if blessed_t <= 0.0:
+		adjust_trust(0.05)
 	blessed_t = maxf(blessed_t, seconds)
+
+func is_blessed() -> bool:
+	return blessed_t > 0.0
+
+## Onboarding: they want this job and show it (pointing, a wish bubble).
+func point_at(s: Site) -> void:
+	if s == null or not is_instance_valid(s) or s.job == null:
+		return
+	wish = s.job.id
+	wish_t = WISH_LIFETIME * 3.0
+	var d := s.global_position - global_position
+	rotation.y = atan2(d.x, d.z)
+	_show_wish()
+
+## [ui] the hand gave this person a name (Events.names_given).
+func set_name_from_hand(n: String) -> void:
+	n = n.strip_edges()
+	if n != "":
+		given_name = n.substr(0, 16)
+	named_by_hand = true
 
 ## Threats: run away from `from` for a while (keeps the job to return to).
 func flee_from(from: Vector3, seconds: float = 4.0) -> void:
@@ -395,6 +438,7 @@ func on_group_done(s: Site) -> void:
 	_gain_skill(s.job.skill, SKILL_PER_CYCLE * 2.0)
 	needs[&"joy"] = minf(needs[&"joy"] + 0.1, 1.0)
 	if placed_by_hand:
+		placed_by_hand = false     # +0.2 once per placement: "a job completed by someone you placed"
 		Faith.add(0.2, global_position)
 
 ## Sends the person to eat at the store (dawn and dusk).
@@ -406,7 +450,14 @@ func go_eat() -> void:
 	var wants_food: bool = needs[&"food"] < 0.95 and Village.food() > 0
 	var wants_water: bool = needs[&"water"] < 0.95 and Village.store(&"water") > 0
 	if not wants_food and not wants_water:
+		if (state == S.WORK or state == S.WAIT_GROUP) and job_site != null and is_instance_valid(job_site) and not Clock.is_night:
+			return            # nothing to eat: keep working
 		_after_eat()
+		return
+	# Working far from the store: eat when really hungry, not at every meal.
+	if job_site != null and is_instance_valid(job_site) and not Clock.is_night \
+			and global_position.distance_to(Site.store_point(global_position)) > 35.0 \
+			and needs[&"food"] > 0.4 and needs[&"water"] > 0.4:
 		return
 	if job_site != null and is_instance_valid(job_site):
 		_resume = job_site
@@ -471,9 +522,13 @@ func hurt(amount: float = 1.0, cause: StringName = &"") -> void:
 	if state == S.DEAD:
 		return
 	hurt_t = minf(hurt_t + HURT_TIME * amount, HURT_TIME * 3.0)
+	if cause == &"wolf":
+		Village.stats["wolf_bites"] = int(Village.stats.get("wolf_bites", 0)) + 1
 	needs[&"joy"] = maxf(float(needs.get(&"joy", 0.5)) - 0.15, 0.0)
 	if visual: visual.set_hurt(0.8)
-	if cause != &"wolf":    # the wolf raises its own alert
+	if cause == &"cold":
+		Events.alert.emit("%s caught a chill" % given_name, global_position)
+	elif cause != &"wolf":    # the wolf raises its own alert
 		Events.alert.emit("%s was hurt" % given_name, global_position)
 	if state == S.WORK or state == S.IDLE or state == S.WALK or state == S.WAIT_GROUP:
 		flee_from(global_position + Vector3(Game.rng.randf_range(-1, 1), 0, Game.rng.randf_range(-1, 1)), 1.0)
@@ -536,10 +591,25 @@ func _sim_needs(dt: float) -> void:
 	if warm_src:
 		w += 0.04 * dt
 	elif _is_cold():
-		w -= (0.012 if Clock.season == Clock.Season.WINTER else 0.007) * dt
+		var loss := (0.012 if Clock.season == Clock.Season.WINTER else 0.007)
+		if Game.world != null and is_instance_valid(Game.world) and Game.world.threats != null and Game.world.threats.cold():
+			loss *= 1.8        # a cold snap
+		if Flags.has(&"hide_clothes"):
+			loss *= 0.6        # hide clothes from the hunt
+		w -= loss * dt
 	else:
 		w += 0.01 * dt
 	needs[&"warmth"] = w
+	# Frozen for a while: they catch a chill and work slowly for about a day.
+	_sick_cd = maxf(_sick_cd - dt, 0.0)
+	if w <= 0.02 and stage != Stage.BABY:
+		_cold_t += dt
+		if _cold_t > 25.0 and _sick_cd <= 0.0:
+			_cold_t = 0.0
+			_sick_cd = 150.0
+			hurt(0.6, &"cold")
+	else:
+		_cold_t = 0.0
 	var j: float = needs[&"joy"] - DECAY[&"joy"] * dt
 	_company_t -= dt
 	if _company_t <= 0.0:
@@ -568,12 +638,14 @@ func _near_someone(r: float) -> bool:
 func _sim_wish(dt: float) -> void:
 	if stage == Stage.BABY:
 		return
+	if not Flags.onboarding_done() and wish == &"":
+		return             # the first minutes teach one wish at a time (onboarding.gd)
 	wish_t -= dt
 	if wish != &"":
 		if wish_t <= 0.0:
 			wish = &""                       # ignored: a little less trust
 			adjust_trust(-0.1)
-			wish_t = Game.rng.randf_range(60.0, 120.0)
+			wish_t = Game.rng.randf_range(WISH_GAP.x * 0.5, WISH_GAP.y * 0.5)
 			_show_wish()
 		return
 	if needs[&"warmth"] < 0.3 and Faith.has(&"warmth"):
@@ -604,11 +676,11 @@ func _sim_wish(dt: float) -> void:
 
 func _grant_wish() -> void:
 	wish = &""
-	wish_t = Game.rng.randf_range(90.0, 150.0)
+	wish_t = Game.rng.randf_range(WISH_GAP.x, WISH_GAP.y)
 	adjust_trust(1.0)
 	needs[&"joy"] = minf(needs[&"joy"] + 0.3, 1.0)
-	Faith.add(Game.rng.randf_range(4.0, 10.0), global_position)
-	if Game.rng.randf() < 0.5:
+	Faith.add(Game.rng.randf_range(WISH_FAITH.x, WISH_FAITH.y) if Flags.onboarding_done() else 2.0, global_position)
+	if Game.rng.randf() < 0.35 and Flags.onboarding_done():
 		Gifts.spawn_gift(self)
 	_show_wish()
 
@@ -785,6 +857,7 @@ func _work_gather(dt: float, s: Site) -> void:
 				_set_cargo_visual()
 				_gain_skill(s.job.skill, SKILL_PER_CYCLE)
 				if placed_by_hand:
+					placed_by_hand = false
 					Faith.add(0.2, global_position)
 				Events.job_completed.emit(s)
 				_phase = "go"
@@ -816,6 +889,7 @@ func _work_craft(dt: float, s: Site) -> void:
 			Village.add_store(k, int(s.job.outputs[k]))
 		_gain_skill(s.job.skill, SKILL_PER_CYCLE)
 		if placed_by_hand:
+			placed_by_hand = false
 			Faith.add(0.2, global_position)
 		s.on_cycle_done(self)
 
@@ -826,7 +900,7 @@ func _work_pray(dt: float, s: Site) -> void:
 	_phase = "work"
 	_first_work(s)
 	var m := lerpf(0.5, 1.2, mood()) * (1.5 if has_trait(&"devout") else 1.0)
-	Faith.add(0.1 * dt * m, global_position)
+	Faith.add(s.job.faith_rate * dt * m, global_position)
 	needs[&"joy"] = minf(needs[&"joy"] + 0.003 * dt, 1.0)
 	_gain_skill(&"scholarship", 0.002 * dt)
 	_pray_t += dt
@@ -1074,7 +1148,17 @@ func _step(dt: float) -> void:
 	if dist <= ARRIVE * 0.8:
 		return
 	var dir := flat
-	if _use_nav():
+	# Stuck on a navmesh corner for a few seconds: walk straight for a while.
+	_no_nav_t = maxf(_no_nav_t - dt, 0.0)
+	if not _stuck_ref.is_finite() or pos.distance_to(_stuck_ref) > 0.6:
+		_stuck_ref = pos
+		_stuck_t = 0.0
+	else:
+		_stuck_t += dt
+		if _stuck_t > 3.0:
+			_stuck_t = 0.0
+			_no_nav_t = 4.0
+	if _no_nav_t <= 0.0 and _use_nav():
 		if nav.target_position.distance_to(_target) > 0.3:
 			nav.target_position = _target
 		var nxt := nav.get_next_path_position()
@@ -1323,7 +1407,7 @@ func save_state() -> Dictionary:
 		"trust_f": trust_f, "wish": str(wish), "wish_t": wish_t,
 		"job": job_uid, "home": home.uid if home != null and is_instance_valid(home) else 0,
 		"shelter": inside_uid, "state": st, "placed_by_hand": placed_by_hand, "wanderer": wanderer,
-		"blessed_t": blessed_t, "hurt_t": hurt_t, "look": look, "bonds": bd, "last_birth_age": last_birth_age,
+		"blessed_t": blessed_t, "hurt_t": hurt_t, "named_by_hand": named_by_hand, "first_two": first_two, "look": look, "bonds": bd, "last_birth_age": last_birth_age,
 		"pos": [p.x, p.y, p.z], "rot_y": rotation.y,
 	}
 
@@ -1355,6 +1439,8 @@ func load_state(d: Dictionary) -> void:
 	wanderer = bool(d.get("wanderer", false))
 	blessed_t = float(d.get("blessed_t", 0.0))
 	hurt_t = float(d.get("hurt_t", 0.0))
+	named_by_hand = bool(d.get("named_by_hand", false))
+	first_two = bool(d.get("first_two", false))
 	var lk: Dictionary = d.get("look", {})
 	look = {"skin": int(lk.get("skin", 0)), "hair": int(lk.get("hair", 0)), "height": float(lk.get("height", 1.0))}
 	if lk.has("outfit"):

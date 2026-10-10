@@ -136,7 +136,7 @@ func _terrain_faces(bounds: Rect2) -> PackedVector3Array:
 				continue
 			var x := -Valley.HALF + i * Valley.CELL
 			var z := -Valley.HALF + j * Valley.CELL
-			if valley.is_water(x + 1.0, z + 1.0):
+			if valley.is_water(x + 1.0, z + 1.0) and not _ford(x + 1.0, z + 1.0):
 				continue
 			var a := Vector3(x, valley.heights[k], z)
 			var b := Vector3(x + Valley.CELL, valley.heights[k + 1], z)
@@ -144,6 +144,11 @@ func _terrain_faces(bounds: Rect2) -> PackedVector3Array:
 			var d := Vector3(x + Valley.CELL, valley.heights[k + Valley.N + 1], z + Valley.CELL)
 			faces.append_array([a, b, c, b, d, c])
 	return faces
+
+## The Clearing's stream is shallow: people wade across it (otherwise the
+## only way round is a gap by the cliff where they get stuck).
+func _ford(x: float, z: float) -> bool:
+	return z > Valley.STREAM_HEAD_Z and z < Valley.river_z(x) - 10.0 and absf(x - Valley.stream_x(z)) < 3.0
 
 ## Nearest point on the navmesh to `p` (p itself if there is no mesh yet).
 func closest(p: Vector3) -> Vector3:

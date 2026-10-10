@@ -110,11 +110,14 @@ func test_data() -> void:
 	check(D.power(&"reach").opens_region == &"east_bank" and D.power(&"strength_1").opens_region == &"", "power regions match section 10 (Era 1 regions open by world blockers)")
 	check(D.eras.size() == 4 and D.era(1).day_seconds == 75.0 and D.era(1).night_seconds == 30.0 and D.era(1).season_seconds == 240.0, "4 eras, Era 1 timing")
 	var e1: EraDef = D.era(1)
-	check(e1.dreams.size() == 4 and D.dream(e1.dreams[-1]).gate, "Era 1 dreams end in the gate")
-	var era1_jobs := [&"gather_berries", &"fetch_water", &"collect_sticks", &"knap_flint", &"tend_fire", &"carry_log", &"haul_log", &"hunt", &"build", &"pray"]
+	check(e1.dreams.size() == 3 and D.dream(e1.dreams[-1]).gate, "Era 1: three milestone dreams, the last is the gate")
+	var era1_jobs := [&"gather_berries", &"fetch_water", &"collect_sticks", &"fell_tree", &"knap_flint", &"tend_fire", &"carry_log", &"haul_log", &"hunt", &"fish_by_hand", &"great_elk_hunt", &"festival", &"build", &"pray"]
 	var missing: Array = era1_jobs.filter(func(j): return D.job(j) == null)
 	check(missing.is_empty(), "Era 1 jobs load %s" % str(missing))
 	check(D.job(&"haul_log").min_people == 3 and D.job(&"hunt").min_people == 4 and D.job(&"carry_log").min_people == 2, "group sizes 2, 3, 4")
+	check(D.job(&"haul_log").needs_power == &"grip_2" and D.job(&"hunt").needs_power == &"grip_2" and D.job(&"fish_by_hand").needs_power == &"warmth"
+		and D.job(&"festival").needs_power == &"blessing" and D.job(&"great_elk_hunt").needs_blessed, "Grip II, Warmth and Blessing open their jobs (doc 6)")
+	check(D.job(&"fell_tree").needs_discovery == &"stone_tools" and D.job(&"gather_berries").winter_stops, "felling needs stone tools; winter stops the berries")
 	var blds := [&"hut", &"fire_circle", &"food_store", &"cairn", &"shrine", &"stone_circle"]
 	check(blds.all(func(b): return D.building(b) != null), "Era 1 buildings load")
 
@@ -156,7 +159,7 @@ func test_group_job() -> void:
 	check(s.bar != null and s.bar.visible, "progress bar visible while the group works")
 	var wood0: int = V.store(&"wood")
 	step(30.0)
-	check(V.store(&"wood") == wood0 + 3, "log delivered 3 wood (%d)" % V.store(&"wood"))
+	check(V.store(&"wood") == wood0 + 2, "log delivered 2 wood (%d)" % V.store(&"wood"))
 	check(not is_instance_valid(s) or s.is_queued_for_deletion(), "single-use log is gone")
 	check(a.state != Person.S.WORK and a.job_site == null, "carriers are free again")
 	# Power-gated group job.
@@ -298,8 +301,18 @@ func test_dreams_and_ai() -> void:
 	hut.start_finished = true
 	root.add_child(hut)
 	dn.update()
+	check(not Dreams.is_done(&"shelter_of_our_own"), "a hut alone is not enough: the fire circle too")
+	var circle: Site = load(SITE_SCENE).instantiate()
+	circle.building = D.building(&"fire_circle")
+	circle.start_finished = true
+	root.add_child(circle)
+	dn.update()
 	check(Dreams.is_done(&"shelter_of_our_own") and F.total > faith0 and int(counts["dream_done"]) == 1, "dream done grants faith")
-	check(Dreams.active_dream().id == &"hut_and_fire", "next dream is milestone 1")
+	check(Dreams.active_dream().id == &"shrine_to_the_hand", "next dream is milestone 2, the shrine")
+	V.stats["last_dream_t"] = Clock.total_t
+	V.stats["dream_active"] = ""
+	dn.update()
+	check(str(V.stats.get("dream_active", "")) == "", "a quiet stretch before the next dream appears")
 	dn.free()
 	# Births.
 	V.stores[&"berries"] = 30

@@ -11,3 +11,6 @@ cost = 10.0
 strength = 4.0
 what_it_does = "Lift weight 4 (fallen logs)"
 what_it_opens = "The western meadow: wanderers, stone, rich bushes"
+requires = Array[StringName]([&"grip_2"])
+requires_regions = Array[StringName]([&"valley_floor"])
+requires_dreams = Array[StringName]([&"shelter_of_our_own"])

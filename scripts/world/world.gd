@@ -453,10 +453,10 @@ func site_near(p: Vector3, r: float, filter: Callable = Callable()) -> Site:
 		best_d = d
 	return best
 
-func spawn_person(at: Vector3, name_hint: String = "") -> Person:
+func spawn_person(at: Vector3, name_hint: String = "", extra: Dictionary = {}) -> Person:
 	var at_g := Vector3(at.x, ground_y(at.x, at.z), at.z)
 	if ResourceLoader.exists(PERSON_SCENE):
-		var opts := {}
+		var opts := extra.duplicate()
 		if name_hint != "":
 			opts["name"] = name_hint
 		return Person.spawn(dynamic, at_g, opts)
@@ -687,7 +687,19 @@ func _ensure_active_dream_plots() -> void:
 	if active != "":
 		ensure_plots_for_dream(StringName(active))
 
-## Safety net (section 8): the evergreen bushes by the cave never run dry.
+## A plot for `building_id` at its next free authored spot (family wishes:
+## another hut, the food store before winter). Null when no spot is free.
+func add_plot(building_id: StringName) -> Site:
+	for spot in LayoutEra1.PLOT_SPOTS.get(building_id, []):
+		var at := Vector3(spot.x, 0, spot.y)
+		if site_near(at, 2.5) != null:
+			continue
+		return spawn_plot(building_id, at)
+	return null
+
+## Safety net (section 8): the evergreen bushes by the cave. They work like any
+## bush, but when food runs out they never run dry and never sleep for winter
+## (Site.food_crisis), so there is always a job to place people on.
 func apply_safety_net() -> void:
 	var cave := Vector2(Valley.CAVE_MOUTH.x, Valley.CAVE_MOUTH.y)
 	for s in Village.sites:
@@ -696,16 +708,7 @@ func apply_safety_net() -> void:
 		var sp: Vector3 = s.global_position
 		if Vector2(sp.x, sp.z).distance_to(cave) > 17.0 and str(s.get_meta("layout_tag", "")) != "evergreen":
 			continue
-		if s.job.node_amount >= 0 or s.job.winter_stops:
-			var j: JobDef = s.job.duplicate()
-			j.node_amount = -1
-			j.winter_stops = false
-			s.job = j
-		if "amount" in s:
-			s.amount = -1
 		s.set_meta("evergreen", true)
-		if "evergreen" in s:
-			s.evergreen = true
 		if s.has_method("set_evergreen"):
 			s.set_evergreen(true)
 
@@ -753,6 +756,8 @@ func new_game() -> void:
 	Clock.set_speed(1)
 	Clock.apply_era(Defs.era(1))
 	opened_at = {&"clearing": 0.0}
+	Onboarding.reset()
+	Village.stats["era_started_t"] = 0.0
 	_reset_props()
 	regions.sync_instant()
 	var huddled := LayoutEra1.spawn(self)

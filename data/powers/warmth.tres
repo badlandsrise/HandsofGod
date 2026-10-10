@@ -12,3 +12,5 @@ gesture = true
 opens_jobs = Array[StringName]([&"fish_by_hand"])
 what_it_does = "Hold over people or a fire to warm them"
 what_it_opens = "Survive the first winter; hand-fishing in cold water"
+requires = Array[StringName]([&"grip_2"])
+min_population = 4

@@ -5,13 +5,15 @@
 [resource]
 script = ExtResource("1_def")
 id = &"carry_log"
-title = "Carry the log"
+title = "Carry the log to the fire"
 era = 1
 kind = 3
 skill = &"woodcraft"
 min_people = 2
 max_people = 2
-outputs = {&"wood": 3}
-work_time = 14.0
+outputs = {&"wood": 2}
+work_time = 12.0
 node_amount = 1
 wait_before_wander = 20.0
+carry_to = &"fire"
+once = true

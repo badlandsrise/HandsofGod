@@ -9,7 +9,9 @@ func _ready() -> void:
 	Events.job_completed.connect(_on_job_completed)
 
 func _on_job_completed(site) -> void:
-	if Village.stats.get("first_gift", false):
+	# The first gift is an onboarding beat (onboarding.gd); this is only the
+	# fallback for saves made before the beats existed.
+	if Village.stats.get("first_gift", false) or not Flags.onboarding_done():
 		return
 	if site is Site and is_instance_valid(site) and site.is_fire():
 		Village.stats["first_gift"] = true
