@@ -12,6 +12,10 @@ extends Node3D
 ##   set_look(skin: Color, hair: Color, cloth: Color, outfit_variant: int)
 ##       outfit_variant picks body, hair style and clothing cut (wraps, see OUTFITS):
 ##       even = male body, odd = female body.
+##   set_era(era: int)
+##       picks the tailoring: 1 = hides (OUTFITS), 2+ = woven clothes (OUTFITS_ERA2:
+##       linen undershirt, hose or long skirt, trim bands, aprons, straw hats, coifs).
+##       Until called, the villager follows ArtPalette.current_era() when it is built.
 ##   set_age_scale(stage: int)
 ##       Person.Stage: 0 BABY, 1 CHILD, 2 ADULT, 3 ELDER. Smaller bodies get a bigger head.
 ##   set_tint(c: Color)   multiplies the whole figure (e.g. dim at night, red when hurt).
@@ -41,6 +45,22 @@ const OUTFITS := [
 	[0, ["Hair_Beard", "Eyebrows_Regular"], Vector4(0.30, 0.80, 0.26, 0.53)],                   # bald, long tunic
 	[1, ["Hair_SimpleParted", "Eyebrows_Female"], Vector4(0.22, 0.79, 0.34, 0.56)],             # mid dress
 ]
+## Era 2: [body, hair pieces, cut, style (1, hose/long skirt, apron, undershirt sleeve
+## reach), trim colour, hat]. Same body parity as OUTFITS so a save keeps its sex.
+## The main garment keeps the job colour Person passes in; trim and hat add variety.
+const OUTFITS_ERA2 := [
+	[0, ["Hair_SimpleParted", "Eyebrows_Regular"], Vector4(0.34, 0.79, 0.36, 0.53), Vector4(1, 1, 0, 0.72), "#a8432e", &"straw_hat"],   # tunic, hose, straw hat
+	[1, ["Hair_Buns", "Eyebrows_Female"], Vector4(0.06, 0.79, 0.34, 0.57), Vector4(1, 0, 1, 0.72), "#5c84a6", &"coif"],               # long dress, apron, coif
+	[0, ["Hair_Buzzed", "Hair_Beard", "Eyebrows_Regular"], Vector4(0.36, 0.78, 0.30, 0.53), Vector4(1, 1, 1, 0.6), "#7a4a2c", &""],   # short tunic, work apron
+	[1, ["Hair_Long", "Eyebrows_Female"], Vector4(0.12, 0.79, 0.36, 0.57), Vector4(1, 0, 0, 0.72), "#d0a040", &""],                    # mid dress
+	[0, ["Hair_Long", "Hair_Beard", "Eyebrows_Regular"], Vector4(0.06, 0.80, 0.42, 0.55), Vector4(1, 0, 0, 0.72), "#d0a040", &""],     # long robe, gold trim
+	[1, ["Hair_BuzzedFemale", "Eyebrows_Female"], Vector4(0.10, 0.79, 0.30, 0.57), Vector4(1, 0, 1, 0.72), "#6f8a3c", &"straw_hat"], # skirt, apron, straw hat
+	[0, ["Hair_Beard", "Eyebrows_Regular"], Vector4(0.30, 0.79, 0.34, 0.53), Vector4(1, 1, 0, 0.72), "#5c84a6", &"cap"],              # long tunic, hose, felt cap
+	[1, ["Hair_SimpleParted", "Eyebrows_Female"], Vector4(0.08, 0.79, 0.34, 0.57), Vector4(1, 0, 0, 0.72), "#a8432e", &"scarf"],     # dress, headscarf
+]
+const UNDER_LINEN := Color("#e8dcc0")
+## hat colours (they use the hair material, so tint and era grading apply)
+const HAT_COLOURS := {&"straw_hat": Color("#d2a75e"), &"coif": Color("#efe6d2"), &"cap": Color("#6a4a32"), &"scarf": Color("#c9b48a")}
 const ONE_SHOT := [&"dead", &"pickup"]
 const ADULT_HEIGHT := 1.7
 ## [overall scale, head scale] per Person.Stage
@@ -57,6 +77,7 @@ var _tint := Color.WHITE
 var _outfit: int = 0
 var _stage: int = 2
 var _body_index: int = -1
+var _era: int = -1   # -1 = follow ArtPalette.current_era() at build time
 
 
 func _ready() -> void:
@@ -101,6 +122,13 @@ func set_look(skin: Color, hair: Color, cloth: Color, outfit_variant: int) -> vo
 		_build()
 
 
+## 1 = Era 1 hides, 2 or later = Era 2 woven clothes.
+func set_era(era: int) -> void:
+	_era = era
+	if is_node_ready():
+		_build()
+
+
 func set_age_scale(stage: int) -> void:
 	_stage = clampi(stage, 0, AGE.size() - 1)
 	if is_node_ready():
@@ -115,8 +143,13 @@ func set_tint(c: Color) -> void:
 
 # ------------------------------------------------------------------ internals
 
+func _woven() -> bool:
+	return (_era if _era >= 0 else ArtPalette.current_era()) >= 2
+
+
 func _build() -> void:
-	var o: Array = OUTFITS[_outfit]
+	var woven := _woven()
+	var o: Array = (OUTFITS_ERA2 if woven else OUTFITS)[_outfit]
 	var body: int = o[0]
 	if body != _body_index or _model == null:
 		if _model:
@@ -147,6 +180,11 @@ func _build() -> void:
 			else:
 				mi.material_override = MAT_BODY
 			mi.set_instance_shader_parameter(&"outfit_cut", o[2])
+			mi.set_instance_shader_parameter(&"outfit_style", o[3] if woven else Vector4(0, 0, 0, 0.72))
+			if woven:
+				mi.set_instance_shader_parameter(&"trim_color", Color(o[4]))
+				mi.set_instance_shader_parameter(&"under_color", UNDER_LINEN)
+	_build_hat(o[5] if woven else &"")
 	_apply_colors()
 	_apply_age()
 	if _anim.has_animation(_state):
@@ -170,9 +208,87 @@ func _attach_hair(piece: String) -> void:
 	tmp.free()
 
 
+## Hats ride a BoneAttachment3D on the head bone, so they follow the head through every
+## animation and the PoseModifier's head scaling. Built from primitives; the hair
+## material colours them (hair_color = hat colour) so tint and era grading apply.
+func _build_hat(kind: StringName) -> void:
+	var old := _skeleton.get_node_or_null("Hat")
+	if old:
+		old.free()
+	if kind == &"":
+		return
+	var att := BoneAttachment3D.new()
+	att.name = "Hat"
+	att.bone_name = "Head"
+	_skeleton.add_child(att)
+	var top := 0.215   # crown of the head above the head bone (both bodies)
+	var parts: Array = []   # [mesh, position, rotation_degrees, scale, colour factor]
+	match kind:
+		&"straw_hat":
+			parts.append([_cyl_mesh(0.215, 0.205, 0.018, 20), Vector3(0, top - 0.055, 0.0), Vector3(-4, 0, 0), Vector3.ONE, 1.0])
+			parts.append([_cyl_mesh(0.082, 0.112, 0.095, 16), Vector3(0, top - 0.005, -0.005), Vector3(-4, 0, 0), Vector3.ONE, 1.0])
+			parts.append([_cyl_mesh(0.113, 0.114, 0.022, 16), Vector3(0, top - 0.04, -0.004), Vector3(-4, 0, 0), Vector3.ONE, 0.42])
+		&"coif":
+			parts.append([_dome_mesh(0.118), Vector3(0, top - 0.115, -0.022), Vector3(-14, 0, 0), Vector3(1.0, 1.12, 1.08), 1.0])
+		&"cap":
+			parts.append([_dome_mesh(0.112), Vector3(0, top - 0.085, -0.012), Vector3(-10, 0, 0), Vector3(1.0, 0.95, 1.05), 1.0])
+			parts.append([_cyl_mesh(0.117, 0.117, 0.03, 18), Vector3(0, top - 0.08, -0.012), Vector3(-10, 0, 0), Vector3.ONE, 0.7])
+		&"scarf":
+			parts.append([_dome_mesh(0.12), Vector3(0, top - 0.11, -0.026), Vector3(-20, 0, 0), Vector3(1.02, 1.1, 1.08), 1.0])
+			parts.append([_ball_mesh(0.045), Vector3(0, top - 0.17, -0.13), Vector3.ZERO, Vector3(1.2, 0.8, 0.9), 0.9])
+	var col: Color = HAT_COLOURS.get(kind, Color("#c9a582"))
+	for p in parts:
+		var mi := MeshInstance3D.new()
+		mi.mesh = p[0]
+		mi.position = p[1]
+		mi.rotation_degrees = p[2]
+		mi.scale = p[3]
+		mi.material_override = MAT_HAIR
+		mi.set_meta("hat_shade", float(p[4]))
+		mi.set_meta("hat_colour", col)
+		att.add_child(mi)
+
+
+func _cyl_mesh(top_r: float, bottom_r: float, h: float, seg: int) -> CylinderMesh:
+	var m := CylinderMesh.new()
+	m.top_radius = top_r
+	m.bottom_radius = bottom_r
+	m.height = h
+	m.radial_segments = seg
+	m.rings = 1
+	return m
+
+
+func _dome_mesh(r: float) -> SphereMesh:
+	var m := SphereMesh.new()
+	m.radius = r
+	m.height = r
+	m.is_hemisphere = true
+	m.radial_segments = 18
+	m.rings = 6
+	return m
+
+
+func _ball_mesh(r: float) -> SphereMesh:
+	var m := SphereMesh.new()
+	m.radius = r
+	m.height = r * 2.0
+	m.radial_segments = 10
+	m.rings = 5
+	return m
+
+
 func _apply_colors() -> void:
 	if _skeleton == null:
 		return
+	var hat := _skeleton.get_node_or_null("Hat")
+	if hat:
+		for c in hat.get_children():
+			var g := c as GeometryInstance3D
+			var hc: Color = g.get_meta("hat_colour", Color.WHITE)
+			var f: float = g.get_meta("hat_shade", 1.0)
+			g.set_instance_shader_parameter(&"hair_color", Color(hc.r * f, hc.g * f, hc.b * f))
+			g.set_instance_shader_parameter(&"instance_tint", _tint)
 	for c in _skeleton.get_children():
 		if c is GeometryInstance3D:
 			var g := c as GeometryInstance3D

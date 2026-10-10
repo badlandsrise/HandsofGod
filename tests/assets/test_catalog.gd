@@ -9,6 +9,19 @@ const REQUIRED := ["tree_pine", "tree_broad", "tree_dead", "bush", "berry_bush",
 	"rock_large", "cliff", "grass_clump", "flowers", "log_fallen", "trunk_fallen", "stump",
 	"campfire", "firewood_pile", "flint_node", "hut", "hut_plot", "food_store", "cairn", "shrine",
 	"stone_circle", "cave_mouth", "deer", "wolf", "sheep", "horse", "villager"]
+## Era 2 (Village) kit: buildings come as done / _plot / _frame (see ERA2_STAGED).
+const REQUIRED_ERA2 := ["market_stall", "market_stall_frame", "charcoal_clamp", "jetty", "raft",
+	"raft_frame", "rowboat", "fishing_boat", "field", "field_tilled", "field_sprouts",
+	"field_growing", "field_ripe", "field_stubble", "field_blighted", "field_parched",
+	"garden_plot", "sheaves", "haystack", "scarecrow", "grain_sacks", "flour_sacks",
+	"bread_basket", "pots", "pots_unfired", "clay_pile", "planks_pile", "charcoal_pile",
+	"ore_pile", "bronze_ingots", "wool_bales", "cloth_bolts", "barrels", "water_trough",
+	"clay_pit", "copper_ore", "rockfall", "fence_wattle", "fence_wattle_gate", "handcart",
+	"hay_wagon", "tool_axe_bronze", "tool_hoe", "tool_hammer", "tool_shovel",
+	"tool_pickaxe_bronze", "tool_sickle", "tool_pitchfork", "cow", "pig", "crop_wheat",
+	"era2_cottage"]
+const ERA2_STAGED := ["cottage", "granary", "mill", "bakery", "kiln", "smelter", "smithy",
+	"weaver", "workshop", "barn", "temple", "bridge", "well", "watchtower", "sheep_pen"]
 
 var _fails := 0
 var _checks := 0
@@ -18,8 +31,19 @@ func _init() -> void:
 	await process_frame
 	var ids := AssetCatalog.ids()
 	_check(ids.size() >= REQUIRED.size(), "catalog has %d ids" % ids.size())
-	for r in REQUIRED:
+	for r in REQUIRED + REQUIRED_ERA2:
 		_check(AssetCatalog.has(StringName(r)), "required id '%s' present" % r)
+	for b in ERA2_STAGED:
+		for stage in ["", "_plot", "_frame"]:
+			var sid := StringName(b + stage)
+			_check(AssetCatalog.has(sid) and int(AssetCatalog.entry(sid).get("era", 1)) == 2,
+				"era 2 building stage '%s' present" % sid)
+	_check(AssetCatalog.variant_count(&"cottage") >= 2 and AssetCatalog.variant_count(&"market_stall") >= 3,
+		"era 2 cottages and market stalls have variants")
+	# the moving parts the gameplay may drive
+	_check_part(&"mill", "Sails")
+	_check_part(&"kiln", "Wheel")
+	_check_part(&"well", "Windlass")
 	for id in ids:
 		var e := AssetCatalog.entry(StringName(id))
 		var seasons: Dictionary = e.get("seasons", {})
@@ -78,6 +102,22 @@ func _check_villager() -> void:
 		v.set_look(Color.BISQUE, Color.SADDLE_BROWN, Color("#7a5236"), o)
 	for st in 4:
 		v.set_age_scale(st)
+	# Era 2 tailoring: woven clothes, hats on some outfits, back to hides for era 1
+	v.set_era(2)
+	var hats := 0
+	for o in 8:
+		v.set_look(Color.BISQUE, Color.SADDLE_BROWN, Color("#6b7f3a"), o)
+		var model := v.get_node("Model")
+		if model.find_child("Hat", true, false) != null:
+			hats += 1
+		var style: Variant = null
+		for c in model.get_node("Armature/Skeleton3D").get_children():
+			if c is MeshInstance3D and not c.has_meta("hair_piece") and String(c.name) not in ["Eyes", "Eyebrows"]:
+				style = (c as MeshInstance3D).get_instance_shader_parameter(&"outfit_style")
+		_check(style is Vector4 and (style as Vector4).x > 0.5, "era 2 outfit %d is woven (style %s)" % [o, style])
+	_check(hats >= 3, "era 2 outfits include hats (%d of 8)" % hats)
+	v.set_era(1)
+	_check(v.get_node("Model").find_child("Hat", true, false) == null, "era 1 villagers have no hats")
 	await process_frame
 	v.set_age_scale(1)
 	var child_h := _aabb(v, Transform3D.IDENTITY).size.y
@@ -85,6 +125,14 @@ func _check_villager() -> void:
 	var adult_h := _aabb(v, Transform3D.IDENTITY).size.y
 	_check(child_h < adult_h * 0.8, "child (%.2f) smaller than adult (%.2f)" % [child_h, adult_h])
 	v.free()
+
+
+func _check_part(id: StringName, part: String) -> void:
+	var n := AssetCatalog.instance(id)
+	var p := n.find_child(part, true, false) if n else null
+	_check(p != null and p.get("spinning") != null, "%s has a '%s' spinner" % [id, part])
+	if n:
+		n.free()
 
 
 func _check(ok: bool, what: String) -> void:
