@@ -192,7 +192,7 @@ func _aqueduct() -> void:
 	check(raise.can_accept(1), "Grip IV opens the crew of ten")
 	raise._complete_group([])
 	check(aq.state == Site.State.FINISHED and Flags.has(&"clean_water"), "raised: clean water")
-	_grow_to(75)
+	_grow_to(Defs.dream(&"aqueduct").needs_population)
 	check(w.era3.fountain != null and w.era3.fountain.visible, "a fountain runs in the square")
 	var arches := aq.visual.get_children().filter(func(c): return str(c.name).begins_with("aqueduct") or (c is Node3D and c.scene_file_path.contains("aqueduct")))
 	check(aq.visual.get_child_count() >= LayoutEra3.AQUEDUCT_SEGMENTS + 1, "the arches walk east from the castellum (%d parts)" % aq.visual.get_child_count())
@@ -361,11 +361,22 @@ func _storm() -> void:
 		p.blessed_t = 0.0
 		p.hurt_t = 0.0
 	out[0].warm(20.0)
+	# [era3] out in the open away from the town (the quarry slope): in the town they duck indoors
+	for i in range(1, out.size()):
+		out[i].global_position = w._v3(Vector2(232.0 + 3.0 * i, -100.0))
+	var in_town: Person = _adults(6)[5]
+	in_town.go_idle()
+	in_town.hurt_t = 0.0
+	var home: Site = _sites(&"townhouse")[0]
+	in_town.global_position = home.global_position + Vector3(4, 0, 4)
 	var old: float = Era3Threats.GUST_CHANCE
+	var hurt0 := int(Village.stats.get("storm_hurt", 0))
 	for i in 30:
 		t._gusts()
 	check(out[0].hurt_t <= 0.0, "Warmth held over people shields them from the gusts")
-	check(out.slice(1).any(func(p): return p.hurt_t > 0.0), "people caught out in the open are knocked about")
+	check(out.slice(1).any(func(p): return p.hurt_t > 0.0) or int(Village.stats.get("storm_hurt", 0)) > hurt0, "people caught out in the open are knocked about")
+	check(in_town.hurt_t <= 0.0 or in_town.state == Person.S.HELD, "in the town people duck into a doorway")
+	check(int(t._gust_hurt) <= Era3Threats.GUST_CAP, "a storm knocks about a few at most (%d)" % t._gust_hurt)
 	check(Village.alive().all(func(p): return p.alive()), "but nobody dies")
 	var damaged := Village.sites.filter(func(s): return is_instance_valid(s) and s.damage > 0.0).size()
 	t._tear_roofs(2)
@@ -457,7 +468,7 @@ func _first_two() -> void:
 # ---------------------------------------------------------------- the gate
 
 func _gate() -> void:
-	_grow_to(88)
+	_grow_to(Defs.dream(&"observatory").needs_population)
 	w.village_ai.dreams.update()
 	check(Dreams.is_done(&"observatory") and int(Village.stats.get("era_gate_done", 0)) == 3, "the observatory dream is the Era 3 gate")
 	check(EraTransition.enter_era(4) and Village.era == 4, "the gate leads on to Era 4")

@@ -10,5 +10,5 @@ warning_seconds = 30.0
 duration_seconds = 80.0
 min_population = 30
 chance_per_day = 0.12
-warning_text = "Dark clouds over the sea, and wind lines on the water. A storm is coming."
+warning_text = "Dark clouds over the sea, and wind lines on the water. A storm is coming: bring people in from the fields, the quarry and the shore."
 start_text = "The storm is here! Carry people indoors, or shield them: hold E with Warmth over them."

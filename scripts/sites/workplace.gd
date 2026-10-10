@@ -11,6 +11,16 @@ class_name Workplace extends RefCounted
 ##   hunting lodge (Era 1)   the hunters go out to the deer herds in a party of
 ##                           two or more and carry the meat and hides home.
 ##   woodcutters' camp (Era 1)  fells the trees around it.
+##   [era3] Era 3 workplaces add a bench, fetching and paving:
+##   mason's yard (Era 3)    quarries the ledges up the quarry face, dresses
+##                           spare stone at its own bench, and two of its masons
+##                           pave the busiest roads in the town (Paving).
+##   forge (Era 3)           mines the iron seams up the slope into its bin and
+##                           forges the ore into iron at its own bench.
+##   watermill, windmill     the millers fetch grain straight from the bins of
+##                           the farmhouses round them and grind it into flour.
+##   A bench (BuildingDef.bench_job) takes its inputs from the bin first, then
+##   the stores, and puts what it makes in the bin for the carter.
 ##
 ## Task sites (fields, herds) are never spots the hand drops people on
 ## (Site.hand_blocked); a tree near a woodcutters' camp is the camp's.
@@ -23,6 +33,9 @@ const CART_LOAD := 8           # a carter's load (twice that with carts, Era 3)
 const FIELD_CREW := 2          # farmers on one field at once (the blight takes two)
 const FIRST_FIELDS := 2        # field plots staked when a farmhouse is finished
 const FIELD_RING := 13.0       # where fields go round a farmhouse with no authored spots near it
+const FETCH_MIN := 4           # [era3] a farmhouse bin worth a miller's walk
+const BENCH_STOCK := 60        # [era3] a bench stops when the stores hold this much of what it makes
+const STONE_RESERVE := 10      # [era3] stone the mason's bench leaves in the stores beyond what the plots want
 
 # ---------------------------------------------------------------- what is a task
 
@@ -47,9 +60,13 @@ static func covers(w: Site, t: Site) -> bool:
 	if w == t or not is_instance_valid(t) or t.is_queued_for_deletion() or not w.is_workplace():
 		return false
 	var b: BuildingDef = w.building
+	if b.paves and t.job != null and t.job.id == Paving.JOB:
+		return true                # [era3] the masons pave roads anywhere in the town
 	var d := Vector2(t.global_position.x - w.global_position.x, t.global_position.z - w.global_position.z).length()
 	if d > b.work_radius:
 		return false
+	if not b.fetch_from.is_empty() and t.is_workplace():
+		return b.fetch_from.has(t.building.id)    # [era3] a mill empties the farmhouse bins near it
 	if t.building != null and t.building.id == &"field":
 		return b.work_jobs.has(&"farm_field") and (t.state == Site.State.BUILDING or t.is_field())
 	return t.job != null and not t.is_plot() and b.work_jobs.has(t.job.id)
@@ -73,6 +90,10 @@ static func tasks(w: Site) -> Array:
 
 ## How much task `t` wants work now (0 = nothing to do there).
 static func need(t: Site) -> float:
+	if t.is_workplace():
+		return 3.0 + float(bin_total(t)) * 0.05 if bin_total(t) >= FETCH_MIN else 0.0    # [era3] a full bin to fetch
+	if t.job != null and t.job.id == Paving.JOB:
+		return Paving.need(t)      # [era3]
 	if t.is_plot():
 		return 3.0 if t.state == Site.State.BUILDING else 0.0      # a new field to clear
 	if t.is_field():
@@ -87,6 +108,8 @@ static func need(t: Site) -> float:
 	return 3.0 if t.can_work_now() and t.discovered() else 0.0
 
 static func task_cap(t: Site) -> int:
+	if t.is_workplace():
+		return 1                   # [era3] one miller at a time fetches from a bin
 	if t.building != null and t.building.id == &"field":
 		return FIELD_CREW
 	if t.job != null and t.job.id == &"hunt":
@@ -140,6 +163,12 @@ static func pick_task(w: Site, p) -> Site:
 		if v > best_v or best == null:
 			best_v = v
 			best = t
+	# [era3] the workplace's own bench, when it has the inputs
+	var bn := bench_need(w)
+	if bn > 0.0 and (_claimed(w, w).size() < bench_cap(w) or _claimed(w, w).has(p)):
+		var bv: float = bn - w.global_position.distance_to(p.global_position) * 0.02
+		if best == null or bv > best_v:
+			best = w
 	return best
 
 ## Crew of `w` at task `t` and working there now.
@@ -152,6 +181,8 @@ static func crew_at(w: Site, t: Site) -> int:
 
 ## Why the crew is sitting at the workplace (for "idle reasons").
 static func idle_reason(w: Site) -> StringName:
+	if w.building.bench_job != &"":
+		return bench_missing(w)    # [era3]
 	var ts := tasks(w)
 	if w.building.work_jobs.has(&"farm_field"):
 		if ts.is_empty():
@@ -297,6 +328,16 @@ static func hover(s: Site) -> String:
 					carters += c.slots_filled()
 			if carters == 0 and bin_total(s) > 0:
 				t += "  (no carter: set someone on the cart)"
+		# [era3] the bench, the bins it fetches, the roads it paves
+		if b.bench_job != &"":
+			var jd: JobDef = Defs.job(b.bench_job)
+			var miss := bench_missing(s)
+			t += "  bench: %s%s" % [jd.title.to_lower() if jd else str(b.bench_job), "" if miss == &"" else " (waits for %s)" % str(miss).replace("_", " ")]
+		if not b.fetch_from.is_empty():
+			var bins := tasks(s).filter(func(x): return x.is_workplace()).size()
+			t += "  fetches grain from %d farmhouse%s" % [bins, "" if bins == 1 else "s"]
+		if b.paves:
+			t += "  roads paved %d" % int(Village.stats.get("roads_paved", 0))
 		if not s.discovered():
 			t += "  (needs stone tools)"
 		elif b.work_jobs.has(&"hunt") and not Site.has_drying_rack():
@@ -329,7 +370,13 @@ static func hover(s: Site) -> String:
 # ---------------------------------------------------------------- the crew at work
 
 static func _task_ok(w: Site, t) -> bool:
+	if t == w:
+		return w.building.bench_job != &""     # [era3] the bench
 	return t != null and is_instance_valid(t) and not t.is_queued_for_deletion() and covers(w, t)
+
+## How much task `t` of workplace `w` wants work (the bench is `w` itself).
+static func _need(w: Site, t: Site) -> float:
+	return bench_need(w) if t == w else need(t)
 
 static func _drop(p, w: Site) -> void:
 	unclaim(w, p)
@@ -343,11 +390,17 @@ static func _show_task(p, w: Site, t: Site) -> void:
 	if p.visual == null:
 		return
 	var jd = t.job if t != null and t.job != null and not t.is_plot() else w.job
+	if t == w and w.building.bench_job != &"":
+		jd = Defs.job(w.building.bench_job)          # [era3] at the bench
+	elif t != null and t != w and t.is_workplace():
+		jd = Defs.job(&"cart_haul")                  # [era3] fetching a bin
 	p.visual.set_task(jd)
 
 ## Where person `p` stands to work task `t`.
 static func task_spot(w: Site, t: Site, p) -> Vector3:
 	var i := maxi(_claimed(w, t).find(p), 0)
+	if t == w:
+		return w.slot_position(w.slot_of(p))     # [era3] at the bench
 	if t.job != null and t.job.id == &"hunt":
 		var a := TAU * float(i) / 5.0 + 0.3
 		var q := t.global_position + Vector3(cos(a), 0, sin(a)) * 3.2
@@ -363,8 +416,11 @@ static func step(p, w: Site, dt: float) -> void:
 		return
 	match p._phase:
 		"to_task":
+			if not is_instance_valid(p.task_site):
+				_drop(p, w)          # [era3] its task was finished and freed (a paved stretch)
+				return
 			var t: Site = p.task_site
-			if not _task_ok(w, t) or need(t) <= 0.0:
+			if not _task_ok(w, t) or _need(w, t) <= 0.0:
 				_drop(p, w)
 				return
 			p._target = task_spot(w, t, p)
@@ -372,6 +428,9 @@ static func step(p, w: Site, dt: float) -> void:
 				p._phase = "work"
 				p._timer = 0.0
 		"work":
+			if not is_instance_valid(p.task_site):
+				_drop(p, w)
+				return
 			var t2: Site = p.task_site
 			if not _task_ok(w, t2):
 				_drop(p, w)
@@ -401,6 +460,16 @@ static func step(p, w: Site, dt: float) -> void:
 
 static func _work(p, w: Site, t: Site, dt: float) -> void:
 	var r: float = dt * p.rate()
+	# [era3] the bench, a bin to fetch, a road to pave
+	if t == w:
+		_bench(p, w, r)
+		return
+	if t.is_workplace():
+		_fetch(p, w, t)
+		return
+	if t.job != null and t.job.id == Paving.JOB:
+		Paving.work(p, w, t, r)
+		return
 	if t.is_plot():
 		# clearing a new field
 		p._waiting_for = &""
@@ -495,8 +564,8 @@ static func _deliver(p, w: Site) -> void:
 	if p._cargo.is_empty():
 		p._phase = "pick"
 		return
-	var to_bin: bool = w.building.bin_cap > 0 and bin_room(w) > 0 and not p.has_meta(&"bin_full")
-	var dest: Vector3 = w.slot_position(w.slot_of(p)) if to_bin else p._store_slot()
+	var to_bin: bool = w.building.bin_cap > 0 and bin_room(w) > 0 and not p.has_meta(&"bin_full") and not _fetched(w, p)
+	var dest: Vector3 = w.slot_position(w.slot_of(p)) if to_bin or _fetched(w, p) else p._store_slot()
 	if p._target.distance_to(dest) > 0.5:
 		p._go(dest, Person.WALK_SPEED)
 	if not p._arrived():
@@ -570,3 +639,126 @@ static func haul_step(p, c: Site, dt: float) -> void:
 			var g := granary_point(p.global_position)
 			var a := float(p.uid) * 2.39996
 			p._go(g + Vector3(cos(a), 0, sin(a)) * 2.4, Person.WALK_SPEED)
+
+# ---------------------------------------------------------------- [era3] the bench
+
+## What the open plots still wait on (so a bench never works it into
+## something else). Looked up once a game second.
+static var _wanted: Dictionary = {}
+static var _wanted_t: float = -INF
+
+static func plots_want(k: StringName) -> int:
+	if absf(Clock.total_t - _wanted_t) >= 1.0:
+		_wanted_t = Clock.total_t
+		_wanted = {}
+		for s in Village.sites:
+			if is_instance_valid(s) and s.state == Site.State.PLOT and s.building != null:
+				for c in s.building.cost:
+					_wanted[c] = int(_wanted.get(c, 0)) + maxi(s.remaining(c), 0)
+	return int(_wanted.get(k, 0))
+
+## Of input `k`, what the bench may use: its own bin, then the stores beyond
+## what the plots want (and, for stone, a reserve).
+static func _usable(w: Site, k: StringName) -> int:
+	var spare := Village.store(k) - plots_want(k) - (STONE_RESERVE if k == &"stone" else 0)
+	return int(w.bin.get(k, 0)) + maxi(spare, 0)
+
+## The first input the bench is short of (&"" when it can work).
+static func bench_missing(w: Site) -> StringName:
+	var jd: JobDef = Defs.job(w.building.bench_job)
+	if jd == null:
+		return &"nothing near"
+	for k in jd.inputs:
+		if _usable(w, k) < int(jd.inputs[k]):
+			return k
+	for k in jd.outputs:
+		if Village.store(k) >= mini(BENCH_STOCK, Village.store_cap - 2):
+			return &"room in the stores"
+	return &""
+
+## How much the bench wants work now (0 = it cannot, or nobody needs more).
+static func bench_need(w: Site) -> float:
+	if w.building == null or w.building.bench_job == &"" or not w.is_workplace():
+		return 0.0
+	return 3.5 if bench_missing(w) == &"" else 0.0
+
+static func bench_cap(w: Site) -> int:
+	var jd: JobDef = Defs.job(w.building.bench_job)
+	return maxi(jd.max_people if jd != null else 1, 2)
+
+## A cycle at the bench: inputs from the bin first, then the stores; what it
+## makes goes in the bin (or the stores when there is no room).
+static func _bench(p, w: Site, r: float) -> void:
+	var jd: JobDef = Defs.job(w.building.bench_job)
+	if not p.has_meta(&"bench_paid"):
+		if bench_missing(w) != &"":
+			_drop(p, w)
+			return
+		for k in jd.inputs:
+			var n := int(jd.inputs[k])
+			var from_bin := mini(int(w.bin.get(k, 0)), n)
+			if from_bin > 0:
+				w.bin[k] = int(w.bin[k]) - from_bin
+				if int(w.bin[k]) <= 0:
+					w.bin.erase(k)
+			if n - from_bin > 0:
+				Village.take_store(k, n - from_bin)
+		bin_visual(w)
+		p.set_meta(&"bench_paid", true)
+		p._timer = 0.0
+	p._waiting_for = &""
+	p._timer += r
+	if p._timer < jd.work_time:
+		return
+	p._timer = 0.0
+	p.remove_meta(&"bench_paid")
+	for k in jd.outputs:
+		var n := int(jd.outputs[k])
+		var put := bin_add(w, k, n) if w.building.bin_cap > 0 else 0
+		if n - put > 0:
+			Village.add_store(k, n - put)
+	p._gain_skill(jd.skill, Person.SKILL_PER_CYCLE)
+	p._placement_faith()
+	Village.stats["bench_cycles"] = int(Village.stats.get("bench_cycles", 0)) + 1
+	Events.job_completed.emit(w)
+	_drop(p, w)
+
+# ---------------------------------------------------------------- [era3] fetching
+
+## A miller takes a load from a farmhouse bin (what the mill's bench grinds).
+static func _fetch(p, w: Site, t: Site) -> void:
+	var jd: JobDef = Defs.job(w.building.bench_job)
+	var load := CART_LOAD * (2 if Flags.has(&"carts") else 1)
+	var got := 0
+	for k in t.bin.keys():
+		if jd != null and not jd.inputs.has(k):
+			continue
+		var n := mini(int(t.bin[k]), load - got)
+		if n <= 0:
+			continue
+		p._cargo[k] = int(p._cargo.get(k, 0)) + n
+		t.bin[k] = int(t.bin[k]) - n
+		if int(t.bin[k]) <= 0:
+			t.bin.erase(k)
+		got += n
+	bin_visual(t)
+	if got > 0:
+		p._set_cargo_visual()
+		p._gain_skill(&"gathering", Person.SKILL_PER_CYCLE)
+		Village.stats["mill_fetches"] = int(Village.stats.get("mill_fetches", 0)) + 1
+	unclaim(w, p)
+	p.task_site = null
+	p._phase = "deliver" if got > 0 else "pick"
+
+## Is `p` carrying what the bench grinds (fetched from a bin)? It goes to the
+## stores at the workplace, where the bench draws it.
+static func _fetched(w: Site, p) -> bool:
+	if w.building.fetch_from.is_empty() or p._cargo.is_empty():
+		return false
+	var jd: JobDef = Defs.job(w.building.bench_job)
+	if jd == null:
+		return false
+	for k in p._cargo:
+		if not jd.inputs.has(k):
+			return false
+	return true

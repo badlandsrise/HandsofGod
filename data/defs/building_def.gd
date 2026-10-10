@@ -32,3 +32,7 @@ class_name BuildingDef extends Resource
 @export var rest_here: bool = false              # the crew eats and sleeps here (no night walk home)
 @export var timbers: int = 0                     # bridge timbers the hand must carry onto the plot (Strong Arms)
 @export var spawns: Array = []                   # [job id, x, z] task sites (local, before yaw) laid out when it is finished
+## [era3] Era 3 workplaces (the mason's yard, the forge, the mills).
+@export var bench_job: StringName = &""          # a CRAFT JobDef the crew works at the building's own bench when it has the inputs (its bin first, then the stores)
+@export var fetch_from: Array[StringName] = []   # building ids whose workplace bins the crew empties (the mills take the farmhouses' grain)
+@export var paves: bool = false                  # the crew lays the busiest roads in stone (the mason's yard)

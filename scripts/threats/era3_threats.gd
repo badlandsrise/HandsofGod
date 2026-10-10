@@ -20,6 +20,18 @@ class_name Era3Threats extends Node3D
 ##               them) or carries them indoors; roofs are torn (a repair job),
 ##               and the ship stays in harbour. A staffed lighthouse sees the
 ##               storm coming twice as early and spares a roof.
+##
+## Calmer (2026-10-10, matching the Era 2 rule; Austin found old Era 2 too
+## much by day 40): danger is sought out, not random.
+##   - a fire starts where fire is worked (the forge, a bakery, a kiln, the
+##     smithy, a charcoal clamp; a townhouse hearth only if there is none),
+##     jumps at most once, and never with a fire station on watch;
+##   - sickness starts with two coughs, comes with crowding (only once the
+##     town is past SICK_POP), and never has more than SICK_CAP down at once;
+##   - storms only knock about people out in the open away from the town
+##     (the fields, the quarry, the shore), never more than GUST_CAP of them;
+##   - after a threat ends the town has QUIET_AFTER of peace, the dice are
+##     kinder (CHANCE_K), and each threat comes at most MAX_EACH times a era.
 
 const IDS: Array[StringName] = [&"town_fire", &"sickness", &"storms"]
 ## Era minute by which each threat has come at least once (if it can).
@@ -28,12 +40,20 @@ const FIRE_GROW := 1.0 / 70.0       # burn per second, left alone
 const FIRE_STATION_DOUSE := 0.006   # per second per fire watcher on duty
 const FIRE_SPREAD_AT := 0.65
 const FIRE_SPREAD_R := 14.0
-const SICK_START := 4
+const SICK_START := 2
 const SICK_SPREAD_R := 3.0
-const SICK_CHANCE := 0.06           # per second, per sick person near someone well
+const SICK_CHANCE := 0.04           # per second, per sick person near someone well
+const SICK_CAP := 8                 # never more than this many down at once
+const SICK_POP := 45                # sickness comes with crowding
 const GUST_EVERY := 4.0
-const GUST_CHANCE := 0.06
+const GUST_CHANCE := 0.05
+const GUST_CAP := 4                 # people a storm knocks about, at most
+const SHELTER_R := 28.0             # within this of a finished home a person can duck in out of the wind
 const ROOFS := 2
+const QUIET_AFTER := 300.0          # game seconds of peace after an Era 3 threat
+const CHANCE_K := 0.5               # the dawn dice, after the due date
+const MAX_EACH := 2                 # times each threat comes in the era
+const FIRE_WORK: Array[StringName] = [&"forge", &"bakery", &"kiln", &"smithy", &"smelter", &"charcoal_clamp"]
 
 var current: StringName = &""
 var phase: int = 0                 # 0 none, 1 warned, 2 active
@@ -44,6 +64,7 @@ var spread_n: int = 0
 var _acc: float = 0.0
 var _gust: float = 0.0
 var _roofs_done: bool = false
+var _gust_hurt: int = 0
 
 func _ready() -> void:
 	name = "Era3Threats"
@@ -95,8 +116,10 @@ func _on_dawn(_d: int) -> void:
 		return
 	maybe.shuffle()
 	for id in maybe:
+		if int(Village.stats.get("threat_" + str(id), 0)) >= MAX_EACH:
+			continue
 		var d := _def(id)
-		var chance := (d.chance_per_day if d else 0.1) * Flags.diff_k(&"wolves")
+		var chance := (d.chance_per_day if d else 0.1) * Flags.diff_k(&"wolves") * CHANCE_K
 		if Game.rng.randf() < chance:
 			warn(id)
 			return
@@ -115,7 +138,7 @@ func can(id: StringName) -> bool:
 		&"town_fire":
 			return era_minutes() > 8.0 and _fire_target() != null and Clock.season != Clock.Season.WINTER
 		&"sickness":
-			return era_minutes() > 16.0 or Village.count_buildings(&"clinic") > 0
+			return Village.population() >= SICK_POP and (era_minutes() > 16.0 or Village.count_buildings(&"clinic") > 0)
 		&"storms":
 			return era_minutes() > 20.0 and Clock.season != Clock.Season.WINTER
 	return true
@@ -127,6 +150,7 @@ func warn(id: StringName) -> void:
 	t = d.warning_seconds if d else 30.0
 	if id == &"storms" and _lighthouse_kept():
 		t *= 2.0
+	_gust_hurt = 0
 	target = _fire_target() if id == &"town_fire" else null
 	at = _where(id)
 	if not seen().has(str(id)):
@@ -135,7 +159,7 @@ func warn(id: StringName) -> void:
 	Events.threat_warned.emit(id, at)
 	var text := d.warning_text if d and d.warning_text != "" else "Trouble is coming"
 	if id == &"town_fire" and target != null:
-		text = "Smoke from the roof of the %s! A fire is catching" % target.building.title.to_lower().trim_prefix("the ")
+		text = "Smoke from the roof of the %s! A fire is catching. Set a bucket line beside it, or hold Rain over it" % target.building.title.to_lower().trim_prefix("the ")
 	elif id == &"storms" and _lighthouse_kept():
 		text += " The lighthouse keeper saw it early."
 	Events.alert.emit(text, at)
@@ -195,7 +219,7 @@ func _close() -> void:
 	if id == &"storms" and w and w.look:
 		w.look.set_weather(0.25, false)
 		Events.alert.emit("The storm has blown itself out", Site.store_point(Vector3.ZERO))
-	Village.stats["quiet_until"] = maxf(float(Village.stats.get("quiet_until", -1.0)), Clock.total_t + 90.0)
+	Village.stats["quiet_until"] = maxf(float(Village.stats.get("quiet_until", -1.0)), Clock.total_t + QUIET_AFTER)
 	if id != &"":
 		Events.threat_ended.emit(id)
 
@@ -230,7 +254,7 @@ func _tick(dt: float) -> void:
 			var watch := _fire_watch()
 			for s in burning:
 				s.burn_tick(dt, FIRE_GROW * (0.5 if watch > 0 else 1.0), FIRE_STATION_DOUSE * float(watch))
-				if s.burn >= FIRE_SPREAD_AT and spread_n < 2 and Game.rng.randf() < 0.04 * dt:
+				if s.burn >= FIRE_SPREAD_AT and spread_n < 1 and watch == 0 and Game.rng.randf() < 0.04 * dt:
 					var n := _neighbour(s)
 					if n != null and n.start_burning(0.1):
 						spread_n += 1
@@ -274,7 +298,12 @@ func _fire_target() -> Site:
 	for s in Village.sites:
 		if not Era3Threats.flammable(s):
 			continue
-		var v: float = Game.rng.randf() + (1.0 if s.building.era >= 3 else 0.0) + (0.5 if s.building.shelter > 0 else 0.0)
+		# where fire is worked first (a workshop with someone at it most of all)
+		var v: float = Game.rng.randf()
+		if FIRE_WORK.has(s.building.id):
+			v += 10.0 + (2.0 if s.workers.size() > 0 else 0.0)
+		elif s.building.shelter > 0:
+			v += 1.0
 		if v > best_v:
 			best_v = v
 			best = s
@@ -327,6 +356,8 @@ static func _lighthouse_kept() -> bool:
 
 func _spread_sickness(dt: float) -> void:
 	var k := SICK_CHANCE * dt * (0.5 if Flags.has(&"clean_water") else 1.0)
+	if Era3Threats.count() >= SICK_CAP:
+		return
 	var people := Village.alive()
 	var well: Array = people.filter(func(p): return not p.is_sick() and p.stage != Person.Stage.BABY and p.visible)
 	for p in people:
@@ -351,11 +382,19 @@ func _gusts() -> void:
 			continue
 		if p.warmed_t > 0.0 or p.is_blessed():
 			continue
-		if p.state == Person.S.WORK and p.job_site != null and is_instance_valid(p.job_site) and p.job_site.building != null and not p.job_site.is_plot():
+		if p.state == Person.S.WORK and p.job_site != null and is_instance_valid(p.job_site) and p.job_site.building != null and not p.job_site.is_plot() and p.task_site == null:
 			continue          # at a workshop bench, under a roof
+		if _gust_hurt >= GUST_CAP or Era3Threats.near_shelter(p.global_position):
+			continue          # in the town they duck into a doorway
 		if Game.rng.randf() < GUST_CHANCE:
 			p.hurt(0.35, &"storm")
+			_gust_hurt += 1
 			Village.stats["storm_hurt"] = int(Village.stats.get("storm_hurt", 0)) + 1
+
+## Is there a finished home within SHELTER_R of `at` (the town gives cover)?
+static func near_shelter(at: Vector3) -> bool:
+	var s := Site.nearest(at, SHELTER_R, func(o): return o.is_shelter() and not o.building.camp)
+	return s != null
 
 func _tear_roofs(n: int) -> void:
 	var cands := Village.sites.filter(func(s): return Era3Threats.flammable(s) and s.damage <= 0.0)

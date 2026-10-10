@@ -10,5 +10,5 @@ warning_seconds = 40.0
 duration_seconds = 180.0
 min_population = 35
 chance_per_day = 0.1
-warning_text = "A cough in the town. Someone is feeling poorly."
+warning_text = "A cough in the town. Someone is feeling poorly. The clinic will help: carry the sick there."
 start_text = "A sickness is spreading. Carry the sick to the clinic, and keep them apart from the rest."
