@@ -49,8 +49,8 @@ animals' procedural gaits are made for this project.
 | Universal Animation Library (Standard) | Quaternius | CC0 | https://quaternius.itch.io/universal-animation-library |
 | Universal Animation Library 2 (Standard) | Quaternius | CC0 | https://quaternius.itch.io/universal-animation-library-2 |
 | Animated Animals Low Poly (the wolf) | Quaternius | CC0 | https://opengameart.org/content/animated-animales-low-poly |
-| Deer Low Poly Rigged | OpenGameArt contributor (see source page) | CC0 | https://opengameart.org/content/deer-low-poly-rigged |
-| White Bear Low Poly | OpenGameArt contributor (see source page) | CC0 | https://opengameart.org/content/white-bear-low-poly |
+| Deer Low Poly Rigged | crownjoshua (OpenGameArt) | CC0 | https://opengameart.org/content/deer-low-poly-rigged |
+| White Bear Low Poly | STKRudy85 (OpenGameArt) | CC0 | https://opengameart.org/content/white-bear-low-poly |
 | Farm Animals (Animated) | Quaternius | CC0 | https://quaternius.itch.io/lowpoly-animated-animals (quaternius.com/packs/farmanimal.html) |
 | Survival Kit | Kenney (www.kenney.nl) | CC0 | https://kenney.nl/assets/survival-kit |
 | Pirate Kit (row boats, ships, crates) | Kenney (www.kenney.nl) | CC0 | https://kenney.nl/assets/pirate-kit |
@@ -100,11 +100,9 @@ All are CC0 1.0; credit is given anyway.
 | Dirt | photo | dirt_floor | Poly Haven | https://polyhaven.com/a/dirt_floor |
 | Mud | photo | brown_mud_03 | Poly Haven | https://polyhaven.com/a/brown_mud_03 |
 | Forest floor | photo | leaves_forest_ground | Poly Haven | https://polyhaven.com/a/leaves_forest_ground |
-| Grass | stylised | Handpainted grass texture pack (grass_01b) | OpenGameArt contributor | https://opengameart.org/content/handpainted-grass-texture-pack |
-| Rock | stylised | Handpainted rock textures (hptex pack 4, rock_03) | OpenGameArt contributor | https://opengameart.org/content/handpainted-rock-textures |
-| Dirt, mud, forest floor | stylised | Tileable dirt textures (Dirt_01, 02, 04) | OpenGameArt contributor | https://opengameart.org/content/tileable-dirt-textures |
-
-The OpenGameArt pages did not name their authors in what was fetched; see each page.
+| Grass | stylised | Handpainted grass texture pack (grass_01b) | rubberduck (OpenGameArt) | https://opengameart.org/content/handpainted-grass-texture-pack |
+| Rock | stylised | Handpainted rock textures (hptex pack 4, rock_03) | rubberduck (OpenGameArt) | https://opengameart.org/content/handpainted-rock-textures |
+| Dirt, mud, forest floor | stylised | Tileable dirt textures (Dirt_01, 02, 04) | Cethiel (OpenGameArt) | https://opengameart.org/content/tileable-dirt-textures |
 
 ## Curated music (hybrid plan, section 13.2)
 
