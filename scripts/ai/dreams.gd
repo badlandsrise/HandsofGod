@@ -146,6 +146,12 @@ static func checklist(d: DreamDef) -> Array:
 				hint = "A plot is marked. Set people on it: they fetch the materials and build."
 			else:
 				hint = "They will mark a plot for it soon."
+			# [era3] a raising the hand must be strong enough to crew (the aqueduct: ten at once)
+			var rj: JobDef = Defs.job(bd.raise_job) if bd != null and bd.raise_job != &"" else null
+			if rj != null and rj.needs_power != &"" and not Faith.has(rj.needs_power):
+				var pd = Defs.power(rj.needs_power)
+				hint += " Then %d raise it at once: the hand needs %s%s." % [rj.min_people, pd.title if pd else str(rj.needs_power),
+					(" (%d faith)" % int(pd.cost)) if pd else ""]
 		out.append({"key": "b:" + str(b), "text": title, "have": mini(have, need), "need": need,
 			"done": have >= need, "hint": hint, "at": plot.global_position if plot != null else Vector3.INF})
 	for k in d.needs_stores:
@@ -238,6 +244,9 @@ static func teaser_hint(d: DreamDef) -> String:
 		&"stone_circle": return "Something bigger stirs in them. Keep the village growing."
 		&"great_bridge": return "They look across the great river more and more."
 		&"temple_of_the_hand": return "They talk of the hand at every fire."
+		&"school": return "The children run wild among the workshops. Keep the town growing in stone."     # [era3]
+		&"aqueduct": return "Half the town carries water every day. Keep the mason's yard and the forge busy."
+		&"observatory": return "They look up at night and wonder where the hand came from. The sea calls them too."
 	return "Keep them fed, warm and busy. A dream is stirring."
 
 ## 0..1 how far along the dream is (pips for the HUD).

@@ -324,6 +324,16 @@ static func hover(s: Site) -> String:
 					carters += c.slots_filled()
 			if carters == 0 and bin_total(s) > 0:
 				t += "  (no carter: set someone on the cart)"
+		# [era3] the bench, the bins it fetches, the roads it paves
+		if b.bench_job != &"":
+			var jd: JobDef = Defs.job(b.bench_job)
+			var miss := bench_missing(s)
+			t += "  bench: %s%s" % [jd.title.to_lower() if jd else str(b.bench_job), "" if miss == &"" else " (waits for %s)" % str(miss).replace("_", " ")]
+		if not b.fetch_from.is_empty():
+			var bins := tasks(s).filter(func(x): return x.is_workplace()).size()
+			t += "  fetches grain from %d farmhouse%s" % [bins, "" if bins == 1 else "s"]
+		if b.paves:
+			t += "  roads paved %d" % int(Village.stats.get("roads_paved", 0))
 		if not s.discovered():
 			t += "  (needs stone tools)"
 		return t

@@ -49,6 +49,19 @@ const WORKPLACE_CALL := 170.0      # a master at a workplace sends this far for 
 ## started stops holding up the next one after SUGGEST_HOLD (as in Era 2).
 const SUGGEST_GAP := 90.0
 const SUGGEST_HOLD := 240.0
+## The aqueduct takes away the water chore (doc 4): the castellum keeps the
+## stores in water, WATER_PER_CHECK at a time, up to WATER_PER_HEAD a head.
+const WATER_PER_CHECK := 6
+const WATER_PER_HEAD := 2
+## Caravans (doc 4, the market chain): once the market hall is kept, a wagon
+## from down the valley calls every CARAVAN_EVERY game seconds and trades the
+## town's biggest surplus for what it cannot make or is short of.
+const CARAVAN_EVERY := 420.0
+const CARAVAN_STAY := 50.0
+const CARAVAN_SURPLUS := 40         # a good is surplus above this
+const CARAVAN_TAKES := 12
+const TRADE_GOODS: Array[StringName] = [&"bread", &"flour", &"grain", &"fish", &"pots", &"wool", &"blocks", &"stone"]
+const CARAVAN_BRINGS := {&"tin": 3, &"iron": 2, &"cloth": 4, &"books": 2, &"charcoal": 6, &"clay": 6}
 
 var _acc: float = 0.0
 var _offer_t: float = 0.0
@@ -94,6 +107,8 @@ func check_now() -> void:
 	_sea()
 	_wishes()
 	Paving.plan()
+	_water()
+	_caravans()
 	_discoveries()
 	_trust()
 
@@ -167,6 +182,82 @@ static func _crowded(s: Site, fp: Vector2) -> bool:
 		if absf(a.x - b.x) < ha.x + hb.x + 0.3 and absf(a.y - b.y) < ha.y + hb.y + 0.3:
 			return true
 	return false
+
+# ---------------------------------------------------------------- water and caravans
+
+func _water() -> void:
+	if not Flags.has(&"clean_water"):
+		return
+	var want := mini(Village.population() * WATER_PER_HEAD, Village.store_cap - 4)
+	var have := Village.store(&"water")
+	if have < want:
+		Village.add_store(&"water", mini(WATER_PER_CHECK, want - have))
+		Village.stats["aqueduct_water"] = int(Village.stats.get("aqueduct_water", 0)) + mini(WATER_PER_CHECK, want - have)
+
+var caravan: Node3D = null
+var _caravan_t := 0.0
+
+static func _market_hall() -> Site:
+	for s in Village.sites:
+		if is_instance_valid(s) and s.is_finished_building(&"market_hall") and s.burn <= 0.0:
+			return s
+	return null
+
+func _caravans() -> void:
+	if caravan != null and is_instance_valid(caravan) and Clock.total_t - _caravan_t > CARAVAN_STAY:
+		caravan.queue_free()
+		caravan = null
+	var hall := VillageEra3._market_hall()
+	if hall == null or hall.workers.filter(func(p): return is_instance_valid(p)).is_empty():
+		return
+	var next := float(Village.stats.get("caravan_next", -1.0))
+	if next < 0.0:
+		Village.stats["caravan_next"] = Clock.total_t + 60.0       # the first comes soon after the hall is kept
+		return
+	if Clock.total_t < next:
+		return
+	Village.stats["caravan_next"] = Clock.total_t + CARAVAN_EVERY
+	var line := VillageEra3.trade()
+	if line == "":
+		return
+	_caravan_t = Clock.total_t
+	if caravan == null or not is_instance_valid(caravan):
+		if AssetCatalog.has(&"caravan_wagon"):
+			caravan = AssetCatalog.instance(&"caravan_wagon")
+			var w = VillageEra3._w()
+			if w != null:
+				w.add_child(caravan)
+				var at: Vector3 = hall.global_position + hall.global_basis * Vector3(hall.building.footprint.x * 0.5 + 3.0, 0, 0)
+				at.y = w.ground_y(at.x, at.z)
+				caravan.global_position = at
+				caravan.rotation.y = hall.rotation.y
+	Events.alert.emit(line, hall.global_position)
+
+## One caravan's trade: the biggest surplus for what the town wants most.
+## Returns the alert line ("" when there was nothing to trade).
+static func trade() -> String:
+	var give: StringName = &""
+	var most := CARAVAN_SURPLUS
+	for k in TRADE_GOODS:
+		if Village.store(k) > most:
+			most = Village.store(k)
+			give = k
+	if give == &"":
+		return ""
+	var want_k: StringName = &"tin"
+	var short := 0
+	for k in CARAVAN_BRINGS:
+		var gap := Workplace.plots_want(k) - Village.store(k)
+		if gap > short:
+			short = gap
+			want_k = k
+	var n := mini(CARAVAN_TAKES, Village.store(give) - CARAVAN_SURPLUS + CARAVAN_TAKES)
+	Village.take_store(give, n)
+	var got := Village.add_store(want_k, int(CARAVAN_BRINGS[want_k]))
+	Village.stats["caravans"] = int(Village.stats.get("caravans", 0)) + 1
+	if int(Village.stats["caravans"]) == 1:
+		Flags.remember("A caravan came up the valley to our market hall, with things we cannot make. We traded our bread for them.")
+	return "A caravan from down the valley trades %d %s for %d %s at the market hall" % [n, str(give), got, str(want_k)]
 
 # ---------------------------------------------------------------- the sea
 
@@ -355,6 +446,7 @@ func _on_building_finished(site) -> void:
 			Flags.remember("We built a harbour where the river meets the sea, and a ship to sail in.")
 		&"aqueduct":
 			Flags.set_flag(&"clean_water")
+			VillageEra3.hint("aqueduct_water", "Nobody needs to carry water any more: the aqueduct keeps the stores full", site.global_position)
 			if w != null and w.era3 != null:
 				w.era3.water_arrives()
 				w.spawn_site(&"draw_water", w._v3(LayoutEra3.FOUNTAIN + Vector2(3.0, 2.0)))

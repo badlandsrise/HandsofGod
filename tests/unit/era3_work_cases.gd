@@ -40,6 +40,7 @@ func run() -> void:
 	await _paving()
 	await _migrate()
 	_calm()
+	_audit()
 	w.queue_free()
 	await get_tree().process_frame
 	print("RESULT: %s (%d failures)" % ["PASS" if fails == 0 else "FAIL", fails])
@@ -330,3 +331,36 @@ func _calm() -> void:
 	check(others > 0, "the other threats still come (%d of 200 dawns)" % others)
 	check(rolled == 0, "a threat that has come twice this era does not come again")
 	check(Era3Threats.QUIET_AFTER >= 300.0 and Era3Threats.SICK_START <= 2 and Era3Threats.GUST_CAP <= 4, "after a threat, five minutes of peace; small outbreaks; few hurt by a storm")
+
+# ---------------------------------------------------------------- audit fixes
+
+func _audit() -> void:
+	# the aqueduct takes away the water chore
+	Flags.set_flag(&"clean_water")
+	Village.stores[&"water"] = 0
+	for i in 10:
+		_e3()._water()
+	check(Village.store(&"water") > 0, "with the aqueduct running, water fills the stores on its own (%d)" % Village.store(&"water"))
+	# caravans trade the biggest surplus for what the plots want
+	Village.stores[&"bread"] = 120
+	Village.stores[&"tin"] = 0
+	var line := VillageEra3.trade()
+	check(line.contains("caravan") and Village.store(&"bread") < 120, "a caravan trades the surplus: \"%s\"" % line)
+	var hall: Site = w.spawn_plot(&"market_hall", Vector3(LayoutEra3.PLOT_SPOTS[&"market_hall"][0].x, 0, LayoutEra3.PLOT_SPOTS[&"market_hall"][0].y))
+	_finish(hall)
+	var keeper := _adult(hall.global_position + Vector3(2, 0, 2), 8)
+	_place(keeper, hall)
+	Village.stats["caravan_next"] = Clock.total_t - 1.0
+	var n0 := int(Village.stats.get("caravans", 0))
+	_e3()._caravans()
+	check(int(Village.stats.get("caravans", 0)) == n0 + 1 and _e3().caravan != null, "a kept market hall draws caravans, and the wagon stands by the hall")
+	# the checklist says the aqueduct's raising needs Grip IV
+	var d: DreamDef = Defs.dream(&"aqueduct")
+	var line2 := ""
+	if not Faith.has(&"grip_4"):
+		for it in Dreams.checklist(d):
+			if str(it["key"]) == "b:aqueduct":
+				line2 = str(it["hint"])
+		check(line2.contains("Grip IV"), "the aqueduct's goal line says the raising needs Grip IV: \"%s\"" % line2)
+	check(Dreams.teaser_hint(Defs.dream(&"observatory")) != Dreams.teaser_hint(null), "the Era 3 dreams have their own teasers")
+	keeper.go_idle()
