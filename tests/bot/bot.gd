@@ -261,8 +261,8 @@ func _think() -> void:
 ## requirements are met (Dreams.region_hint names it on the checklist).
 func _power_the_dream_needs() -> PowerDef:
 	var d := Dreams.active_dream()
-	if not Dreams.revealed(d):
-		return null
+	if Village.era != 2 or not Dreams.revealed(d):
+		return null           # Era 2 (the quarry for the temple); Era 3's bot buys by its own plan
 	for r in d.needs_regions:
 		if Village.regions.has(r):
 			continue
@@ -453,8 +453,8 @@ func _dream_chain() -> Array:
 	_chain_t = Clock.total_t
 	_chain_ids = []
 	var d := Dreams.active_dream()
-	if not Dreams.revealed(d):
-		return _chain_ids
+	if Village.era != 2 or not Dreams.revealed(d):
+		return _chain_ids     # Era 3's chains are bot_era3.gd's
 	for b in d.needs_buildings:
 		var bd: BuildingDef = Defs.building(b)
 		if bd == null or Village.count_buildings(b) >= int(d.needs_buildings[b]):
@@ -505,6 +505,9 @@ func _score(s, idle_n: int) -> float:
 		var d := Dreams.active_dream()
 		if d != null and d.needs_buildings.has(b.id):
 			dream = true
+		if Village.era == 2 and b.shelter > 0 and not b.camp and d != null and Dreams.revealed(d) \
+				and Village.population() < d.needs_population and Dreams.beds() <= Village.population() + 2:
+			dream = true          # the dream needs people and every home is full (the checklist says so)
 		if b.id == &"drying_rack" and not Site.has_drying_rack():
 			dream = true          # Era 1: the hunting lodge waits for the meat rack
 		if b.id == &"footbridge" or _dream_chain().has(b.id):
