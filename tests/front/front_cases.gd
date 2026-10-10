@@ -81,6 +81,13 @@ func _run() -> void:
 	check(not menu.visible and not w.hud.visible and not Clock.running, "intro: menu and HUD hidden, the clock stopped")
 	check(intro != null and intro.cam.current, "intro: its camera is live")
 	await _until(func(): return intro.t > 0.6, 10.0)
+	# [polish] Austin: "the two sit on nothing". Each sits on a log or rock.
+	var seated := 0
+	for p in intro.people:
+		var v = p.visual.get(&"villager") if is_instance_valid(p) and p.get(&"visual") != null else null
+		if v != null and v.has_seat():
+			seated += 1
+	check(intro.people.size() == 2 and seated == 2, "intro: the first two sit on a log or rock (%d of %d)" % [seated, intro.people.size()])
 	_key(KEY_ENTER)              # arms the skip
 	await _frames(8)
 	check(intro.playing and intro._skip_armed > 0.0, "intro: one key only asks to skip")

@@ -41,13 +41,15 @@ func build(w) -> void:
 			scree.add_child(art)
 			_rocks.append(art)
 	# big boulders wedged against the cutting walls, smaller ones between
-	var spots := [Vector2(-7.4, -0.5), Vector2(7.6, 0.4), Vector2(-4.6, 1.8), Vector2(4.2, -1.6), Vector2(0.4, 1.4), Vector2(-1.2, -1.9), Vector2(9.6, 1.6), Vector2(-9.8, 1.2)]
+	# [polish] the last five close the gap that showed between the spills
+	var spots := [Vector2(-7.4, -0.5), Vector2(7.6, 0.4), Vector2(-4.6, 1.8), Vector2(4.2, -1.6), Vector2(0.4, 1.4), Vector2(-1.2, -1.9), Vector2(9.6, 1.6), Vector2(-9.8, 1.2),
+		Vector2(-2.3, 0.3), Vector2(2.2, 0.5), Vector2(0.0, -0.4), Vector2(-3.2, -1.4), Vector2(1.6, 2.3)]
 	for i in spots.size():
 		var r := AssetCatalog.instance(&"rock_large", i)
 		var p: Vector2 = c + _rot(spots[i])
 		r.position = _ground(p, -0.3)
 		r.rotation = Vector3(rng.randf_range(-0.3, 0.3), rng.randf() * TAU, rng.randf_range(-0.3, 0.3))
-		r.scale = Vector3.ONE * (rng.randf_range(0.9, 1.25) if absf(spots[i].x) > 6.0 else rng.randf_range(0.6, 0.9))
+		r.scale = Vector3.ONE * (rng.randf_range(0.9, 1.25) if absf(spots[i].x) > 6.0 else (rng.randf_range(0.8, 1.0) if i >= 8 else rng.randf_range(0.6, 0.9)))
 		scree.add_child(r)
 		_rocks.append(r)
 	for i in 10:

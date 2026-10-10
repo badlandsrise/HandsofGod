@@ -368,7 +368,11 @@ func adjust_trust(d: float) -> void:
 ## Warmth power: the hand warms this person.
 func warm(seconds: float = 10.0) -> void:
 	warmed_t = maxf(warmed_t, seconds)
-	needs[&"warmth"] = minf(needs[&"warmth"] + 0.3, 1.0)
+	# [polish] one touch of the hand is enough to stop the shivering ("cold" clears)
+	needs[&"warmth"] = minf(maxf(needs[&"warmth"] + 0.3, 0.5), 1.0)
+	_cold_t = 0.0
+	if visual:
+		visual.set_warmth_cue(1.0, false)
 	if wish == &"warmth":
 		_grant_wish()
 	else:
@@ -420,6 +424,7 @@ func go_idle() -> void:
 	if state == S.DEAD or state == S.HELD or state == S.FALL:
 		return
 	_leave_job()
+	idle_why = ""
 	state = S.IDLE
 	_target = Vector3.INF
 	_decide_t = Game.rng.randf_range(0.5, 2.0)
@@ -436,6 +441,7 @@ func join(s: Site, by_hand: bool = true) -> bool:
 		_enter_shelter_site(s)
 		return true
 	job_site = s
+	idle_why = ""
 	s.claim(self)
 	_phase = "go"
 	_timer = 0.0
@@ -452,6 +458,30 @@ func join(s: Site, by_hand: bool = true) -> bool:
 		else:
 			adjust_trust(0.05)
 	return true
+
+## [polish] Why they are idle, when something ended their work (shown by
+## PersonInfo.idle_reason). Austin: people "go idle at random".
+var idle_why: String = ""
+
+## [polish] Back to the work they left to eat, sleep or flee. If that place
+## will not take them (its slot was filled, it ran out, or a workplace's crew
+## works it now) they take the same work nearby, or join that workplace,
+## before they give up, and then they say why.
+func _rejoin(r: Site) -> void:
+	if r == null or not is_instance_valid(r):
+		return
+	if join(r, false):
+		return
+	var jd := r.work_job()
+	if jd != null:
+		var near := Site.nearest(r.global_position, 25.0, func(o): return o != r and o.job != null and o.job.id == jd.id and not o.is_plot() and o.can_accept(1) and can_do(o))
+		if near != null and join(near, false):
+			return
+		var w := r.covering_workplace()
+		if w != null and w.can_accept(1) and join(w, false):
+			return
+	var what := r.title().to_lower() if r.has_method(&"title") else "work"
+	idle_why = ("their place was taken (%s)" if r.free_slots() <= 0 else "nothing to do there now (%s)") % what
 
 ## Can this person do the work at `s` (stage, era rules)?
 func can_do(s: Site) -> bool:
@@ -594,7 +624,16 @@ func die(cause: String = "old age") -> void:
 	for p in Village.alive():
 		if p.uid == partner or parents.has(p.uid) or children.has(p.uid):
 			p.needs[&"joy"] = maxf(p.needs[&"joy"] - 0.35, 0.0)
-	Memorial.add_name(self, cause)
+	var stone := Memorial.add_name(self, cause)
+	# [polish] Each loss is personal (doc 3, 8): say so, and the family gathers
+	# at the stone for a small funeral.
+	if is_inside_tree() and Clock.running:
+		var why := "" if cause == "old age" else " (%s)" % cause
+		Events.alert.emit("%s has died%s. Their name is carved by the shrine" % [given_name, why] if stone != null else "%s has died%s" % [given_name, why], global_position)
+		if stone != null:
+			for p in Village.alive():
+				if p.state == S.IDLE and (p.uid == partner or parents.has(p.uid) or children.has(p.uid)) and p.stage != Stage.BABY:
+					p._walk(stone.global_position + Vector3(Game.rng.randf_range(-1.6, 1.6), 0, 1.4))
 	Events.person_died.emit(self)
 
 # --- sim (10 Hz) -------------------------------------------------------------------
@@ -684,7 +723,7 @@ func sim(dt: float) -> void:
 				if _resume != null and is_instance_valid(_resume):
 					var r := _resume
 					_resume = null
-					join(r, false)
+					_rejoin(r)
 
 func _age(dt: float) -> void:
 	age += dt
@@ -713,6 +752,9 @@ func _sim_needs(dt: float) -> void:
 		_env_joy = Site.joy_at(global_position)
 	var warm_src := sheltered or warmed_t > 0.0 or _env_warm
 	var w: float = needs[&"warmth"]
+	if visual:   # [polish] warming up shows: a glow and sparks; cold shows a shiver
+		var warming := 1.0 if warmed_t > 0.0 else (0.65 if warm_src and w < 0.97 and _is_cold() else 0.0)
+		visual.set_warmth_cue(warming, w < 0.3 and _is_cold())
 	if warm_src:
 		w += 0.04 * dt
 	elif _is_cold():
@@ -820,9 +862,13 @@ func _sim_idle(dt: float) -> void:
 		s = (1.0 - needs[&"water"]) * 1.3 - 0.45
 		if s > score: score = s; best = &"eat"
 	var fire: Site = null
+	var hut: Site = null
 	if _is_cold() and needs[&"warmth"] < 0.7 and Site.warmth_at(global_position) == null:
 		fire = Site.nearest_warmth(global_position)
-		if fire != null:
+		hut = _warm_hut()   # [polish] a hut warms the people inside it, by day too
+		if fire != null and hut != null and hut.global_position.distance_to(global_position) < fire.global_position.distance_to(global_position):
+			fire = null
+		if fire != null or hut != null:
 			s = (1.0 - needs[&"warmth"]) * 1.1
 			if s > score: score = s; best = &"warm"
 	var friend: Person = null
@@ -834,6 +880,10 @@ func _sim_idle(dt: float) -> void:
 	match best:
 		&"eat": go_eat()
 		&"warm":
+			if fire == null:
+				_enter_shelter_site(hut)
+				_speed = WALK_SPEED
+				return
 			var a := Game.rng.randf() * TAU
 			_walk(fire.global_position + Vector3(cos(a), 0, sin(a)) * Game.rng.randf_range(1.5, 2.5))
 		&"social":
@@ -844,6 +894,12 @@ func _sim_idle(dt: float) -> void:
 			var off := Vector3(Game.rng.randf_range(-3.5, 3.5), 0, Game.rng.randf_range(-3.5, 3.5))
 			if global_position.distance_to(anchor) > 6.0 or Game.rng.randf() < 0.6:
 				_walk(anchor + off)
+
+## [polish] Their own home, or a hut with room that is no other family's, to warm up in.
+func _warm_hut() -> Site:
+	if home != null and is_instance_valid(home) and home.shelter_room() > 0 and home.global_position.distance_to(global_position) < HOME_RANGE:
+		return home
+	return Site.nearest(global_position, 60.0, func(o): return o.is_shelter() and o.shelter_room() > 0 and not o.building.camp and not _others_home(o))
 
 func _copy_parent_job() -> bool:
 	var par := _a_parent()
@@ -887,7 +943,7 @@ func _leave_offering() -> void:
 	if _resume != null and is_instance_valid(_resume):
 		var r := _resume
 		_resume = null
-		join(r, false)
+		_rejoin(r)
 
 func _anchor() -> Vector3:
 	if stage == Stage.CHILD:
@@ -979,6 +1035,15 @@ func _sim_work(dt: float) -> void:
 		_:
 			_work_gather(dt, s)
 
+## [polish] Every store this job fills is at its cap.
+static func _stores_full(jd: JobDef) -> bool:
+	if jd == null or jd.outputs.is_empty():
+		return false
+	for k in jd.outputs:
+		if Village.store(k) < Village.store_cap:
+			return false
+	return true
+
 func _first_work(s: Site) -> void:
 	if not _started_working:
 		_started_working = true
@@ -997,6 +1062,9 @@ func _work_gather(dt: float, s: Site) -> void:
 				var other := Site.nearest(global_position, 15.0, func(o): return o != s and o.job == s.job and o.can_accept(1) and o.can_work_now())
 				if other != null:
 					join(other, false)
+				return
+			if _stores_full(s.job) and _cargo.is_empty():
+				_waiting_for = &"room in the stores"   # [polish] no gathering into full stores
 				return
 			_waiting_for = &""
 			_first_work(s)
@@ -1160,17 +1228,26 @@ func _sim_wait(dt: float) -> void:
 	_wait_t += dt
 	if _wait_t >= s.job.wait_before_wander:
 		_leave_job()
+		idle_why = "gave up waiting for helpers (%s needs %d at once)" % [s.job.title.to_lower(), s.job.min_people]   # [polish]
 		Events.group_job_failed.emit(s)
 		var a := Game.rng.randf() * TAU
 		state = S.WALK
 		_go(global_position + Vector3(cos(a), 0, sin(a)) * Game.rng.randf_range(4.0, 6.0), WALK_SPEED)
 
+const VARIETY_JOY := 0.08
+var _last_meal: StringName = &""
+
 func _sim_eat() -> void:
 	if not _arrived():
 		return
-	if needs[&"food"] < MEAL_BELOW and Village.eat_one():
+	var ate: StringName = Village.eat_kind() if needs[&"food"] < MEAL_BELOW else &""
+	if ate != &"":
 		needs[&"food"] = minf(needs[&"food"] + 0.6, 1.0)
 		needs[&"joy"] = minf(needs[&"joy"] + 0.03, 1.0)
+		# [polish] Variety raises mood from Era 2 (doc 3): a different dish from the last.
+		if Village.era >= 2 and _last_meal != &"" and ate != _last_meal:
+			needs[&"joy"] = minf(needs[&"joy"] + VARIETY_JOY, 1.0)
+		_last_meal = ate
 	if needs[&"water"] < MEAL_BELOW and Village.take_store(&"water", 1):
 		needs[&"water"] = minf(needs[&"water"] + 0.7, 1.0)
 	# Feed any baby they are carrying.
@@ -1194,7 +1271,7 @@ func _after_eat() -> void:
 	if _resume != null and is_instance_valid(_resume):
 		var r := _resume
 		_resume = null
-		join(r, false)
+		_rejoin(r)
 
 func _sim_rest(dt: float) -> void:
 	_rest_t += dt
@@ -1216,7 +1293,7 @@ func _sim_rest(dt: float) -> void:
 		if _resume != null and is_instance_valid(_resume):
 			var r := _resume
 			_resume = null
-			join(r, false)
+			_rejoin(r)
 
 func _enter_shelter_site(s: Site) -> void:
 	if job_site != null and is_instance_valid(job_site):
@@ -1279,13 +1356,13 @@ func _store_slot() -> Vector3:
 	return c + Vector3(cos(a), 0, sin(a)) * 1.3
 
 func _on_day(_d: int) -> void:
-	if state == S.DEAD:
+	if state == S.DEAD or not is_inside_tree() or is_queued_for_deletion():   # [polish] removed on load
 		return
 	wake()
 	go_eat()
 
 func _on_night(_d: int) -> void:
-	if state == S.DEAD or state == S.HELD or state == S.FALL:
+	if state == S.DEAD or state == S.HELD or state == S.FALL or not is_inside_tree() or is_queued_for_deletion():   # [polish]
 		return
 	go_eat()      # dusk meal; _after_eat sends them to bed at night
 
@@ -1320,6 +1397,8 @@ static func _stride() -> int:
 	return 1 if Engine.time_scale < FAST_SCALE else (2 if Engine.time_scale < FASTER_SCALE else 3)
 
 func _on_sim_tick(dt: float) -> void:
+	if not is_inside_tree() or is_queued_for_deletion():
+		return     # [polish] being removed (a save loading): no last tick
 	var k := _stride()
 	if k == 1 or state == S.HELD or state == S.FALL:
 		if _sim_acc > 0.0:
@@ -1355,6 +1434,8 @@ func _process(delta: float) -> void:
 		_dead_t += delta
 		if _dead_t > 4.0:
 			queue_free()
+	if _gaze_t > 0.0:
+		_gaze_t -= Clock.real_delta if Clock.real_delta > 0.0 else delta
 	# Animation runs once per drawn frame, not once per physics step: at 3x
 	# speed a frame holds several physics steps, and a town holds a hundred people.
 	if visual and _anim_dt > 0.0:
@@ -1604,7 +1685,27 @@ func _hand_dist() -> float:
 	d.y = 0.0
 	return d.length()
 
+## [polish] Cutscenes: stop and look at `what` for `seconds` (real time);
+## `point` = the one who points it out.
+var _gaze_at: Node3D = null
+var _gaze_t: float = 0.0
+var _gaze_point := false
+
+func gaze(what: Node3D, seconds: float, point: bool = false) -> void:
+	_gaze_at = what
+	_gaze_t = seconds
+	_gaze_point = point
+	if state == S.IDLE and what != null and is_instance_valid(what):
+		var d := what.global_position - global_position
+		if Vector2(d.x, d.z).length() > 0.1:
+			rotation.y = atan2(d.x, d.z)
+
+func gazing() -> bool:
+	return _gaze_t > 0.0 and _gaze_at != null and is_instance_valid(_gaze_at)
+
 func _hand_look() -> Vector3:
+	if gazing():
+		return _gaze_at.global_position
 	var h := _hand()
 	if h == null or _hand_dist() > HAND_NEAR * 1.5:
 		return Vector3.INF
@@ -1640,6 +1741,8 @@ func _pose() -> int:
 			return PersonVisual.Pose.COWER if not _moving else PersonVisual.Pose.RUN
 	if stage == Stage.BABY:
 		return PersonVisual.Pose.SIT
+	if gazing() and not _moving and state in [S.IDLE, S.WORK, S.WAIT_GROUP, S.EAT]:
+		return PersonVisual.Pose.POINT if _gaze_point else PersonVisual.Pose.WATCH   # [polish]
 	if not _cargo.is_empty():
 		return PersonVisual.Pose.CARRY
 	if _moving and _carrying_baby():
@@ -1667,7 +1770,7 @@ func _pose() -> int:
 const WAIT_NOTES := {&"no fields": "no fields to work yet", &"nothing near": "nothing to work nearby",
 	&"another hunter": "waiting for another hunter", &"a second farmer": "the blight needs two",
 	&"the harvest": "waiting for the harvest", &"room in the stores": "the stores are full",
-	&"stone_tools": "needs stone tools"}
+	&"stone_tools": "needs stone tools", &"a drying rack": "needs a drying rack first"}
 
 ## [village] Called to the hand (Village.call_idle): walk over and wait there a while.
 const CALLED_WAIT := 25.0

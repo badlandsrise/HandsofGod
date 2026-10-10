@@ -49,7 +49,7 @@ func on_placed(at: Vector3) -> void:
 	var plot := Timber.wanting_plot(global_position, DROP_RADIUS)
 	if plot != null and plot.add_timber():
 		Events.alert.emit("A timber for the %s (%d/%d)" % [plot.building.title.to_lower().trim_prefix("the "), plot.timbers_in, plot.building.timbers], plot.global_position)
-		Flags.remember("The hand carried a great timber to the river for our bridge.")
+		Flags.remember("The hand carried a great timber to the Great River for our bridge.")
 		_forget()
 		queue_free()
 		return

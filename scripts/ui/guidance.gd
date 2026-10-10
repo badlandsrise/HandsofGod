@@ -116,9 +116,15 @@ func _beat_pos(b: Dictionary) -> Vector3:
 		return at
 	return b.get("at", Vector3.INF)
 
+## [polish] The running mini-cutscene (the first wanderer), if any.
+var scene: WandererScene = null
+
 func _start_beat(b: Dictionary) -> void:
 	var p := _beat_pos(b)
 	if not p.is_finite():
+		return
+	if b.get("scene", false) and b.get("node") is Node3D:
+		scene = WandererScene.play(b["node"], str(b["line"]), self)
 		return
 	_beat = b
 	_beat_t = float(b["hold"])
@@ -156,6 +162,9 @@ func _step_beat(dt: float) -> void:
 
 func _process(_d: float) -> void:
 	var dt := Clock.real_delta
+	if scene != null and is_instance_valid(scene) and not scene.done:
+		return
+	scene = null
 	if _beat.is_empty():
 		if not _queue.is_empty() and can_run():
 			_start_beat(_queue.pop_front())
@@ -231,8 +240,10 @@ func _on_joined(p) -> void:
 		Village.stats["guide_first_wanderer"] = true
 		mark(p, 16.0, &"wanderer")
 		var who := "%s, a wanderer, is walking into your valley. %s saw your fire." % [p.given_name, BookData.pronoun(p.sex, "she").capitalize()] if &"given_name" in p else "Someone is walking into your valley."
+		# [polish] a short, skippable mini-cutscene (WandererScene), not just a pan
 		if beat(p, who, "", 4.0, 30.0):
 			(_queue.back() as Dictionary)["lean"] = 0.4
+			(_queue.back() as Dictionary)["scene"] = true
 
 func _on_born(baby) -> void:
 	if not (baby is Person) or not is_instance_valid(baby):
@@ -329,6 +340,9 @@ func _on_power(id: StringName) -> void:
 	if id == &"blessing" and not Village.stats.get("hint_blessing", false):
 		Village.stats["hint_blessing"] = true
 		caption.say("Blessing: hold E over people. Blessed people work twice as fast; the ring under them shows the time left.", 6.5)
+	elif id == &"warmth" and not Village.stats.get("hint_warmth", false):
+		Village.stats["hint_warmth"] = true   # [polish] the lesson the first time (doc 6)
+		caption.say("Warmth: hold E over cold people, or over the fire to feed it. They glow as they warm up.", 6.5)
 
 ## A line of guidance near the bottom of the screen, on parchment.
 class Caption extends PanelContainer:

@@ -61,10 +61,18 @@ func food() -> int:
 	return t
 
 func eat_one() -> bool:
+	return eat_kind() != &""
+
+## [polish] Eats one food, from the biggest stock (so bread, fish and meat get
+## eaten too, not only berries); returns the kind eaten, or &"" if none.
+func eat_kind() -> StringName:
+	var best: StringName = &""
 	for k in FOOD_KINDS:
-		if take_store(k, 1):
-			return true
-	return false
+		if store(k) > 0 and (best == &"" or store(k) > store(best)):
+			best = k
+	if best != &"" and take_store(best, 1):
+		return best
+	return &""
 
 func count_buildings(id: StringName) -> int:
 	var n := 0

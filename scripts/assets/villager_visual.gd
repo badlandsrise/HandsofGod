@@ -639,7 +639,7 @@ func _update_cargo_visible() -> void:
 ## Runs after the skeleton poses each frame: the armful sits between the hands, upright,
 ## facing the way the villager faces.
 func _place_cargo() -> void:
-	if _cargo == null or _skeleton == null or not _cargo.visible:
+	if _cargo == null or _skeleton == null or not _cargo.visible or not is_inside_tree() or not _skeleton.is_inside_tree():   # [polish]
 		return
 	var hr := _skeleton.find_bone("hand_r")
 	var hl := _skeleton.find_bone("hand_l")

@@ -12,4 +12,4 @@ free = true
 grip = 3
 opens_jobs = Array[StringName]([&"haul_log", &"hunt"])
 what_it_does = "Lift 3 people; unlocks the scoop gesture. Granted free as the first gift"
-what_it_opens = "Log hauling and the hunt (group jobs)"
+what_it_opens = "Log hauling, and the hunt from a hunting lodge once a drying rack stands (group jobs)"

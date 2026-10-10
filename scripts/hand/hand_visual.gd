@@ -92,6 +92,11 @@ var _ghost_ring_mat: ShaderMaterial
 var _ghost_bad_mat: StandardMaterial3D        # red: they can't be set down there
 var _ghost_bad_ring: ShaderMaterial
 var _ghost_red := false
+## [polish] The no-drop sign: a big pulsing red ring with a bar across it under
+## the hand, and the red ghosts drawn larger, so "not there" reads at normal zoom.
+const BAD_GHOST_SCALE := 1.7
+const NO_DROP_RADIUS := 2.6
+var no_drop: Node3D = null
 var _pip_full: StandardMaterial3D
 var _pip_new: StandardMaterial3D
 var _pip_empty: StandardMaterial3D
@@ -175,6 +180,7 @@ func _build_ghosts() -> void:
 		g.add_child(gr)
 		g.visible = false
 		ghosts.append(g)
+	_build_no_drop(root)
 	pips_root = Node3D.new()
 	pips_root.name = "SitePips"
 	pips_root.top_level = true
@@ -562,6 +568,52 @@ func _update_trail(hand: Hand, dt: float) -> void:
 		im.surface_add_vertex(Vector3(p.x, y, p.z) - side * w)
 	im.surface_end()
 
+## [polish] The no-drop sign (see NO_DROP_RADIUS).
+func _build_no_drop(root: Node3D) -> void:
+	no_drop = Node3D.new()
+	no_drop.name = "NoDrop"
+	root.add_child(no_drop)
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.albedo_color = Color(1.0, 0.18, 0.12, 0.85)
+	m.no_depth_test = true
+	m.render_priority = 11
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var ring := MeshInstance3D.new()
+	var tm := TorusMesh.new()
+	tm.inner_radius = NO_DROP_RADIUS - 0.32
+	tm.outer_radius = NO_DROP_RADIUS
+	tm.rings = 48
+	tm.ring_segments = 6
+	ring.mesh = tm
+	ring.scale = Vector3(1.0, 0.15, 1.0)
+	ring.material_override = m
+	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	no_drop.add_child(ring)
+	var bar := MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	bm.size = Vector3((NO_DROP_RADIUS - 0.2) * 2.0, 0.05, 0.32)
+	bar.mesh = bm
+	bar.rotation.y = PI * 0.25
+	bar.material_override = m
+	bar.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	no_drop.add_child(bar)
+	var fill := MeshInstance3D.new()
+	var cm := CylinderMesh.new()
+	cm.top_radius = NO_DROP_RADIUS - 0.3
+	cm.bottom_radius = NO_DROP_RADIUS - 0.3
+	cm.height = 0.02
+	cm.radial_segments = 40
+	fill.mesh = cm
+	var fm := m.duplicate() as StandardMaterial3D
+	fm.albedo_color = Color(1.0, 0.15, 0.1, 0.22)
+	fm.render_priority = 10
+	fill.material_override = fm
+	fill.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	no_drop.add_child(fill)
+	no_drop.visible = false
+
 func _update_ghosts(hand: Hand) -> void:
 	var spots: Array = []
 	var s := hand.hover_site
@@ -589,6 +641,17 @@ func _update_ghosts(hand: Hand) -> void:
 		if g.visible:
 			var p: Vector3 = spots[i]
 			g.global_position = Vector3(p.x, hand._ground_y(p.x, p.z), p.z)
+			g.scale = Vector3.ONE * (BAD_GHOST_SCALE if bad else 1.0)   # [polish]
+	if no_drop != null:
+		no_drop.visible = bad and not spots.is_empty()
+		if no_drop.visible:
+			var c := Vector3.ZERO
+			for p in spots:
+				c += p
+			c /= float(spots.size())
+			no_drop.global_position = Vector3(c.x, hand._ground_y(c.x, c.z) + 0.12, c.z)
+			var pulse := 1.0 + 0.06 * sin(hand.time * 6.0)
+			no_drop.scale = Vector3(pulse, 1.0, pulse) * maxf(1.0, sqrt(float(spots.size())) * 0.8)
 	# slot pips over the site: filled, about to be filled, empty
 	for q in pips:
 		(q as MeshInstance3D).visible = false

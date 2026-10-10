@@ -453,6 +453,9 @@ func gesture_target() -> Dictionary:
 	var w := Game.world
 	if w != null and w.has_method(&"is_water") and w.is_water(ground):
 		return {"kind": &"sea", "at": ground}
+	# [polish] over a group of people (not exactly on one): Warmth or Blessing them
+	if (is_gesture_unlocked(&"warmth") or is_gesture_unlocked(&"blessing")) and not HandPowers._people_near(ground, HandPowers.RADIUS).is_empty():
+		return {"kind": &"person", "at": ground}
 	return {"kind": &"sky", "at": ground}
 
 ## The unlocked gesture power for a target kind, preferring the selected power.

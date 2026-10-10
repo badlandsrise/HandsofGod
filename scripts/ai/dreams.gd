@@ -236,7 +236,7 @@ static func teaser_hint(d: DreamDef) -> String:
 	match d.id:
 		&"shrine_to_the_hand": return "They are settling in. Keep them fed and warm, and keep the fire burning."
 		&"stone_circle": return "Something bigger stirs in them. Keep the village growing."
-		&"great_bridge": return "They look across the great river more and more."
+		&"great_bridge": return "They look across the Great River more and more."
 		&"temple_of_the_hand": return "They talk of the hand at every fire."
 	return "Keep them fed, warm and busy. A dream is stirring."
 

@@ -55,6 +55,15 @@ var _cargo_kind: StringName = &""
 var _move_hold := 0.0
 var _idle_pick: StringName = &"idle"
 var _idle_t := 0.0
+## [polish] Warmth you can see (Austin: warmth "doesn't seem to come from
+## anything"): a soft orange glow and rising sparks while someone warms up by a
+## fire, coming out of a hut, or under the hand's Warmth; a frosty tint while cold.
+var _glow: MeshInstance3D = null
+var _glow_mat: StandardMaterial3D = null
+var _sparks: CPUParticles3D = null
+var _glow_k := 0.0
+var _glow_want := 0.0
+var _temp := 0              # -1 cold, 0 neither, 1 warming
 
 func _ready() -> void:
 	_build()
@@ -163,8 +172,98 @@ func set_wish(c: Variant) -> void:
 ## Red tint that fades as an injury heals (0..1).
 func set_hurt(amount: float) -> void:
 	_hurt = clampf(amount, 0.0, 1.0)
-	if villager:
-		villager.set_tint(Color.WHITE.lerp(Color(1.0, 0.62, 0.55), _hurt))
+	_push_tint()
+
+func _push_tint() -> void:
+	if villager == null:
+		return
+	var c := Color.WHITE.lerp(Color(1.0, 0.62, 0.55), _hurt)
+	if _temp < 0:
+		c *= Color(0.82, 0.9, 1.08)          # frosty
+	elif _temp > 0:
+		c *= Color(1.08, 0.97, 0.88)         # warm cheeks
+	villager.set_tint(c)
+
+## [polish] `warming` 0..1: how strongly they are being warmed right now (0 = not);
+## `cold`: chilled (warmth low in the cold).
+func set_warmth_cue(warming: float, cold: bool) -> void:
+	_glow_want = clampf(warming, 0.0, 1.0)
+	var t := 1 if warming > 0.05 else (-1 if cold else 0)
+	if t != _temp:
+		_temp = t
+		_push_tint()
+
+func warmth_glow() -> float:
+	return _glow_k
+
+func _build_glow() -> void:
+	_glow = MeshInstance3D.new()
+	_glow.name = "WarmGlow"
+	var qm := QuadMesh.new()
+	qm.size = Vector2(1.7, 2.4)
+	_glow.mesh = qm
+	_glow.position = Vector3(0, 1.0, 0)
+	_glow_mat = StandardMaterial3D.new()
+	_glow_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_glow_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_glow_mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	_glow_mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	_glow_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var g := Gradient.new()
+	g.set_color(0, Color(1.0, 0.62, 0.22, 0.9))
+	g.set_color(1, Color(1.0, 0.45, 0.1, 0.0))
+	var gt := GradientTexture2D.new()
+	gt.gradient = g
+	gt.fill = GradientTexture2D.FILL_RADIAL
+	gt.fill_from = Vector2(0.5, 0.5)
+	gt.fill_to = Vector2(0.5, 0.0)
+	gt.width = 64
+	gt.height = 64
+	_glow_mat.albedo_texture = gt
+	_glow.material_override = _glow_mat
+	_glow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_glow.visible = false
+	add_child(_glow)
+	_sparks = CPUParticles3D.new()
+	_sparks.name = "WarmSparks"
+	_sparks.amount = 10
+	_sparks.lifetime = 1.4
+	_sparks.emitting = false
+	_sparks.position = Vector3(0, 0.6, 0)
+	_sparks.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+	_sparks.emission_sphere_radius = 0.45
+	_sparks.direction = Vector3.UP
+	_sparks.spread = 15.0
+	_sparks.gravity = Vector3(0, 0.6, 0)
+	_sparks.initial_velocity_min = 0.4
+	_sparks.initial_velocity_max = 0.8
+	_sparks.scale_amount_min = 0.5
+	_sparks.scale_amount_max = 1.0
+	var sm := SphereMesh.new()
+	sm.radius = 0.045; sm.height = 0.09; sm.radial_segments = 6; sm.rings = 3
+	var spm := StandardMaterial3D.new()
+	spm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	spm.albedo_color = Color(1.0, 0.72, 0.3)
+	spm.vertex_color_use_as_albedo = true
+	spm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	sm.material = spm
+	_sparks.mesh = sm
+	var ramp := Gradient.new()
+	ramp.set_color(0, Color(1, 0.85, 0.5, 1))
+	ramp.set_color(1, Color(1, 0.4, 0.1, 0))
+	_sparks.color_ramp = ramp
+	add_child(_sparks)
+
+func _animate_glow(delta: float) -> void:
+	if _glow == null:
+		if _glow_want <= 0.0:
+			return
+		_build_glow()
+	_glow_k = move_toward(_glow_k, _glow_want, delta * 2.5)
+	_glow.visible = _glow_k > 0.01
+	if _glow.visible:
+		_glow_mat.albedo_color = Color(1, 1, 1, _glow_k * (0.75 + 0.25 * sin(_t * 5.0)))
+	_sparks.emitting = _glow_k > 0.3
 
 func land_squash() -> void:
 	_squash = 1.0
@@ -205,6 +304,11 @@ func animate(delta: float, pose: int, moving: bool, look_at_world: Vector3) -> v
 	villager.scale = Vector3(1.0 + _squash * 0.2, 1.0 - _squash * 0.3, 1.0 + _squash * 0.2)
 	if bubble.visible:
 		bubble.position.y = 2.45 + sin(_t * 3.0) * 0.08
+	_animate_glow(delta)   # [polish]
+	if _temp < 0 and not moving:
+		villager.position.x = sin(_t * 47.0) * 0.012   # a shiver
+	elif villager.position.x != 0.0:
+		villager.position.x = 0.0
 
 ## The animation plan in use: the job's (set_task), else one from the skill colour.
 func _task_plan() -> Dictionary:

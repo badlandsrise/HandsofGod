@@ -539,6 +539,25 @@ func test_guidance() -> void:
 	check(ring == null or not is_instance_valid(ring) or ring.ending(), "guidance: the ring fades when the blessing ends")
 	var m := g.mark(a, 2.0)
 	check(m != null and Beacon.on(a) == m, "guidance: the Book's find marks the person")
+	# [polish] the first wanderer: a short, skippable mini-cutscene
+	g._queue.clear()
+	g._beat = {}
+	Village.stats.erase("guide_first_wanderer")
+	var wen := _spawn("Wen", "f", {"wanderer": true})
+	wen.global_position = a.global_position + Vector3(20, 0, 0)
+	Events.person_joined.emit(wen)
+	await _frames(3)
+	var sc: WandererScene = g.scene
+	check(sc != null and is_instance_valid(sc) and not sc.done, "first wanderer: a mini-cutscene plays")
+	check(sc != null and sc.line.contains("Wen"), "first wanderer: one line names them")
+	if sc != null:
+		sc.t = WandererScene.PULL_AT + 0.1
+		await _frames(2)
+		check(a.gazing(), "first wanderer: the tribe turns to look")
+		sc.skip()
+		var was_skipped := sc.skipped
+		await _frames(2)
+		check(was_skipped and not is_instance_valid(sc), "first wanderer: the scene can be skipped")
 	g.free()
 	for bb in tree.get_nodes_in_group(&"beacon"):
 		bb.free()

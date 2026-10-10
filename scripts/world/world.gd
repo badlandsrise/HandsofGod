@@ -127,6 +127,7 @@ func build() -> void:
 	terrain = Terrain.new()
 	add_child(terrain)
 	terrain.build(valley)
+	terrain.add_child(RiverNames.make(valley, regions))   # [polish] the waters' names
 	foliage = Foliage.new()
 	add_child(foliage)
 	foliage.build(valley, terrain, _keep_out_zones())

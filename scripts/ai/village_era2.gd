@@ -149,10 +149,10 @@ func _far_bank() -> void:
 	if Flags.has(&"far_bank_seen") or era_t() < FAR_BANK_AFTER:
 		return
 	Flags.set_flag(&"far_bank_seen")
-	Flags.remember("We stood on the river bank and looked across. Clay, and green stone in the rocks. We wanted the far bank.")
+	Flags.remember("We stood on the bank of the Great River and looked across. Clay, and green stone in the rocks. We wanted the far bank.")
 	var w = VillageEra2._w()
 	var at: Vector3 = Vector3(150, 0, 112) if w == null else w._v3(Vector2(150, 112))
-	Events.alert.emit("They gaze across the great river. They long for the far bank (Strong Arms)", at)
+	Events.alert.emit("They gaze across the Great River. They long for the far bank (Strong Arms)", at)
 
 ## Once the bridge plot is laid, the builders pitch a yard on the near bank.
 func _bridge_yard() -> void:
@@ -166,7 +166,7 @@ func _bridge_yard() -> void:
 	var yard: Site = w.spawn_plot(&"camp", Vector3(c.x, 0, c.y))
 	if yard != null:
 		yard._finish(true)
-		Events.alert.emit("The builders pitch a camp by the river and stack wood and stone there for the bridge", yard.global_position)
+		Events.alert.emit("The builders pitch a camp by the Great River and stack wood and stone there for the bridge", yard.global_position)
 
 ## Winter: a raising that waits for its season says so once (the bridge piers).
 func _low_river() -> void:
@@ -343,7 +343,7 @@ func _raft() -> void:
 	Village.stats["raft_site"] = true
 	var s: Site = w.spawn_site(&"raft_launch", w._v3(LayoutEra2.RAFT))
 	if s != null:
-		Events.alert.emit("They have built a raft. Five of them can push it into the river", s.global_position)
+		Events.alert.emit("They have built a raft. Five of them can push it into the Great River", s.global_position)
 
 func _on_job_completed(site) -> void:
 	if not (site is Site) or not is_instance_valid(site) or site.job == null:
@@ -355,8 +355,8 @@ func _on_job_completed(site) -> void:
 				if w != null:
 					for b in LayoutEra2.BOATS:
 						w.spawn_site(&"fish_boat", w._v3(b))
-				Flags.remember("Five of us pushed the raft into the great river, and now we fish from boats.")
-				Events.alert.emit("The raft is on the river! Now they fish from boats", site.global_position)
+				Flags.remember("Five of us pushed the raft into the Great River, and now we fish from boats.")
+				Events.alert.emit("The raft is on the Great River! Now they fish from boats", site.global_position)
 				site.remove_site.call_deferred()
 		&"harvest_festival":
 			if Flags.set_flag(&"harvest_festival"):

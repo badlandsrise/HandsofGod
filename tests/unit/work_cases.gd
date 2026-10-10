@@ -140,8 +140,19 @@ func _lodge() -> void:
 	var prog: Progression = w.village_ai.progression
 	Faith.grant(&"grip_2")
 	prog._family_plots()
+	# [polish] the drying rack comes first
+	var racks := _sites(&"drying_rack")
+	check(_sites(&"hunting_lodge").is_empty() and racks.size() == 1, "with the deer in reach they first want a drying rack, not yet a lodge")
+	check(herd != null and herd.hover_text().contains("drying rack"), "the herd says the hunt needs a drying rack first")
+	if not racks.is_empty():
+		var rack: Site = racks[0]
+		for k in rack.building.cost:
+			rack.deliver(k, int(rack.building.cost[k]))
+		rack.add_build_work(1000.0)
+	check(Site.has_drying_rack(), "the rack stands")
+	prog._family_plots()
 	var plots := _sites(&"hunting_lodge")
-	check(plots.size() == 1 and plots[0].is_plot(), "with the Valley Floor open and Grip II they want a hunting lodge")
+	check(plots.size() == 1 and plots[0].is_plot(), "with the rack built, the Valley Floor open and Grip II they want a hunting lodge")
 	var lodge: Site = plots[0]
 	check(Vector2(lodge.global_position.x, lodge.global_position.z).distance_to(Progression.LODGE_SPOT) < 0.5, "at its spot by the deer")
 	var herds := _jobs(&"hunt").size()
