@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="EraDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/defs/era_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+era = 1
+title = "Tribe"
+target_minutes = 45.0
+population_band = Vector2i(12, 20)
+faith_target = 150.0
+dreams = Array[StringName]([&"shelter_of_our_own", &"hut_and_fire", &"shrine_to_the_hand", &"stone_circle"])
+music = &"tribe"
+day_seconds = 75.0
+night_seconds = 30.0
+season_seconds = 240.0

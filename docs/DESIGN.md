@@ -67,8 +67,8 @@ The hand is the player character, the cursor and the only tool. It must feel hea
 | Left hold and drag on the ground | **Scoop**: sweep a circle and lift everyone inside, up to your grip (needs Grip II) |
 | Shift + left click | Add one more person to the hand without setting down |
 | Right click | Set down here with no job |
-| Double click a job | **Fill**: the hand gathers the nearest idle people and places them until the job is full \[PROPOSED\] |
-| Left hold over a person, field or fire | **Hold over**: the gesture for Warmth, Rain, Blessing, Shade (once unlocked) |
+| Double click a job | **Fill**: from Era 3, the hand gathers the nearest idle people and places up to your grip at once \[PROPOSED\] |
+| Hold E with the hand over a person, field or fire | **Hold over**: the gesture for Warmth, Rain, Blessing, Shade (once unlocked) |
 | Flick (fast drag then release while holding a small object) | Toss it a short way: shoo a wolf, throw a seed bag across the river \[PROPOSED\] |
 | WASD or screen edges / middle drag | Pan |
 | Q / E, mouse wheel | Rotate, zoom |
@@ -81,10 +81,10 @@ All keys remappable. Controller support is \[STRETCH\] (left stick moves the han
 
 Grip answers your playtest note that lifting more than one person had no point. Two numbers govern the hand:
 
-- **Grip** = how many people at once (1, 2, 5, 10, 20 across the game).
-- **Strength** = the heaviest object you can lift. A person weighs 1. A fallen log 4, a boulder 10, a cart 15, a house 40, a rocket stage 100.
+- **Grip** = how many people at once (1, 3, 5, 10, 20 across the game; the hand starts at 1).
+- **Strength** = the heaviest object you can lift. The hand starts at Strength 2 (a person, or the storm-night branch). A person weighs 1, a fallen log 4, a boulder or a bear 10, a cart 15, a house 40, a rocket stage 100. Strength I lifts 4, Strength II 10, Lift Buildings 40, Strength III 100.
 
-Grip matters because many jobs need a group **at the same moment** (section 4): a heavy log needs 3 carriers, a hunt needs 4, a raft needs a crew of 5, a barn raising needs 8. People placed one at a time drift off or start other work before the group forms. Grip is how you start group jobs, and scoop is how you move a crowd. Each grip upgrade comes with a group job that needs it and a short in-game hint showing the scoop gesture.
+Grip matters because many jobs need a group **at the same moment** (section 4): a heavy log needs 3 carriers, a hunt needs 4, a raft needs a crew of 5, a barn raising needs 8. People waiting at an unfilled group job wander off after about 20 seconds, so filling one by one is a race; enough grip turns it into one easy motion. Grip is how you start group jobs, and scoop is how you move a crowd. Each grip upgrade comes with a group job that needs it and a short in-game hint showing the scoop gesture.
 
 ### Hand feedback \[CORE\]
 
@@ -111,7 +111,7 @@ The game starts with **two people** \[CORE\] and peaks around **150 to 200** by 
 | Elder | 50 to 65 min | Slow work; **teaches** | An elder beside an apprentice doubles their skill gain |
 | Death | \~65 min |  | A small funeral at the shrine; their name is carved on the memorial stones |
 
-One generation is roughly one era, so the launch crew are four to five generations after the first two people. Times are scaled game time and tune with pacing.
+A new generation comes of age about every 20 to 30 minutes of play, so the launch crew are eight to ten generations after the first two people, and each era opens by naming its new generation. Times are scaled game time and tune with pacing.
 
 ### Population growth \[CORE\]
 
@@ -140,6 +140,8 @@ Unmet needs lower mood. Mood sets work speed (70% to 125%), birth rate and how m
 - Every person has a generated name drawn from an era-appropriate name list, a face (skin, hair, eyes, build) and parents. Children resemble parents.
 - The **Village Book** (F1) holds a family tree, a portrait of everyone alive, the memorial list, and a list of things the people remember you doing.
 - The game tracks the **first two** as the root of the tree. The rocket crew are always chosen from their descendants, and the ending names the line from them to the crew.
+
+**Naming \[CORE, ruled In\].** On the storm night the player can name the first two people (or keep the generated names). Later, a random event has a couple pray at the shrine "for the hand to name our baby": a name box appears, and the child carries that name in the Book with a small hand mark beside it.
 
 ### The autonomy dial \[CORE\]
 
@@ -241,21 +243,21 @@ Sixteen powers over four eras, and every one opens a region, a job or a gesture 
 
 | Era | Power | What it lets you do | What it opens |
 | --- | --- | --- | --- |
-| 1 | Grip II | Lift 2 people; unlocks the scoop gesture | Log hauling and the hunt (group jobs) |
+| 1 | Grip II | Lift 3 people; unlocks the scoop gesture. Granted free as the first gift (section 11.4) | Log hauling and the hunt (group jobs) |
 | 1 | Strength I | Lift weight 4 (fallen logs) | The western meadow: wanderers, stone, rich bushes |
 | 1 | Warmth | Hold over people or a fire to warm them | Survive the first winter; hand-fishing in cold water |
-| 1 | Blessing | People you set down work 2x for 30 s | Racing a deadline; turning a bad night around |
+| 1 | Blessing | People you set down work 2x for 30 s | The first festival (a blessed crowd dances at the fire for +20 faith) and the great elk hunt, which only blessed hunters can win |
 | 2 | Reach | Place people across the great river | The east bank (clay, ore) before the bridge exists |
 | 2 | Rain | Hold over fields to water them | The dry southern plains become farmland |
 | 2 | Grip III | Lift 5; wider scoop | Barn raising and the raft crew |
 | 2 | Strength II | Lift weight 10 (boulders) | The hill quarry behind the rockfall |
-| 3 | Lift Buildings | Pick up a whole house and move it | Rebuild the town above the flood line; design your layout |
+| 3 | Lift Buildings | Pick up a whole house and move it | Rearranging your layout and rebuilding above the flood line. Always optional: no goal ever forces you to move a building |
 | 3 | Calm Waters | Hold over the sea to still it | The coast and the islands by boat |
 | 3 | Grip IV | Lift 10 | Aqueduct crews; moving whole families |
 | 3 | Guiding Light | Hold over the night sky to clear it | Astronomy at the observatory; northern lights event |
 | 4 | Strength III | Lift weight 100 (rocket stages, rail cars) | Assembling the rocket; laying rail across the gorge |
 | 4 | Part the Clouds | Hold over the sky to open a weather window | The launch itself |
-| 4 | Grip V | Lift 20 | Evacuating a district in an emergency; crowd scenes |
+| 4 | Grip V | Lift 20 | The stacking crew: 20 engineers carried to the gantry at once for the final rocket stage; evacuating a burning district |
 | 4 | Steady Hand | Fine placement at slow speed | Docking stages, threading the crew gantry |
 
 The old prototype's Strength opening the western pass stays as the template for this whole list.
@@ -274,7 +276,18 @@ Faith is the only currency the hand spends. It is earned from the relationship, 
 | A night or disaster survived with no losses | +5 |
 | A festival (Era 2 and later) | +20 |
 
-Power costs climb from 10 (Grip II) to about 400 (Part the Clouds). Faith is never lost or drained: a neglected village simply earns less of it. Ignored, frightened or hungry people pray less, and a lost person's family prays less for a while.
+Power costs climb from 10 (Strength I, the first bought power) to about 400 (Part the Clouds). Faith is never lost or drained: a neglected village simply earns less of it. Ignored, frightened or hungry people pray less, and a lost person's family prays less for a while.
+
+**Faith budget per era \[PROPOSED\].** These are targets the test bot checks on every build, and they are what keeps an era from being rushed: you cannot afford the next region's power until the village has grown into it.
+
+| Era | Faith earned (target) | Powers bought | Their total cost |
+| --- | --- | --- | --- |
+| 1 Tribe | about 150 | Strength I 10, Warmth 30, Blessing 60 (Grip II is free) | 100 |
+| 2 Village | about 450 | Reach 80, Grip III 80, Rain 100, Strength II 120 | 380 |
+| 3 Town | about 800 | Grip IV 150, Calm Waters 180, Lift Buildings 200, Guiding Light 200 | 730 |
+| 4 Launch | about 1,400 | Steady Hand 200, Grip V 250, Strength III 300, Part the Clouds 400 | 1,150 |
+
+If the bot can afford a power more than about 5 minutes before its region or job is needed, its cost goes up.
 
 ## 7. The relationship with the hand
 
@@ -318,7 +331,7 @@ The image of an open hand is the game's recurring motif and the setup for the en
 
 ### The shrine grows with them \[CORE\]
 
-Cairn (Era 1), then shrine, temple (Era 2), observatory (Era 3), launch tower (Era 4). Each is built where the last stood, so the place they built to talk to you becomes the place they leave from.
+Cairn (Era 1), then shrine, temple (Era 2), great hall of the hand (Era 3), launch tower (Era 4). Each is built where the last stood, so the place they built to talk to you becomes the place they leave from.
 
 ### Memories and disagreements \[PROPOSED\]
 
@@ -336,7 +349,7 @@ Threats exist to give the hand something to *do* under pressure, and to make the
 - **Answered by preparation.** Each threat also has a build answer (palisade, granary, well, fire brigade, clinic). Good planning makes a threat smaller; it never makes it vanish entirely, so the hand always matters.
 - **Escalates by era, never spikes.** Threat strength is tied to era and population, not elapsed time, so a slow player is never punished.
 - **Loss is personal and small.** A death is one named person with a memorial, never a mass wipe. A burned building leaves a ruin you can rebuild at half cost.
-- **\[CORE\] Safety net.** If population ever falls to 1, wanderers arrive within a day. If food hits zero, the hand can pick berries itself (slowly). The game can always recover.
+- **\[CORE\] Safety net.** If population ever falls to 1, wanderers arrive within a day. If food hits zero, the berry bushes by the cave never run dry, so there is always a job to place people on. The game can always recover.
 
 ### 8.2 Threats per era
 
@@ -344,16 +357,16 @@ Threats exist to give the hand something to *do* under pressure, and to make the
 | --- | --- | --- | --- | --- | --- |
 | 1 Tribe | Wolves at night | Howls at dusk, eyes in the treeline | Flick wolves away; carry people into huts | Fire, palisade, torch-bearers | One person injured or killed |
 | 1 | Cold snap | Frost creeping across the ground, people shivering | Warmth power; carry people to the fire | Huts, fire tended, furs | People slow and sick for a day |
-| 1 | First winter | Season banner, food ticker shows days left | Haul stored food; pick berries yourself | Food store, smokehouse | Hunger, lower joy |
+| 1 | First winter | Season banner, food ticker shows days left | Lift stored food to the fire; place people on the evergreen bushes | Food store, smokehouse | Hunger, lower joy |
 | 2 Village | Flood | River rises, rain clouds build for a day | Lift people and goods to high ground; Calm Waters (later) | Levee, raised granary | Fields and a few huts washed out |
 | 2 | Drought | Cracking soil, wilting crops | Rain power; carry water from the river | Well, irrigation ditch | Poor harvest |
 | 2 | Bears | Claw marks, then a bear at the edge of the woods | Strength II lifts and relocates a bear (fun moment) | Watchtower, hunters' lodge | Livestock lost, someone hurt |
-| 2 | Crop blight | Brown patches spread field to field | Pull sick plants out by hand before it spreads | Crop rotation, herbalist | One field lost |
+| 2 | Crop blight | Brown patches spread field to field | Place the herbalist and helpers on sick fields before it spreads | Crop rotation, herbalist | One field lost |
 | 3 Town | Town fire | Smoke, bell rings | Carry water buckets, pull people from windows, Lift Buildings to make a firebreak | Fire brigade, stone houses, wells | A district burns |
 | 3 | Sickness | One cough, then a few; the Book shows who's ill | Carry the sick to the clinic; quarantine by placement | Clinic, clean water, sewer | Elders or babies may die |
-| 3 | Storms | Dark sky, wind lines | Part the Clouds, shield people with the open palm | Storm cellars, sturdy roofs | Roofs torn, boats lost |
-| 4 Launch | Workplace accidents | Machinery sparks, a crane sways | Catch a falling worker, lift a girder off someone | Safety rules guild, Steady Hand power | One injury, a halted line |
-| 4 | Smog | Haze rises, joy drops, people cough | Carry workers to new clean industry; plant trees by hand | Filters, rail, parks | City-wide joy and health drop |
+| 3 | Storms | Dark sky, wind lines | Shield people with the open palm; Lift Buildings to pull boats and carts to shelter | Storm cellars, sturdy roofs | Roofs torn, boats lost |
+| 4 Launch | Workplace accidents | Machinery sparks, a crane sways | Catch a falling worker, lift a girder off someone | Safety rules guild, guard rails | One injury, a halted line |
+| 4 | Smog | Haze rises, joy drops, people cough | Carry workers to new clean industry; place foresters on new parks | Filters, rail, parks | City-wide joy and health drop |
 | 4 | Launch scrub | Countdown halts with a fault light | Lift the stage back to the gantry; place the right engineer | Test stand, redundant systems | Delay of a few minutes, gentle disappointment |
 
 ### 8.3 Failure states, in order of severity
@@ -361,7 +374,7 @@ Threats exist to give the hand something to *do* under pressure, and to make the
 1. **Inconvenience:** a job pauses, someone sulks, a log rolls away. Fixed by the hand in seconds.
 2. **Setback:** a building lost, a harvest ruined, a few sick. Costs time and resources, never progress milestones.
 3. **Grief:** a named person dies. Memorial stone appears, family mourns for a day (lower joy, slower work), the Book records it. **\[PROPOSED\]** Descendants occasionally visit the memorial.
-4. **Crisis:** population collapses or food runs out. Safety net kicks in (wanderers, hand-picked berries). The era clock does not reset.
+4. **Crisis:** population collapses or food runs out. Safety net kicks in (wanderers, the evergreen berry bushes). The era clock does not reset.
 
 There is no fifth level. **\[CORE\]** Milestones, unlocked powers and trust earned are never lost.
 
@@ -387,8 +400,8 @@ The ending is the reason the whole game exists. Everything before it, the names,
 | # | Beat | What the player does | What happens |
 | --- | --- | --- | --- |
 | 1 | The last evening | Free, with a soft prompt to visit the shrine | Music thins. People gather at the launch plateau in the clothes of their trade. The shrine has become the base of the launch tower. |
-| 2 | Crew selection | Place four crew members on the crew bench (the game suggests the eligible descendants, all with trust 5) | Each one, when lifted, says a single line of gibberish plus a subtitle ("I remember the stories of the cave") |
-| 3 | The gifts | People line up and offer the hand one item each from every era (a carved stone, a clay pot, a bell, a circuit board) | Gifts float into a ring around the hand; they go up with the crew as a time capsule |
+| 2 | Crew selection | Place four crew members on the crew bench (the game suggests the four most trusting descendants of the first two; trust 5 is ideal, not required) | Each one, when lifted, says a single line of gibberish plus a subtitle ("I remember the stories of the cave") |
+| 3 | The gifts | People line up and offer the hand one item each from every era (a carved hand, a painted pot, a clockwork hand, a model rocket) | Gifts float into a ring around the hand; they go up with the crew as a time capsule |
 | 4 | Into the capsule | Lift each crew member and place them in the capsule seat, one at a time | The same lift sound as the very first night. The hand's shadow covers the capsule. |
 | 5 | The weather turns | Clouds roll in. Hold **Part the Clouds** over the plateau through the countdown | The countdown only runs while you hold. Let go and it pauses gently (no failure). |
 | 6 | Liftoff | Hold, then release when the crowd cheers | Rocket rises through the gap you opened. The camera stays low, with the people. |
@@ -445,7 +458,7 @@ The ending is the reason the whole game exists. Everything before it, the names,
 
 - **\[CORE\]** Timings follow section 5: a day is 60 to 90 seconds of light plus a short night, and a season is about 4 minutes. A full year is roughly 16 minutes, so Era 1 sees about three winters.
 - Each season changes the map visibly: spring meltwater and blossom, summer gold grass, autumn colour and harvest piles, winter snow that slows walking.
-- **\[PROPOSED\]** Weather is tied to powers: Rain and Part the Clouds give the hand direct control from Era 2 on.
+- **\[PROPOSED\]** Weather is tied to powers: Rain (Era 2) and Part the Clouds (Era 4) give the hand direct control.
 
 ## 11. UI, UX and onboarding
 
@@ -464,7 +477,7 @@ The ending is the reason the whole game exists. Everything before it, the names,
 
 ### 11.2 The Village Book (F1)
 
-A hand-drawn book that grows with the village. Tabs: **People** (portrait, name, age, skills, trust, wish, parents and children), **Family Tree** (zoomable, from the first two), **Dreams** (current and completed, with the date), **Memories** (gifts, firsts, memorials), **Powers** (unlocked and next, each with the region it opens). **\[PROPOSED\]** Every page is written in the people's voice: "The hand gave us fire on the twelfth day."
+A hand-drawn book that grows with the village. Tabs: **People** (portrait, name, age, skills, trust, wish, parents and children), **Family Tree** (zoomable, from the first two), **Dreams** (current and completed, with the date), **Memories** (gifts, firsts, memorials), **Powers** (unlocked and next, each with the region it opens). **\[PROPOSED\]** Every page is written in the people's voice: "On the twelfth day the hand brought us the log for our first fire."
 
 ### 11.3 Placement clarity (answers your playtest note)
 
@@ -480,8 +493,8 @@ A hand-drawn book that grows with the village. Tabs: **People** (portrait, name,
 | 0 | Storm night. Two people huddle under a cliff, rain pouring. A branch has fallen across the cave mouth. | Mood, and that they are small |
 | 0 to 1 | A hint glow on the branch. The player lifts it away; the two run inside the cave. They look up at the hand. | Lift and place; they see you |
 | 1 to 3 | Dawn. One of them points at berry bushes. Place them there. | Placing on a job |
-| 3 to 5 | A log needs carrying to the cave for fire; it needs 2. The player learns to drag-scoop both. | Multi-grab, with a real reason |
-| 5 to 8 | They light a fire and leave the first gift (a stone with a handprint). Faith appears. | Gifts and faith |
+| 3 to 5 | A log for the fire needs 2 carriers. With a grip of 1, the player places them one after the other before the first gets bored. | Multi-grab, with a real reason |
+| 5 to 8 | They light a fire and leave the first gift (a stone with a handprint). Faith appears, and the first power, Grip II, arrives free with a one-time scoop hint. | Gifts and faith |
 | 8 to 10 | First Village Dream: "A shelter of our own." A third person (a wanderer) appears at the edge of the map. | Dreams are goals; the village grows |
 
 No pop-up tutorial screens. **\[CORE\]** Every lesson is taught by a situation in the world.
@@ -571,6 +584,8 @@ Season colours: winter thins to strings and bells, autumn adds warmth, spring ad
 | B. **Curated library** | Kevin MacLeod (incompetech, CC-BY 4.0) and CC0 / CC-BY tracks from OpenGameArt | Polished recordings | No shared theme, no stems, so adaptive layers become cross-fades; needs credits |
 | C. **Hybrid** (recommended) | Claude composes the main theme and the adaptive era pieces (A); curated tracks (B) fill menus, the credits and free play | Best of both | Two styles to blend |
 
+**Ruled: C, Hybrid.** Claude's own compositions come first. Royalty-free tracks are only suggested to you where a gap remains, and you approve each one.
+
 Kevin MacLeod tracks require this credit in-game and in the store page: `"Track Title" Kevin MacLeod (incompetech.com) Licensed under Creative Commons: By Attribution 4.0 License http://creativecommons.org/licenses/by/4.0/`. Every asset and track, CC0 included, goes in `CREDITS.md` and the in-game credits.
 
 ### 13.3 Villager voices
@@ -657,10 +672,10 @@ Cloud-built Windows export, zipped, delivered to this project's files (and copie
 | Milestone | Goal | What's in it | Your playtest checks |
 | --- | --- | --- | --- |
 | **M1 Foundation** | The bones, rebuilt properly | New project structure (14.2), data Resources, people state machine with needs, the new hand (drag-scoop, slot pips, weight), navmesh, save/load, first real assets (nature + villagers + hand), main theme sketch | Does the hand feel good? Is multi-grab obvious? Do the people feel alive? |
-| **M2 Era 1 complete** | A full 45-minute tribe era | Storm-night opening, start with 2 people, wanderers and births, all Era 1 jobs and group jobs, seasons and the first winter, wolves and cold, Grip II and Strength I opening the Valley Floor and Western Meadow, the Stone Circle gate, Era 1 music with adaptive layers, the Village Book v1 | Is the pacing right this time? Is every power a fun moment? Do you remember the names? |
+| **M2 Era 1 complete** | A full 45-minute tribe era | Storm-night opening, start with 2 people, wanderers and births, all Era 1 jobs and group jobs, seasons and the first winter, wolves and cold, Grip II, Strength I, Warmth and Blessing, with the first two opening the Valley Floor and Western Meadow, the Stone Circle gate, Era 1 music with adaptive layers, the Village Book v1 | Is the pacing right this time? Is every power a fun moment? Do you remember the names? |
 | **M3 Era 2 Village** | Farming, families, the first generation change | Era transition, ageing and elders, farming and bread, pottery, bronze, herding, boats; flood, drought, bears, blight; East Bank, Southern Plains, Hill Quarry; Temple of the Hand gate | Does the jump in complexity feel earned? Does a generation passing land? |
-| **M4 Era 3 Town** | Stone town, foremen and the coast | Foremen (autonomy dial), stone and iron, harbour and islands, fire and sickness, Northern Pass, Observatory gate | Can you still manage 100+ people with one hand? Is it still *your* village? |
-| **M5 Era 4 Launch + goodbye** | The city, the rocket, the ending | Guilds, industry, rail, the launch plateau, rocket stage stacking, the full goodbye sequence, free play, credits | Does the ending land? Would you change a beat? |
+| **M4 Era 3 Town** | Stone town, foremen and the coast | Foremen (autonomy dial), stone and iron, harbour and islands, fire and sickness, the Observatory on the quarry hilltop as the gate | Can you still manage 100+ people with one hand? Is it still *your* village? |
+| **M5 Era 4 Launch + goodbye** | The city, the rocket, the ending | Guilds, industry, rail and the Northern Pass, the launch plateau, rocket stage stacking, the full goodbye sequence, free play, credits | Does the ending land? Would you change a beat? |
 | **M6 Polish and release** | A finished game | Balance pass with the bot, options and accessibility, performance at 200 people, bug sweep, credits and licences, optional epilogue | Is it done? |
 
 ### 15.2 How each milestone runs
@@ -687,32 +702,32 @@ Pick a ruling for each line. **In** builds it as written, **Out** cuts it, **Lat
 
 | # | Decision | Section | Tag | My pick | Ruling | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | Start with 2 people; wanderers and births grow the tribe | 3, 11.4 | CORE | In |  |  |
-| 2 | Four eras at about 45/60/70/60 minutes, roughly 4 hours to the rocket | 5 | CORE | In |  |  |
-| 3 | Named people age, have children and die (one generation per era) | 3 | CORE | In |  |  |
-| 4 | Grip levels 1, 2, 5, 10, 20 with group jobs that need them | 2, 4 | CORE | In |  |  |
-| 5 | Strength by weight, up to lifting whole buildings and rocket stages | 2, 6 | CORE | In |  |  |
-| 6 | Seasons of about 4 minutes, so Era 1 has about three winters | 5, 10.4 | PROPOSED | In |  |  |
-| 7 | Foremen in Era 3 and guilds in Era 4 take over routine placement | 3 | CORE | In |  |  |
-| 8 | Faith from gifts and work buys powers; it is never drained | 6 | CORE | In |  |  |
-| 9 | Village Dreams are the goal system (three per era, the third is the gate) | 5, 7 | CORE | In |  |  |
-| 10 | Gifts per era, kept in a museum | 7 | PROPOSED | In |  |  |
-| 11 | The 16 powers and the regions each one opens | 6, 10 | CORE | In |  |  |
-| 12 | Threat list per era, no game over, safety net at 1 person | 8 | CORE | In |  |  |
-| 13 | Deaths can happen on Normal (Gentle turns them into injuries) | 8.4 | PROPOSED | In |  |  |
-| 14 | Ending beat sheet: crew are descendants, you hold Part the Clouds through countdown | 9 | CORE | In |  |  |
-| 15 | Epilogue: a light from the stars after free play | 9.3 | PROPOSED | In |  |  |
-| 16 | New Valley (New Game+ that keeps the museum) | 9.3 | STRETCH | Later |  |  |
-| 17 | Village Book written in the people's voice | 11.2 | PROPOSED | In |  |  |
-| 18 | Art style: warm low-poly diorama, glowing hand | 12.1 | CORE | In |  |  |
-| 19 | Asset packs: Quaternius primary, Kenney fill, KayKit fallback | 12.3 | CORE | In |  |  |
-| 20 | Mixamo animations (needs your free Adobe account to download) | 12.3 | PROPOSED | In |  |  |
-| 21 | Asset route: you download to Downloads, or open the network in settings | 12.4 | CORE | Open the network |  |  |
-| 22 | Music: A Claude-composed, B curated library, or C hybrid | 13.2 | CORE | C hybrid |  |  |
-| 23 | Gibberish voices that learn a few real words each era | 13.3 | PROPOSED | In |  |  |
-| 24 | Switch renderer to Forward+ (Compatibility kept as fallback) | 14.1 | PROPOSED | In |  |  |
-| 25 | Linux build alongside Windows | 14.1 | PROPOSED | Later |  |  |
-| 26 | Full key rebinding | 11.5 | PROPOSED | In |  |  |
-| 27 | Controller support | 11.5 | STRETCH | Later |  |  |
-| 28 | Private GitHub repo for history and backups | 14.7 | PROPOSED | In |  |  |
-| 29 | Milestones M1 to M6, each gated by your playtest | 15 | CORE | In |  |  |
+| 1 | Start with 2 people; wanderers and births grow the tribe | 3, 11.4 | CORE | In | In |  |
+| 2 | Four eras at about 45/60/70/60 minutes, roughly 4 hours to the rocket | 5 | CORE | In | In |  |
+| 3 | Named people age, have children and die (a new generation every 20 to 30 minutes) | 3 | CORE | In | In | Opportunity to name first 2 if desired. Random event where villagers may "pray to receive a name for their baby" |
+| 4 | Grip levels 1, 3, 5, 10, 20 with group jobs that need them | 2, 4 | CORE | In | In |  |
+| 5 | Strength by weight, up to lifting whole buildings and rocket stages | 2, 6 | CORE | In | In | only for organizational purposes. Should be optional if the player chooses not to move buildings. |
+| 6 | Seasons of about 4 minutes, so Era 1 has about three winters | 5, 10.4 | PROPOSED | In | In |  |
+| 7 | Foremen in Era 3 and guilds in Era 4 take over routine placement | 3 | CORE | In | In |  |
+| 8 | Faith from gifts and work buys powers; it is never drained | 6 | CORE | In | In |  |
+| 9 | Village Dreams are the goal system (three per era, the third is the gate) | 5, 7 | CORE | In | In |  |
+| 10 | Gifts per era, kept in a museum | 7 | PROPOSED | In | In |  |
+| 11 | The 16 powers and the regions each one opens | 6, 10 | CORE | In | In |  |
+| 12 | Threat list per era, no game over, safety net at 1 person | 8 | CORE | In | In |  |
+| 13 | Deaths can happen on Normal (Gentle turns them into injuries) | 8.4 | PROPOSED | In | In |  |
+| 14 | Ending beat sheet: crew are descendants, you hold Part the Clouds through countdown | 9 | CORE | In | In |  |
+| 15 | Epilogue: a light from the stars after free play | 9.3 | PROPOSED | In | In |  |
+| 16 | New Valley (New Game+ that keeps the museum) | 9.3 | STRETCH | Later | Later |  |
+| 17 | Village Book written in the people's voice | 11.2 | PROPOSED | In | In |  |
+| 18 | Art style: warm low-poly diorama, glowing hand | 12.1 | CORE | In | In |  |
+| 19 | Asset packs: Quaternius primary, Kenney fill, KayKit fallback | 12.3 | CORE | In | In |  |
+| 20 | Mixamo animations (you download these with a free Adobe account, whichever asset route you pick) | 12.3 | PROPOSED | In | In |  |
+| 21 | Asset route: you download to Downloads, or open the network in settings | 12.4 | CORE | Open the network | In | I will open the network as you see fit, I will need proper explanation on this when the time comes |
+| 22 | Music: A Claude-composed, B curated library, or C hybrid | 13.2 | CORE | C hybrid | In | C, Hybrid, but start with your own compositions first and recommend some royalty free tracks when needed. |
+| 23 | Gibberish voices that learn a few real words each era | 13.3 | PROPOSED | In | In |  |
+| 24 | Switch renderer to Forward+ (Compatibility kept as fallback) | 14.1 | PROPOSED | In | In |  |
+| 25 | Linux build alongside Windows | 14.1 | PROPOSED | Later | Later |  |
+| 26 | Full key rebinding | 11.5 | PROPOSED | In | In |  |
+| 27 | Controller support | 11.5 | STRETCH | Later | Later |  |
+| 28 | Private GitHub repo for history and backups | 14.7 | PROPOSED | In | In |  |
+| 29 | Milestones M1 to M6, each gated by your playtest | 15 | CORE | In | In |  |

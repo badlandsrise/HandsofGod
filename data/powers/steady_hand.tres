@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="PowerDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/defs/power_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"steady_hand"
+title = "Steady Hand"
+era = 4
+cost = 200.0
+what_it_does = "Fine placement at slow speed"
+what_it_opens = "Docking stages, threading the crew gantry"

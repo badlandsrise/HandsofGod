@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="PowerDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/defs/power_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"grip_2"
+title = "Grip II"
+era = 1
+cost = 10.0
+free = true
+grip = 3
+opens_jobs = Array[StringName]([&"haul_log", &"hunt"])
+what_it_does = "Lift 3 people; unlocks the scoop gesture. Granted free as the first gift"
+what_it_opens = "Log hauling and the hunt (group jobs)"

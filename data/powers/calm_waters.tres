@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="PowerDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/defs/power_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"calm_waters"
+title = "Calm Waters"
+era = 3
+cost = 180.0
+gesture = true
+opens_region = &"coast_and_islands"
+what_it_does = "Hold over the sea to still it"
+what_it_opens = "The coast and the islands by boat"

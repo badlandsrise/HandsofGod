@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="JobDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/defs/job_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"knap_flint"
+title = "Knap flint"
+era = 1
+kind = 0
+skill = &"crafting"
+max_people = 1
+outputs = {&"stone": 1}
+work_time = 7.0

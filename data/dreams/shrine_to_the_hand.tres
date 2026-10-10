@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DreamDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/defs/dream_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"shrine_to_the_hand"
+era = 1
+text = "A shrine to the hand, so we can speak to you."
+gate = false
+needs_buildings = {&"shrine": 1}
+reward_faith = 15.0

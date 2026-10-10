@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="PowerDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/defs/power_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"lift_buildings"
+title = "Lift Buildings"
+era = 3
+cost = 200.0
+strength = 40.0
+requires = Array[StringName]([&"strength_2"])
+what_it_does = "Pick up a whole house and move it"
+what_it_opens = "Rebuild the town above the flood line; design your layout"

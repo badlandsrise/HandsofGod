@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="EraDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/defs/era_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+era = 4
+title = "Launch"
+target_minutes = 60.0
+population_band = Vector2i(150, 200)
+faith_target = 1400.0
+dreams = Array[StringName]([&"powerhouse", &"launch_tower", &"the_rocket"])
+music = &"launch"
+day_seconds = 80.0
+night_seconds = 25.0
+season_seconds = 240.0

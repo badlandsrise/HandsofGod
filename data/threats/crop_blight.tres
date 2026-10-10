@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ThreatDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/defs/threat_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"crop_blight"
+era = 2
+warning_seconds = 40.0
+only_at_night = false
+season = -1
+min_population = 10
+chance_per_day = 0.1
