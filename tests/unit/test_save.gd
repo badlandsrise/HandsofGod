@@ -1,4 +1,4 @@
-extends SceneTree
+extends "res://tests/guard_tree.gd"
 ## Save/load round trips: stub nodes under a bare world, then the real world.
 ## Run: godot --headless --path . -s tests/unit/test_save.gd
 ## The cases live in save_cases.gd, loaded after the first frame so the autoloads
@@ -7,6 +7,8 @@ extends SceneTree
 var _frame := 0
 
 func _process(_d: float) -> bool:
+	if not guard():
+		return true
 	_frame += 1
 	if _frame == 2:
 		var c: Node = load("res://tests/unit/save_cases.gd").new()

@@ -1,4 +1,4 @@
-extends SceneTree
+extends "res://tests/guard_tree.gd"
 ## Headless unit tests for people, sites, data and village AI.
 ## Run: godot --headless --path . -s tests/unit/test_people.gd
 ## Spawns on flat ground with no world, and steps the sim by hand
@@ -10,6 +10,8 @@ var _frame := 0
 var _cases
 
 func _process(_d: float) -> bool:
+	if not guard():
+		return true
 	_frame += 1
 	if _frame < 2:
 		return false
