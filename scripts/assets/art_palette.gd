@@ -124,6 +124,32 @@ const NAMED := {
 	"glass_dark": ["#2a3644", false],
 	"coal": ["#26262a", false],
 	"rust": ["#8a4a2e", false],
+	# Era 4 (Launch): concrete, steel, glass and enamel paint; signal orange and night blue
+	# on warm white, with mid-century turquoise, mint, mustard and coral accents (DESIGN 12.2)
+	"concrete_flat": ["#d9d3c6", false],
+	"concrete_dark": ["#a29d93", false],
+	"steel": ["#8d99a6", false],
+	"steel_dark": ["#4e5864", false],
+	"warm_white": ["#f2eee6", false],
+	"signal_orange": ["#f26b1d", false],
+	"night_blue": ["#1c2a4a", false],
+	"enamel_turquoise": ["#3fa7a0", false],
+	"enamel_mint": ["#a8d5c2", false],
+	"enamel_mustard": ["#e8b33a", false],
+	"enamel_coral": ["#e2735a", false],
+	"enamel_sky": ["#7fb0d6", false],
+	"enamel_red": ["#c8432e", false],
+	"chrome": ["#cfd6de", false],
+	"rubber": ["#26272b", false],
+	"glass_blue": ["#4f7395", false],
+	"dish_white": ["#eeeae2", true],
+	"canvas_orange": ["#f26b1d", true],
+	"cloth_navy": ["#1c2a4a", true],
+	"frost": ["#f4f8fb", false],
+	"turf": ["#6a8f3e", false],
+	"hedge": ["#4f7232", false],
+	"road_paint": ["#f1ede2", false],
+	"road_yellow": ["#e8b33a", false],
 }
 
 ## Named library materials that carry a tileable texture (made by gen_era2_textures.py and
@@ -145,6 +171,14 @@ const NAMED_TEXTURED := {
 	"books": ["#ffffff", false, "res://assets/textures/era3/books.png"],
 	"clock_face": ["#ffffff", false, "res://assets/textures/era3/clock_face.png"],
 	"flag_hand": ["#ffffff", true, "res://assets/textures/era3/flag_hand.png"],
+	# Era 4: board-marked concrete, asphalt, curtain-wall glazing, the mission patch, flag and
+	# launch poster of gen_era4_textures.py
+	"concrete": ["#ffffff", false, "res://assets/textures/era4/concrete.png"],
+	"asphalt": ["#ffffff", false, "res://assets/textures/era4/asphalt.png"],
+	"curtain_wall": ["#ffffff", false, "res://assets/textures/era4/curtain_wall.png"],
+	"mission_patch": ["#ffffff", false, "res://assets/textures/era4/mission_patch.png"],
+	"flag_mission": ["#ffffff", true, "res://assets/textures/era4/flag_mission.png"],
+	"poster_launch": ["#ffffff", false, "res://assets/textures/era4/poster_launch.png"],
 }
 
 static var _era: int = 1

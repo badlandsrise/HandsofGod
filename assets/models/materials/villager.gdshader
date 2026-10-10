@@ -10,7 +10,8 @@
 // hose or a long skirt (outfit_style.y = 1 covers the legs to the ankle), leather shoes,
 // embroidered bands at hem, neck and cuffs (trim_color), a woven belt, and an optional
 // apron (outfit_style.z = 1). outfit_style.w = undershirt sleeve reach (0.72 = wrists).
-// outfit_style.x = 2 is Era 3 town clothes (see the branch below).
+// outfit_style.x = 2 is Era 3 town clothes, 3 is Era 4 work clothes and flight suits
+// (see the branches below).
 shader_type spatial;
 render_mode diffuse_toon, specular_disabled, cull_back;
 
@@ -53,6 +54,129 @@ void fragment() {
 				}
 			} else if (h < 0.055) {
 				c = cloth_color.rgb * 0.5;   // hide foot wraps
+			}
+		} else if (outfit_style.x > 2.5) {
+			// Era 4: the clothes of their trade. outfit_style.y picks the garment:
+			// 0 = overalls (bib and braces in cloth_color over a rolled-sleeve shirt in
+			// under_color, work boots), 1 = lab coat (white, to the knee, the job colour
+			// showing as the shirt at the open front, a tie in trim_color), 2 = day clothes
+			// (outfit_style.z = 1: a suit jacket with lapels, white shirt and tie; z = 0: a
+			// dress with a white collar, a belt and shoes in trim_color), 3 = the crew's
+			// flight suit (white, navy boots and gloves, orange arm bands and leg stripes in
+			// trim_color, a chrome neck ring and zip, the mission patch on the chest).
+			int kind = int(outfit_style.y + 0.5);
+			bool front = COLOR.b > 0.5;
+			bool arm = h > 0.70 && h < 0.9 && ax > 0.26;
+			bool limb_or_body = h > 0.055 && h < outfit_cut.y && (ax < 0.26 || arm);
+			vec3 navy = vec3(0.11, 0.16, 0.29);
+			if (kind == 0) {
+				bool bib = front && ax < 0.105 && h > outfit_cut.w && h < 0.785;
+				bool strap = abs(ax - 0.088) < 0.014 && h > outfit_cut.w && h < outfit_cut.y;
+				if (h < 0.055) {
+					c = vec3(0.24, 0.16, 0.1);                          // work boots
+				} else if (h < outfit_cut.w + 0.01 && ax < 0.26) {
+					c = cloth_color.rgb;                                // trousers
+					if (front && ax > 0.05 && ax < 0.1 && h > 0.36 && h < 0.42) {
+						c = cloth_color.rgb * 0.8;                      // knee patch pocket
+					}
+				} else if (bib || strap) {
+					c = cloth_color.rgb;
+					if (front && ax < 0.05 && h > 0.66 && h < 0.72) {
+						c = cloth_color.rgb * 0.82;                     // bib pocket
+					}
+					if (front && strap && abs(h - 0.775) < 0.009) {
+						c = vec3(0.82, 0.66, 0.3);                      // brass buckles
+					}
+				} else if ((h > outfit_cut.w && ax < 0.26) || (arm && ax < outfit_style.w)) {
+					c = under_color.rgb;                                // shirt, sleeves rolled
+					if (arm && outfit_style.w - ax < 0.025) {
+						c = under_color.rgb * 0.86;                     // the roll
+					}
+				}
+			} else if (kind == 1) {
+				bool coat = covered;
+				if (h < 0.055) {
+					c = vec3(0.12, 0.11, 0.12);
+				} else if (coat) {
+					c = vec3(0.95, 0.95, 0.93);                         // the white coat
+					if (front && ax < 0.034 && h > outfit_cut.w + 0.06) {
+						c = cloth_color.rgb;                            // shirt at the open front
+						if (ax < 0.011 && h < outfit_cut.y - 0.02) {
+							c = trim_color.rgb;                         // tie
+						}
+					}
+					if (front && abs(ax - 0.045) < 0.006 && h < outfit_cut.w + 0.06 && fract(h * 30.0) < 0.3) {
+						c = vec3(0.7, 0.72, 0.75);                      // buttons
+					}
+					if (front && ax > 0.075 && ax < 0.115 && h > 0.735 && h < 0.765) {
+						c = vec3(0.86, 0.87, 0.88);                     // breast pocket
+						if (ax < 0.09 && h > 0.755) {
+							c = trim_color.rgb;                         // pens
+						}
+					}
+				} else if (h < outfit_cut.x && ax < 0.26) {
+					c = vec3(0.26, 0.28, 0.32);                         // grey trousers
+				}
+			} else if (kind == 2) {
+				bool men = outfit_style.z > 0.5;
+				if (h < 0.055) {
+					c = men ? vec3(0.1, 0.09, 0.1) : trim_color.rgb;    // shoes
+				} else if (covered) {
+					c = cloth_color.rgb;
+					bool open = front && h > 0.66 && ax < (h - 0.66) * 0.55;
+					if (men && open) {
+						c = under_color.rgb;                            // shirt between the lapels
+						if (ax < 0.012) {
+							c = trim_color.rgb;                         // tie
+						}
+					}
+					if (men && front && abs(ax - (h - 0.66) * 0.55) < 0.008 && h > 0.66) {
+						c = cloth_color.rgb * 0.7;                      // lapel edge
+					}
+					if (!men && outfit_cut.y - h < 0.024 && ax < 0.2) {
+						c = under_color.rgb;                            // white collar
+					}
+					if (!men && abs(h - outfit_cut.w) < 0.012) {
+						c = trim_color.rgb;                             // belt
+					}
+					if (!men && h < outfit_cut.w && fract((h + ax) * 26.0) < 0.12 && fract((h - ax) * 26.0) < 0.12) {
+						c = mix(cloth_color.rgb, under_color.rgb, 0.7); // a little print on the skirt
+					}
+				} else if (men && h < outfit_cut.x && ax < 0.26) {
+					c = cloth_color.rgb * vec3(0.55, 0.55, 0.6);        // trousers
+				}
+			} else {
+				vec3 suit = vec3(0.93, 0.93, 0.9);
+				if (h < 0.075) {
+					c = navy;                                           // boots
+				} else if (limb_or_body) {
+					c = suit;
+					if (arm && ax > outfit_cut.z) {
+						c = navy;                                       // gloves
+					}
+					if (arm && abs(ax - 0.36) < 0.018) {
+						c = trim_color.rgb;                             // arm band
+					}
+					if (!arm && h < outfit_cut.w && ax > 0.105 && ax < 0.13) {
+						c = trim_color.rgb;                             // leg stripe
+					}
+					if (abs(h - outfit_cut.w) < 0.013 && ax < 0.26) {
+						c = navy;                                       // belt
+					}
+					if (front && ax < 0.006 && h > outfit_cut.w && h < outfit_cut.y - 0.02) {
+						c = vec3(0.7, 0.72, 0.76);                      // zip
+					}
+					float pd = length(vec2(ax * 0.5, h - 0.745));
+					if (front && pd < 0.022) {
+						c = pd < 0.015 ? navy : trim_color.rgb;         // mission patch
+						if (pd < 0.005) {
+							c = vec3(0.85, 0.68, 0.3);
+						}
+					}
+					if (outfit_cut.y - h < 0.022 && ax < 0.26) {
+						c = vec3(0.72, 0.74, 0.78);                     // neck ring
+					}
+				}
 			}
 		} else if (outfit_style.x > 1.5) {
 			// Era 3: town clothes. Men (outfit_style.y = 1): a coat with turned-back cuffs

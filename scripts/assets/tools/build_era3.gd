@@ -27,6 +27,8 @@ var _jobs3: Dictionary = {}
 
 
 func _init() -> void:
+	if (get_script() as Script).resource_path != "res://scripts/assets/tools/build_era3.gd":
+		return   # a subclass (build_era4.gd) reuses the helpers and runs its own jobs
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--only="):
 			_only = a.substr(7).split(",", false)
