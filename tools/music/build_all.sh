@@ -6,6 +6,7 @@ set -e
 HERE="$(dirname "$0")"
 python3 "$HERE/era1.py"
 python3 "$HERE/era2.py"
+python3 "$HERE/era3.py"
 python3 "$HERE/stingers.py"
 python3 "$HERE/title.py"
 python3 "$HERE/sfx.py"

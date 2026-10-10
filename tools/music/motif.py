@@ -38,7 +38,10 @@ SCALES = {
 ERAS = {
     1: dict(key=62, scale="dorian", lead="pan_flute", note="lone flute, hand drum, drone"),
     2: dict(key=67, scale="major", lead="fiddle", note="fiddle, recorder, lute, frame drum, light strings; G with mixolydian colour, 4/4"),
-    3: dict(key=65, scale="major", lead="horn", note="small orchestra and church bells"),
+    3: dict(key=65, scale="major", lead="horn",
+            note="small civic orchestra (horn, trumpet, woodwinds, harpsichord, piano, strings, tuba) "
+                 "and church bells; F major, 4/4 march at 108; the motif worked as a learned tune: "
+                 "fanfare, diminution, inversion, fugato subject with answers in C, sequence"),
     4: dict(key=67, scale="lydian", lead="piano", note="piano and soft synth pads"),
 }
 

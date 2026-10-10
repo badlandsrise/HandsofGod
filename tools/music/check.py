@@ -8,7 +8,7 @@
   - loudness (EBU R128) of each era's mixes, which must sit within 1.5 LU of
     Era 1's, so the music doesn't jump in level when the era changes
   - tools/music/preview_era<N>.mp3: 60 s of the stems layered as the game would
-    (Era 2's opens with its arrival stinger, as it does on the era change)
+    (Eras 2 and 3 open with their arrival stingers, as on the era change)
     (night: base; day: + rhythm; hand holding: + melody, colour; a threat
     warning swaps rhythm for tense and drops melody; then back to calm)
 
@@ -26,7 +26,7 @@ from common import SR, dbfs, lufs, out_path, peak, read_audio, write_mp3  # noqa
 
 MUSIC = out_path("assets", "audio", "music")
 SFX = out_path("assets", "audio", "sfx")
-ERAS = ["era1", "era2"]
+ERAS = ["era1", "era2", "era3"]
 STEMS = ["base", "rhythm", "melody", "colour", "tense"]
 MIXES = {  # what the director plays together (colour is at 0.6 by the fire)
     "night": {"base": 1},

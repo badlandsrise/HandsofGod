@@ -25,6 +25,7 @@ GM = dict(
     kalimba=108, tinkle=112, taiko=116, melodic_tom=117,
     celesta=8, accordion=21, steel=25, violin=40, viola=41, tremolo=44, pizz=45,
     bassoon=70, fiddle=110,
+    harpsichord=6, trumpet=56, trombone=57, tuba=58, brass=61, piccolo=72,
 )
 
 
