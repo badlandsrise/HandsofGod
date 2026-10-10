@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="PowerDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/defs/power_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"rain"
+title = "Rain"
+era = 2
+cost = 90.0
+gesture = true
+opens_region = &"southern_plains"
+what_it_does = "Hold over fields to water them"
+what_it_opens = "The dry southern plains become farmland"

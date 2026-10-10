@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="EraDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/defs/era_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+era = 3
+title = "Town"
+target_minutes = 70.0
+population_band = Vector2i(90, 130)
+faith_target = 900.0
+dreams = Array[StringName]([&"school", &"aqueduct", &"observatory"])
+music = &"town"
+day_seconds = 80.0
+night_seconds = 28.0
+season_seconds = 240.0

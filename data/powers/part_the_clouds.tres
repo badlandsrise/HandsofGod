@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="PowerDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/defs/power_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"part_the_clouds"
+title = "Part the Clouds"
+era = 4
+cost = 400.0
+gesture = true
+what_it_does = "Hold over the sky to open a weather window"
+what_it_opens = "The launch itself"

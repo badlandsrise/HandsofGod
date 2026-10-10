@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="PowerDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/defs/power_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"grip_5"
+title = "Grip V"
+era = 4
+cost = 340.0
+grip = 20
+requires = Array[StringName]([&"grip_4"])
+what_it_does = "Lift 20"
+what_it_opens = "Evacuating a district in an emergency; crowd scenes"

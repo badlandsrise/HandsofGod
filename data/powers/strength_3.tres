@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="PowerDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/defs/power_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"strength_3"
+title = "Strength III"
+era = 4
+cost = 300.0
+strength = 100.0
+requires = Array[StringName]([&"lift_buildings"])
+opens_region = &"northern_pass"
+opens_jobs = Array[StringName]([&"lay_rail"])
+what_it_does = "Lift weight 100 (rocket stages, rail cars)"
+what_it_opens = "Assembling the rocket; laying rail across the gorge"
