@@ -9,7 +9,8 @@ extends Node
 ##   melody   while the hand holds people
 ##   colour   quietly at night by the fire
 ##   tense    from threat_warned until threat_ended
-## Stingers play over the top on region_opened, dream_done, power_unlocked and era change.
+## Stingers play over the top on region_opened, dream_done, power_unlocked and era change
+## (era<N>_begin when that era has one, else era_complete).
 ## The title theme (title.ogg) plays on the title screen instead of the stems.
 
 const STEMS: Array[StringName] = [&"base", &"rhythm", &"melody", &"colour", &"tense"]
@@ -103,9 +104,17 @@ func play_title() -> void:
 		if _title.stream:
 			_title.play()
 
+## The stem set for an era: music/era<N>/ (era1, era2 ...), falling back to era1
+## for an era whose music isn't made yet.
 func era_set(era: int) -> StringName:
 	var s := StringName("era%d" % era)
 	return s if ResourceLoader.exists("res://assets/audio/music/%s/base.ogg" % s) else &"era1"
+
+## The stinger for arriving in an era: stingers/era<N>_begin.ogg (in the new era's
+## key and tempo, lined up with its stems' first bars), else the generic era_complete.
+func era_stinger(era: int) -> StringName:
+	var s := StringName("era%d_begin" % era)
+	return s if ResourceLoader.exists(STINGERS % s) else &"era_complete"
 
 func set_layer(stem: StringName, on: float) -> void:
 	_target[stem] = clampf(on, 0.0, 1.0)
@@ -274,7 +283,7 @@ func _load_voices() -> void:
 				_hums[mood].append(st)
 
 func _on_era(era: int) -> void:
-	stinger(&"era_complete")
+	stinger(era_stinger(era))
 	if _set != &"":
 		play_set(era_set(era))
 

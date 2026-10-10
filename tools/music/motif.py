@@ -37,7 +37,7 @@ SCALES = {
 # How the motif grows across eras (section 13.1). Era pieces read this.
 ERAS = {
     1: dict(key=62, scale="dorian", lead="pan_flute", note="lone flute, hand drum, drone"),
-    2: dict(key=62, scale="mixolydian", lead="strings", note="strings and lute join"),
+    2: dict(key=67, scale="major", lead="fiddle", note="fiddle, recorder, lute, frame drum, light strings; G with mixolydian colour, 4/4"),
     3: dict(key=65, scale="major", lead="horn", note="small orchestra and church bells"),
     4: dict(key=67, scale="lydian", lead="piano", note="piano and soft synth pads"),
 }

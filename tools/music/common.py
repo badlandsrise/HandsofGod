@@ -23,6 +23,8 @@ GM = dict(
     clarinet=71, flute=73, recorder=74, pan_flute=75, ocarina=79,
     pad_new_age=88, pad_warm=89, pad_choir=91, pad_halo=94,
     kalimba=108, tinkle=112, taiko=116, melodic_tom=117,
+    celesta=8, accordion=21, steel=25, violin=40, viola=41, tremolo=44, pizz=45,
+    bassoon=70, fiddle=110,
 )
 
 
@@ -190,3 +192,13 @@ def read_audio(path):
 
 def out_path(*parts):
     return os.path.join(ROOT, *parts)
+
+
+def lufs(audio):
+    """Integrated loudness (EBU R128, LUFS) of a stereo float array, via ffmpeg."""
+    a = np.ascontiguousarray(np.asarray(audio, dtype=np.float32))
+    r = subprocess.run(["ffmpeg", "-hide_banner", "-nostats", "-f", "f32le", "-ar", str(SR), "-ac", "2",
+                        "-i", "-", "-af", "ebur128", "-f", "null", "-"],
+                       input=a.tobytes(), capture_output=True, check=True)
+    lines = [ln.strip() for ln in r.stderr.decode().splitlines() if ln.strip().startswith("I:")]
+    return float(lines[-1].split()[1])
