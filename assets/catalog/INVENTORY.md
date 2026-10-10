@@ -12,13 +12,13 @@ All packs are CC0. The pipeline is in `scripts/assets/tools/prep_packs.py` (its 
 | quaternius-universal-base-characters (Standard) | 129.0 MB | 2 rigged bodies + 8 hair/eyebrow pieces, gltf / fbx, 48 png | yes, glTF | **Villagers** |
 | quaternius-universal-animation-library (Standard) | 15.9 MB | 43 clips in 1 glb (+ root-motion glb, fbx) | yes, GLB | **Villager animations** |
 | quaternius-farm-animals | 7.0 MB | 7 rigged animals (cow, horse, llama, pig, pug, sheep, zebra), fbx / obj / blend | no (FBX) | **Sheep, horse** (+ cow, pig for later) |
-| quaternius-modular-scifi-megakit (Standard) | 48.6 MB | 190 pieces, gltf / fbx / obj | yes | later (Era 4) |
-| quaternius-ultimate-spaceships | 0.9 MB | 5 ships, fbx / obj / blend | no | later (rocket) |
+| quaternius-modular-scifi-megakit (Standard) | 48.6 MB | 190 pieces, gltf / fbx / obj | yes | not used (reads too far-future for the mid-century Era 4) |
+| quaternius-ultimate-spaceships | 0.9 MB | 5 ships, fbx / obj / blend | no | not used (the rocket is modelled in code) |
 | kenney-survival-kit | 1.9 MB | 80 models, glb / fbx / obj, one colormap texture | yes, GLB | **Primary: Era 1 props** (38 models) |
 | kenney-pirate-kit | 3.2 MB | 72 models, glb / fbx / obj | yes | **Era 2 row boats** (2 boats + paddle, own colormap in `assets/models/boats/`), **Era 3 ships and cargo** (ship-small, ship-medium, crate, crate-bottles) |
-| kenney-city-kit-commercial | 4.1 MB | 41 models, glb / fbx / obj | yes | later (Era 4) |
-| kenney-city-kit-industrial | 5.0 MB | 37 models, glb / fbx / obj | yes | later (Era 4) |
-| kenney-space-kit | 6.7 MB | 153 models, glb / fbx / obj / dae / stl, 772 png previews | yes | later (launch) |
+| kenney-city-kit-commercial | 4.1 MB | 41 models, glb / fbx / obj | yes | **Era 4 details** (5 low-detail blocks for `city_block_far`, the wide awning; own colormap in `assets/models/city/`) |
+| kenney-city-kit-industrial | 5.0 MB | 37 models, glb / fbx / obj | yes | **Era 4 details** (storage tanks, water tower, 3 shipping containers; own colormap in `assets/models/industry/`) |
+| kenney-space-kit | 6.7 MB | 153 models, glb / fbx / obj / dae / stl, 772 png previews | yes | **Era 4 details** (2 satellite dishes on mission control, `assets/models/space/`) |
 | kenney-game-icons | 1.0 MB | 425 png, 2 svg | n/a | UI worker |
 | kenney-ui-pack | 1.2 MB | 870 png, 434 svg, 2 ttf, 6 ogg | n/a | UI worker |
 | kenney-impact-sounds / interface-sounds / rpg-audio | 2.6 MB | 130 + 100 + 52 ogg | n/a | audio worker |
@@ -109,6 +109,60 @@ town-flag and book-spine textures (`assets/textures/era3/`) are painted by
   stomachers. Both have aprons, collars, cuffs and lace frills. Hats are a tricorn, bonnet,
   flat cap, mob cap and felt hat.
 
+## The Era 4 (Launch) kit
+
+Built in code by `scripts/assets/tools/build_era4.gd` (it extends `build_era3.gd`, so all the Era 2
+and Era 3 helpers are there) into `scenes/props/era4/*.scn` (108 scenes):
+
+    godot --headless --path . -s res://scripts/assets/tools/build_era4.gd [-- --only=rocket,launch_tower]
+
+Pack pieces are copied in by `scripts/assets/tools/prep_era4.py`: Kenney City Kit Industrial
+(refinery tanks, water tower, shipping containers), City Kit Commercial (far-skyline blocks,
+awnings) and Space Kit (two dishes). They are details only; everything that carries the look
+is modelled in code. The concrete, asphalt, curtain-wall, mission-patch, mission-flag and
+launch-poster textures and the steam puff (`assets/textures/era4/`) are painted by
+`scripts/assets/tools/gen_era4_textures.py`.
+
+- Look: mid-century and hopeful ("optimistic retro-future"), not grim. Warm-white concrete
+  and the Era 3 red brick carried on; steel picked out in signal orange (#f26b1d) with
+  night-blue (#1c2a4a) trim; enamel panels in turquoise, mint, mustard, coral and sky;
+  curtain-wall glass, boomerang canopies, TV aerials and round portholes. Era 4 adds
+  `concrete_flat concrete_dark steel steel_dark warm_white signal_orange night_blue enamel_*
+  chrome rubber glass_blue dish_white canvas_orange cloth_navy frost turf hedge road_paint
+  road_yellow` and textured `concrete asphalt curtain_wall mission_patch flag_mission
+  poster_launch` to `ArtPalette`, plus unshaded `window_lit signal_lamp molten screen_glow
+  porthole_lit` and the particle materials `steam smoke exhaust`.
+- The rocket is the centrepiece: a friendly finned rocket in warm white and signal orange,
+  with the open hand (`_hand_plate`, the mission-patch silhouette) on both sides of the
+  booster, a chequer band, the mission patch, portholes and an ogive nose. Build stages:
+  `rocket_stage_1` (booster), `rocket_stage_2` (+ tank stage), `rocket` (complete, 23 m);
+  segments to carry and stack: `rocket_segment_booster/_tank/_upper`. `rocket_ready` is
+  fuelled for liftoff: frost bands, lit portholes, `Steam` and `VentSteam` particles venting,
+  and an `ExhaustHook` holding `Exhaust` and `ExhaustSmoke` (GPUParticles3D, not emitting)
+  and a hidden `ExhaustLight` for ignition.
+- `launch_tower` is the shrine's last stage (DESIGN 7, 9): the octagonal pad with its flame
+  pit at the origin, the orange lattice gantry with umbilical arms and a hammerhead crane on
+  an ashlar plinth (the great hall's warm stone), crowned by the gilded hand (31.5 m). The
+  old shrine stone of the first tribe sits in a railed garden beside the plinth with the
+  crew bench facing it. Hooks: `RocketMount` (Node3D at the pad deck; meta `rocket_ids`),
+  `AccessArm` (rotate about Y to retract; meta `retract_degrees` 90),
+  `CrewBench/Seat1..Seat4`, `Floods/Flood1..4` (hidden SpotLights) and a hidden NightGlow.
+- Every building has `<id>_plot` (orange-taped stakes, steel, bricks, mixer, theodolite) and
+  `<id>_frame` (orange I-beam frame, concrete floors, brick infill, scaffold stair, tower
+  crane or derrick), then `<id>`.
+- Moving parts (spinners): `coal_mine/Wheels`, `mission_control/Radar`,
+  `radio_telescope/Mount`, `training_centre/Centrifuge` (ships stopped), `wind_turbine/Rotor`.
+- Smoke and steam: GPUParticles3D named `Smoke`, `Smoke1`, `Smoke2` on the stacks
+  (powerhouse, foundry, factory); gameplay can stop them when a filter is built. The
+  foundry's `Glow` light is on.
+- Night: lit windows are one hidden `NightGlow` mesh per building; `street_light/Light` and
+  the launch floods are hidden lights (as Era 3).
+- Villagers: `VillagerVisual.set_era(4)` dresses them for their trade (shader style 3):
+  overalls over rolled shirt sleeves, white lab coats with a shirt and tie, suits and
+  dresses; hats are a hard hat, trilby, pillbox, kerchief and flat cap. `set_crew(true)`
+  puts anyone in the white flight suit (navy boots and gloves, orange bands, the mission
+  patch, a chrome neck ring) with an open-face helmet and raised gold visor.
+
 ## Palette approach: shared shader remap (not a baked palette texture)
 
 Every visual is drawn with one shader, `assets/models/materials/hog_flat.gdshader` (and a
@@ -161,10 +215,29 @@ the ground at their footprint centre and face +Z.
 - Era 3 resources: `stone_blocks bricks_pile iron_ore_pile iron_bars books_pile paper_stack
   crates glassware fire_buckets`; nodes `quarry iron_ore`; tools `tool_axe_iron
   tool_pickaxe_iron tool_mallet tool_chisel tool_saw tool_trowel`
+- Era 4 buildings, each with `_plot` and `_frame`: `apartment` (3 variants: brick slab,
+  streamline, enamel tower) `powerhouse coal_mine foundry refinery factory assembly_hall
+  institute mission_control radio_telescope training_centre rail_station test_stand
+  wind_turbine launch_tower` (the shrine stage)
+- Era 4 rocket (category `rocket`): `rocket_stage_1 rocket_stage_2 rocket rocket_ready
+  rocket_segment_booster rocket_segment_tank rocket_segment_upper`
+- Era 4 streets and rail: `road_asphalt road_asphalt_cross road_asphalt_end rail_track
+  rail_buffer rail_crossing rail_bridge street_light bus_stop phone_box kiosk bench_modern
+  planter_modern fire_hydrant poster_board flag_mission power_pylon park water_tower
+  cafe_parasol city_block_far` (5 variants)
+- Era 4 vehicles: `car` (turquoise, coral, mustard) `bus truck` (flatbed, tanker) `locomotive
+  rail_wagon` (coal, steel, fuel tank, rocket segment) `passenger_coach`; gifts
+  `gift_model_rocket gift_photograph`
+- Era 4 resources: `steel_beams parts_crates fuel_tanks coal_pile oil_drums cable_drum
+  shipping_container` (3 variants); nodes `coal_seam oil_seep`; tools `tool_wrench
+  tool_toolbox tool_clipboard tool_welder`
 - Seasons: trees, bushes, rocks, logs and stumps have `autumn` and/or `winter` variant lists.
 
 Contact sheets: `tests/assets/contact_era1.png`, `tests/assets/villagers.png`; Era 2:
 `tests/shots/era2_art_kit.png` and the diorama `tests/shots/era2_village.png`
 (`tests/assets/era2_shots.gd`, `--shot=kit` or `--shot=village`); Era 3:
 `tests/shots/era3_art_kit.png` and the coastal town diorama `tests/shots/era3_town.png`
-(`tests/assets/era3_shots.gd`, `--shot=kit`, `--shot=town` or `--shot=preview --ids=...`).
+(`tests/assets/era3_shots.gd`, `--shot=kit`, `--shot=town` or `--shot=preview --ids=...`); Era 4:
+`tests/shots/era4_art_kit.png`, the city diorama `tests/shots/era4_city.png` and the launch at
+dusk `tests/shots/era4_rocket_launch.png` (`tests/assets/era4_shots.gd`, `--shot=kit`,
+`--shot=city`, `--shot=launch` or `--shot=preview --ids=... [--dusk=1]`).
