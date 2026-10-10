@@ -29,6 +29,11 @@ const ARMFUL := 3
 const BUNDLE_PER_M := 45.0
 const BUNDLE_MAX := 4
 const DECAY: Dictionary = {&"food": 0.0045, &"water": 0.006, &"joy": 0.002}
+## Era 1 is gentler on hunger and thirst (Austin's Era 1 notes: "they go
+## through food and water too fast"); the difficulty multiplies on top.
+const ERA1_NEEDS := 0.72
+## Era 1 trust grows more slowly, so fear turning to love takes the whole era.
+const ERA1_TRUST_GAIN := 0.55
 const WALK_SPEED := 3.0
 const RUN_SPEED := 5.0
 const GRAVITY := 20.0
@@ -69,6 +74,7 @@ var trust_f: float = 1.5                # fractional trust; trust = floor(trust_
 var wish: StringName = &""              # a JobDef id they want, or &"warmth"
 var wish_t: float = 40.0                # wish lifetime, or cooldown before the next one
 var job_site: Site = null
+var task_site: Site = null              # at a workplace: the field, herd or tree they are working now
 var home: Site = null
 var state: int = S.IDLE
 var placed_by_hand: bool = false
@@ -340,17 +346,19 @@ func rate() -> float:
 	var jd := _job_def()
 	if jd != null:
 		r *= 1.0 + 0.1 * float(stars(_family(jd.skill)) - 1)
-		if Flags.has(&"iron_tools") and jd.kind in [JobDef.Kind.GATHER, JobDef.Kind.CRAFT, JobDef.Kind.TEND, JobDef.Kind.BUILD]:
+		if Flags.has(&"iron_tools") and jd.kind in [JobDef.Kind.GATHER, JobDef.Kind.CRAFT, JobDef.Kind.TEND, JobDef.Kind.BUILD, JobDef.Kind.WORKPLACE]:
 			r *= 1.7           # iron tools: +70% (Era 3), building too
-		elif Flags.has(&"bronze_tools") and jd.kind in [JobDef.Kind.GATHER, JobDef.Kind.CRAFT, JobDef.Kind.TEND]:
+		elif Flags.has(&"bronze_tools") and jd.kind in [JobDef.Kind.GATHER, JobDef.Kind.CRAFT, JobDef.Kind.TEND, JobDef.Kind.WORKPLACE]:
 			r *= 1.5           # bronze tools: +50% (doc 4, Era 2)
-		elif jd.kind == JobDef.Kind.GATHER and Flags.has(&"stone_tools"):
+		elif (jd.kind == JobDef.Kind.GATHER or jd.kind == JobDef.Kind.WORKPLACE) and Flags.has(&"stone_tools"):
 			r *= 1.25          # stone tools: +25% gather speed (doc 4)
 	return r
 
 func adjust_trust(d: float) -> void:
 	if d > 0.0 and has_trait(&"devout"):
 		d *= 1.25
+	if d > 0.0 and Village.era == 1:
+		d *= ERA1_TRUST_GAIN
 	var before := trust
 	trust_f = clampf(trust_f + d, 0.0, 5.99)
 	trust = clampi(floori(trust_f), 0, 5)
@@ -487,6 +495,9 @@ func on_group_done(s: Site) -> void:
 func go_eat() -> void:
 	if state in [S.HELD, S.FALL, S.DEAD, S.FLEE] or stage == Stage.BABY:
 		return
+	if rests_at_work():
+		_eat_at_work()
+		return
 	if state == S.SHELTER or state == S.SLEEP:
 		_leave_shelter()
 	var wants_food: bool = needs[&"food"] < MEAL_BELOW and Village.food() > 0
@@ -508,9 +519,35 @@ func go_eat() -> void:
 	state = S.EAT
 	_go(_store_slot(), WALK_SPEED)
 
+## A farmhouse crew eats and sleeps at the farmhouse (Austin's Era 2 notes:
+## the farmers walked home all night). They keep their place on the crew.
+func rests_at_work() -> bool:
+	return job_site != null and is_instance_valid(job_site) and job_site.is_workplace() and job_site.building.rest_here \
+		and job_site.burn <= 0.0 and job_site.damage <= 0.0
+
+func _eat_at_work() -> void:
+	if state == S.SHELTER or state == S.SLEEP:
+		_leave_shelter()
+	var wants_food: bool = needs[&"food"] < MEAL_BELOW and Village.food() > 0
+	var wants_water: bool = needs[&"water"] < MEAL_BELOW and Village.store(&"water") > 0
+	if not wants_food and not wants_water:
+		_after_eat()
+		return
+	_offering = null
+	state = S.EAT
+	_go(job_site.slot_position(job_site.slot_of(self)), WALK_SPEED)
+
 ## Night: to the home hut, any hut with room, the fire, or the stash.
 func go_rest() -> void:
 	if state in [S.HELD, S.FALL, S.DEAD]:
+		return
+	if rests_at_work():
+		_offering = null
+		state = S.SHELTER
+		_phase = "to_hut"
+		_fall_site = job_site
+		_rest_t = 0.0
+		_go(job_site.global_position + Vector3(0, 0, job_site.pick_radius() + 0.2), WALK_SPEED)
 		return
 	if job_site != null and is_instance_valid(job_site):
 		_resume = job_site
@@ -663,8 +700,9 @@ func _is_cold() -> bool:
 	return Clock.is_night or Clock.season == Clock.Season.WINTER
 
 func _sim_needs(dt: float) -> void:
-	needs[&"food"] -= DECAY[&"food"] * Flags.diff_k(&"food") * dt
-	needs[&"water"] -= DECAY[&"water"] * dt
+	var ek := ERA1_NEEDS if Village.era == 1 else 1.0
+	needs[&"food"] -= DECAY[&"food"] * Flags.diff_k(&"food") * ek * dt
+	needs[&"water"] -= DECAY[&"water"] * Flags.diff_k(&"water") * ek * dt
 	var sheltered := state == S.SHELTER and _phase == "inside"
 	# Which fires and joyful places are near: looked up a few times a second,
 	# not every tick (a town has a lot of buildings to look through).
@@ -760,6 +798,11 @@ func _sim_idle(dt: float) -> void:
 	if _decide_t > 0.0:
 		return
 	_decide_t = Game.rng.randf_range(1.5, 3.5)
+	if rests_at_work():
+		state = S.WORK          # woke at the farmhouse: back to work
+		return
+	if _called_t > 0.0 and Clock.total_t < _called_t:
+		return                  # called to the hand: they wait there for it
 	if Village.era >= 3 and autonomy_hook.is_valid():
 		if autonomy_hook.call(self):
 			return
@@ -917,7 +960,12 @@ func _sim_work(dt: float) -> void:
 	if s.job == null:
 		go_idle()
 		return
+	if s.is_workplace():
+		Workplace.step(self, s, dt)
+		return
 	match s.job.kind:
+		JobDef.Kind.HAUL:
+			Workplace.haul_step(self, s, dt)
 		JobDef.Kind.GROUP:
 			if not s.group_running:
 				state = S.WAIT_GROUP
@@ -1137,6 +1185,10 @@ func _after_eat() -> void:
 	if Clock.is_night:
 		go_rest()
 		return
+	if rests_at_work():
+		state = S.WORK          # back to the fields from the farmhouse table
+		_target = Vector3.INF
+		return
 	state = S.IDLE
 	_target = Vector3.INF
 	if _resume != null and is_instance_valid(_resume):
@@ -1201,6 +1253,9 @@ func _leave_job() -> void:
 	_armful = 0
 	_reserved = &""
 	_waiting_for = &""
+	task_site = null
+	if has_meta(&"bin_full"):
+		remove_meta(&"bin_full")
 	job_site = null
 	_phase = ""
 	_timer = 0.0
@@ -1325,10 +1380,40 @@ func motion(dt: float) -> void:
 						_target = job_site.slot_position(job_site.slot_of(self))
 				_react_to_hand(dt)
 				if _target != Vector3.INF and not _frozen():
-					_step(dt)
+					if _carrying_group():
+						_glide(dt)
+					else:
+						_step(dt)
 	_anim_dt += dt
 
 var _anim_dt: float = 0.0
+
+## Carrying a log with others: the log is moving under them.
+func _carrying_group() -> bool:
+	return state == S.WORK and job_site != null and is_instance_valid(job_site) and job_site.group_running \
+		and job_site.moves_to_store() and _phase != "carry" and _phase != "fetch"
+
+## Keeps step with a moving log: no arrive dead zone (which made the carriers
+## stop, fall behind, then dash to catch up), walking only while it moves.
+func _glide(dt: float) -> void:
+	var pos := global_position
+	var flat := _target - pos
+	flat.y = 0.0
+	var dist := flat.length()
+	if dist < 0.02:
+		return
+	var st := minf(dist, clampf(dist * 4.0, _speed * 1.2, _speed * 2.5) * dt)
+	pos += flat / dist * st
+	pos.y = Site.ground(pos.x, pos.z)
+	global_position = pos
+	if st > 0.25 * dt:
+		rotation.y = lerp_angle(rotation.y, atan2(flat.x, flat.z), minf(6.0 * dt, 1.0))
+		_moving = true
+
+var _prog_to: Vector3 = Vector3.INF
+var _prog_best: float = 0.0
+var _prog_t: float = 0.0
+var _prog_fails: int = 0
 
 func _step(dt: float) -> void:
 	var pos := global_position
@@ -1348,6 +1433,24 @@ func _step(dt: float) -> void:
 		if _stuck_t > 3.0:
 			_stuck_t = 0.0
 			_no_nav_t = 4.0
+	# Pacing back and forth without getting closer (a path that flips between
+	# two corners, seen by the cave stash): walk straight for a while too.
+	# Each time it happens again on the way, the straight walk is longer.
+	if not _prog_to.is_finite() or _prog_to.distance_to(_target) > 0.5:
+		_prog_to = _target
+		_prog_best = dist
+		_prog_t = 0.0
+		_prog_fails = 0
+	elif dist < _prog_best - 0.5:
+		_prog_best = dist
+		_prog_t = 0.0
+	elif _no_nav_t <= 0.0:
+		_prog_t += dt
+		if _prog_t > 6.0:
+			_prog_t = 0.0
+			_prog_best = dist
+			_prog_fails += 1
+			_no_nav_t = minf(4.0 * float(_prog_fails), 20.0)
 	if _no_nav_t <= 0.0 and _use_nav():
 		var nd := _path_dir(pos)
 		if nd.length() > 0.05:
@@ -1560,6 +1663,30 @@ func _pose() -> int:
 				_: return PersonVisual.Pose.REACH
 	return PersonVisual.Pose.IDLE
 
+## Why a workplace crew member is waiting (Workplace.idle_reason and friends).
+const WAIT_NOTES := {&"no fields": "no fields to work yet", &"nothing near": "nothing to work nearby",
+	&"another hunter": "waiting for another hunter", &"a second farmer": "the blight needs two",
+	&"the harvest": "waiting for the harvest", &"room in the stores": "the stores are full",
+	&"stone_tools": "needs stone tools"}
+
+## [village] Called to the hand (Village.call_idle): walk over and wait there a while.
+const CALLED_WAIT := 25.0
+var _called_t: float = -1.0
+
+func answer_call(to: Vector3) -> bool:
+	if not alive() or stage == Stage.BABY or not pickable():
+		return false
+	if not (state == S.IDLE or (state == S.WALK and _offering == null)):
+		return false
+	if job_site != null and is_instance_valid(job_site):
+		return false
+	var a := float(uid) * 2.39996
+	var r := 1.4 + 0.45 * float(uid % 5)
+	_walk(to + Vector3(cos(a), 0, sin(a)) * r)
+	_speed = RUN_SPEED * 0.8
+	_called_t = Clock.total_t + CALLED_WAIT + to.distance_to(global_position) / (RUN_SPEED * 0.8)
+	return true
+
 func _activity_text() -> String:
 	if stage == Stage.BABY:
 		return "baby"
@@ -1586,6 +1713,8 @@ func _activity_text() -> String:
 				return t + " (the crop is growing)"
 			if _waiting_for == &"spring":
 				return t + " (resting until spring)"
+			if WAIT_NOTES.has(_waiting_for):
+				return t + " (%s)" % WAIT_NOTES[_waiting_for]
 			if _waiting_for != &"":
 				return t + " (needs %s)" % _waiting_for
 			return t
@@ -1609,6 +1738,8 @@ func _resolve_links() -> void:
 				if s.can_accept(1) or s.workers.has(self):
 					join(s, false)
 			"shelter":
+				if s.is_workplace() and s.building.rest_here and not s.workers.has(self):
+					join(s, false)          # asleep at the farmhouse: still on its crew
 				if s.enter_shelter(self):
 					state = S.SHELTER
 					_fall_site = s

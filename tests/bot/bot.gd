@@ -383,6 +383,8 @@ func _wasted(s, p = null) -> bool:
 		return s.state == Site.State.PLOT and not _plot_can_progress(s)
 	if j == null:
 		return false
+	if j.kind == JobDef.Kind.HAUL or (s.is_workplace() and s.building.bin_cap > 0):
+		return false              # the farmhouse crew and its carter stay put
 	if j.kind == JobDef.Kind.GROUP:
 		return false
 	if j.kind == JobDef.Kind.DEVOTION:
@@ -425,14 +427,24 @@ func _site_ok(s) -> bool:
 	if not s.can_accept(1):
 		return false
 	var w = Game.world
-	var at: Vector3 = s.slot_position(0) if s.building != null and s.building.id == &"bridge" else s.global_position
+	var at: Vector3 = s.slot_position(0) if s.building != null and Site.BRIDGES.has(s.building.id) else s.global_position
 	if w.has_method("is_region_open") and not w.is_region_open(w.region_at(at)):
 		return false
 	if s.job != null and not s.is_plot() and not s.is_group() and s.job.kind == JobDef.Kind.GATHER and not s.can_work_now():
 		return false
 	if era2.site_blocked(s) or era3.site_blocked(s):
 		return false
+	# the hand refuses to set people down where they couldn't walk home from
+	if w.has_method("site_drop_reason"):
+		var why: String = w.site_drop_reason(s)
+		if why != "":
+			if not _drop_refused.has(s.get_instance_id()):
+				_drop_refused[s.get_instance_id()] = true
+				print("BOT drop refused: %s at %s (%s)" % [s.job.id if s.job != null else s.building.id, str(s.global_position.snapped(Vector3.ONE)), why])
+			return false
 	return true
+
+var _drop_refused: Dictionary = {}
 
 func _score(s, idle_n: int) -> float:
 	var j: JobDef = s.job
@@ -444,6 +456,8 @@ func _score(s, idle_n: int) -> float:
 		var d := Dreams.active_dream()
 		if d != null and d.needs_buildings.has(b.id):
 			dream = true
+		if b.id == &"footbridge":
+			dream = true          # the way across: the bridge's bronze needs East Bank copper
 		var key: float = era3.plot_score(b)
 		if key > 0.0 and ready:
 			return key            # the workshop a waiting chain needs (the forge for iron, ...)
@@ -452,7 +466,12 @@ func _score(s, idle_n: int) -> float:
 		var other := 5.5
 		if Village.era >= 2:
 			other = 7.0 if b.id == &"field" else 6.2     # a field is next season's bread
+		if b.workplace:
+			other = 7.4 if b.id == &"farmhouse" else 6.8   # a workplace feeds itself once staffed
 		return (8.0 if dream else (7.2 if home else other)) if ready else 0.5
+	var wp: float = _workplace_score(s)
+	if wp >= 0.0:
+		return wp
 	if j == null:
 		return 0.0
 	var e3: float = era3.score(s, idle_n)
@@ -498,15 +517,38 @@ func _score(s, idle_n: int) -> float:
 		match j.id:
 			&"haul_log", &"carry_log": sc = 9.5
 			&"festival", &"great_elk_hunt": sc = 9.0
-			&"hunt":
-				# four hunters out of five leave nobody for the village
-				if pop < 6:
-					return 0.0
-				sc = 7.5 if Village.food() < pop * 3 else (4.0 if food_low or Village.store(&"hide") < 3 else 2.5)
 			_: sc = 7.0
 		if waiting > 0:
 			sc += 1.0                     # finish filling a group already waiting
 	return sc
+
+## Workplaces (doc 4): each gets its first crew (crew_min) before most other
+## work, then more hands up to the grip while it has tasks waiting; a farmhouse
+## with grain in its bin wants a carter. -1.0 = not a workplace or its cart.
+func _workplace_score(s) -> float:
+	if s.is_workplace():
+		var have: int = s.slots_filled()
+		if have >= Workplace.crew_cap(s) or not s.discovered():
+			return 0.0
+		var busy := false
+		for t in Workplace.tasks(s):
+			if Workplace.need(t) > 0.0:
+				busy = true
+				break
+		var base := 5.0
+		match s.building.id:
+			&"farmhouse": base = 8.0
+			&"hunting_lodge": base = 6.8 if Village.food() < _food_target() else 4.2
+			&"woodcutter_camp": base = 6.6 if Village.store(&"wood") < _need(&"wood") + 6 else 2.5
+		if have < s.building.crew_min:
+			return base + 0.6
+		return base - 1.5 if busy else 0.4
+	if s.job != null and s.job.id == &"cart_haul" and not s.is_plot():
+		var wk := Site.by_uid(s.parent_uid)
+		if wk == null or s.slots_filled() >= 1:
+			return 0.0
+		return 7.4 if Workplace.bin_total(wk) > 0 else 4.0
+	return -1.0
 
 func _staff() -> void:
 	var movable := _movable()
@@ -548,6 +590,8 @@ func _staff() -> void:
 		want = maxi(best.job.min_people - best.workers.size(), 1)
 	elif best.is_plot():
 		want = mini(2, best.free_slots())
+	elif best.is_workplace():
+		want = maxi(best.building.crew_min - best.slots_filled(), 1)
 	want = mini(want, best.free_slots())
 	want = mini(want, pool.size())
 	if want <= 0:
@@ -655,9 +699,9 @@ func _report() -> void:
 	_last_day = Clock.day
 	var fps := _fps_sum / maxf(_fps_n, 1)
 	var dn: float = maxf(float(_day_fps[1]), 1.0)
-	print("BOT day %d %s %s y%d | pop %d | stores %s | faith %.0f (avail %.0f) | dream %s | deaths %d | fps %.0f (today %.0f, process %.1f ms, physics %.1f ms) | actions %d" % [
+	print("BOT day %d %s %s y%d | pop %d | stores %s | faith %.0f (avail %.0f) | trust %.2f | dream %s | deaths %d | fps %.0f (today %.0f, process %.1f ms, physics %.1f ms) | actions %d" % [
 		Clock.day, _mmss(Clock.total_t), ["spring", "summer", "autumn", "winter"][Clock.season], Clock.year, Village.population(), _stores_text(),
-		Faith.total, Faith.available(), str(Village.stats.get("dream_active", "")), _deaths, fps, _day_fps[0] / dn, _day_fps[2] / dn, _day_fps[3] / dn, _actions])
+		Faith.total, Faith.available(), Trust.average(), str(Village.stats.get("dream_active", "")), _deaths, fps, _day_fps[0] / dn, _day_fps[2] / dn, _day_fps[3] / dn, _actions])
 	_day_fps = [0.0, 0, 0.0, 0.0]
 	var nv = Game.world.nav if Game.world != null else null
 	if nv != null and nv.navigation_mesh != null:

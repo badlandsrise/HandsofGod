@@ -107,14 +107,14 @@ func test_data() -> void:
 	for id in [&"strength_1", &"strength_2", &"lift_buildings", &"strength_3"]:
 		st.append(D.power(id).strength)
 	check(st == [4.0, 10.0, 40.0, 100.0], "strength 4, 10, 40, 100")
-	check(D.power(&"reach").opens_region == &"east_bank" and D.power(&"strength_1").opens_region == &"", "power regions match section 10 (Era 1 regions open by world blockers)")
+	check(D.power(&"reach") == null and D.power(&"strong_arms").opens_region == &"" and D.power(&"strength_1").opens_region == &"", "power regions match section 10 (Era 1 regions open by world blockers)")
 	check(D.eras.size() == 4 and D.era(1).day_seconds == 75.0 and D.era(1).night_seconds == 30.0 and D.era(1).season_seconds == 300.0, "4 eras, Era 1 timing")
 	var e1: EraDef = D.era(1)
 	check(e1.dreams.size() == 3 and D.dream(e1.dreams[-1]).gate, "Era 1: three milestone dreams, the last is the gate")
 	var era1_jobs := [&"gather_berries", &"fetch_water", &"collect_sticks", &"fell_tree", &"knap_flint", &"tend_fire", &"carry_log", &"haul_log", &"hunt", &"fish_by_hand", &"great_elk_hunt", &"festival", &"build", &"pray"]
 	var missing: Array = era1_jobs.filter(func(j): return D.job(j) == null)
 	check(missing.is_empty(), "Era 1 jobs load %s" % str(missing))
-	check(D.job(&"haul_log").min_people == 3 and D.job(&"hunt").min_people == 4 and D.job(&"carry_log").min_people == 2, "group sizes 2, 3, 4")
+	check(D.job(&"haul_log").min_people == 3 and D.job(&"hunt").kind == JobDef.Kind.GATHER and D.job(&"work_lodge").kind == JobDef.Kind.WORKPLACE and D.job(&"carry_log").min_people == 2, "group sizes 2 and 3; the hunt is the lodge crew's")
 	check(D.job(&"haul_log").needs_power == &"grip_2" and D.job(&"hunt").needs_power == &"grip_2" and D.job(&"fish_by_hand").needs_power == &"warmth"
 		and D.job(&"festival").needs_power == &"blessing" and D.job(&"great_elk_hunt").needs_blessed, "Grip II, Warmth and Blessing open their jobs (doc 6)")
 	check(D.job(&"fell_tree").needs_discovery == &"stone_tools" and D.job(&"gather_berries").winter_stops, "felling needs stone tools; winter stops the berries")
@@ -172,7 +172,7 @@ func test_wander_off() -> void:
 	clear()
 	if not F.has(&"grip_2"):
 		F.grant(&"grip_2")
-	var s := site(&"hunt", Vector3(0, 0, 10))
+	var s := site(&"haul_log", Vector3(0, 0, 10))
 	var a := person(Vector3(0, 0, 8))
 	var failed0: int = counts["group_job_failed"]
 	place(a, s)
@@ -181,7 +181,7 @@ func test_wander_off() -> void:
 	step(2.0)
 	check(a.job_site == null and a.state != Person.S.WAIT_GROUP, "wandered off after 20 s")
 	check(int(counts["group_job_failed"]) == failed0 + 1, "group_job_failed emitted")
-	check(s.workers.is_empty() and not s.group_running, "hunt is empty again")
+	check(s.workers.is_empty() and not s.group_running, "the log haul is empty again")
 
 func test_eating() -> void:
 	clear()

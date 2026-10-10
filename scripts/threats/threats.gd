@@ -55,7 +55,7 @@ func _process(delta: float) -> void:
 	# dusk: decide on wolves before night falls
 	var wd := _def(Wolves.ID)
 	var warn_s := wd.warning_seconds if wd else 15.0
-	if not Clock.is_night and not wolves.warned and Clock.phase_t >= Clock.day_seconds - warn_s and Village.era <= 2:
+	if not Clock.is_night and not wolves.warned and Clock.phase_t >= Clock.day_seconds - warn_s and Village.era <= 2 and Wolves.may_come():
 		var min_pop := wd.min_population if wd else 3
 		var chance := (wd.chance_per_day if wd else 0.55) * Flags.diff_k(&"wolves")
 		if Village.population() >= min_pop and not cold_active and not cold_warned and not era2.active() and not quiet():
@@ -63,7 +63,7 @@ func _process(delta: float) -> void:
 			if not has_meta("rolled_day") or int(get_meta("rolled_day")) != Clock.day:
 				set_meta("rolled_day", Clock.day)
 				if Game.rng.randf() < chance or Game.flags.has("wolves"):
-					var n := clampi(1 + Village.population() / 7, 1, 3)
+					var n := clampi(1 + Village.population() / 7, 1, 3) if Village.era == 1 else mini(1 + Wolves.den_workers() / 3, 2)
 					wolves.warn(n)
 	# cold snap creeps in over its warning time
 	if cold_warned and not cold_active:

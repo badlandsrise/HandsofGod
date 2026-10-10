@@ -13,10 +13,12 @@ var manager: Node = null
 var state: int = S.APPROACH
 var target: Node3D = null
 var home: Vector3 = Vector3.ZERO
+var leash: float = 0.0          # > 0: keeps within this of home (Era 2 den wolves)
 var flee_t: float = 0.0
 var _retarget: float = 0.0
 var _visual: Node3D = null
 var bites: int = 0
+var _prowl_t: float = 0.0
 
 func _ready() -> void:
 	add_to_group("wolves")
@@ -73,6 +75,12 @@ func _process(delta: float) -> void:
 			if target != null and is_instance_valid(target):
 				state = S.STALK
 				goal = target.global_position
+			elif leash > 0.0:
+				state = S.APPROACH
+				# prowl round the den
+				_prowl_t += delta
+				var a := _prowl_t * 0.25 + float(get_instance_id() % 7)
+				goal = home + Vector3(cos(a), 0, sin(a)) * leash * 0.4
 			else:
 				state = S.APPROACH
 				# circle the firelight hungrily
@@ -118,6 +126,8 @@ func _pick_target(fire_p: Vector3, fire_r: float) -> Node3D:
 		var pp: Vector3 = p.global_position
 		if fire_r > 0.0 and Vector2(pp.x - fire_p.x, pp.z - fire_p.z).length() < fire_r + 0.5:
 			continue
+		if leash > 0.0 and Vector2(pp.x - home.x, pp.z - home.z).length() > leash:
+			continue    # den wolves keep to their own woods
 		var dd := pp.distance_to(global_position)
 		if dd < best_d:
 			best_d = dd

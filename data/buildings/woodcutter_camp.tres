@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="BuildingDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/defs/building_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"woodcutter_camp"
+title = "Woodcutters' camp"
+era = 1
+footprint = Vector2(4.0, 3.5)
+cost = {&"wood": 4, &"stone": 2}
+build_work = 18.0
+build_slots = 2
+jobs = Array[StringName]([&"work_wood"])
+weight = 30.0
+workplace = true
+work_radius = 22.0
+work_jobs = Array[StringName]([&"fell_tree"])
+crew_min = 1
+crew_max = 3
+spawns = [[&"fell_tree", 12.0, 6.0], [&"fell_tree", -2.0, 10.0]]

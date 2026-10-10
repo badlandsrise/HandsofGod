@@ -4,13 +4,13 @@
 
 [resource]
 script = ExtResource("1_def")
-id = &"reach"
+id = &"strong_arms"
 era = 2
-title = "Reach"
-cost = 80.0
+title = "Strong Arms"
+cost = 40.0
+strength = 6.0
 requires = Array[StringName]([&"grip_2"])
-opens_region = &"east_bank"
 requires_flags = Array[StringName]([&"far_bank_seen"])
 flag_hint = "When they long for the far bank"
-what_it_does = "Place people across the great river"
-what_it_opens = "The East Bank: clay, copper ore, fish and bears, before there is a bridge"
+what_it_does = "Carry a bridge timber (weight 6) and set it on a bridge plot"
+what_it_opens = "The footbridge over the shallows to the East Bank: clay, copper ore and the far bank's fish"

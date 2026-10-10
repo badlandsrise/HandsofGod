@@ -64,7 +64,7 @@ func _finished(bid: StringName, at: Vector2) -> Site:
 
 ## The village as it stands late in Era 2: every chain built, the fields sown.
 func _build_village() -> void:
-	Faith.grant(&"reach")
+	Faith.grant(&"strong_arms")
 	Faith.grant(&"grip_3")
 	Faith.grant(&"rain")
 	w.look.set_weather(0.0, false)

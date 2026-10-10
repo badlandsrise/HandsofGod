@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="BuildingDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/defs/building_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"farmhouse"
+title = "Farmhouse"
+era = 2
+footprint = Vector2(6.5, 8.0)
+cost = {&"wood": 10, &"stone": 4}
+build_work = 30.0
+build_slots = 3
+jobs = Array[StringName]([&"work_farm", &"cart_haul"])
+weight = 60.0
+workplace = true
+work_radius = 26.0
+work_jobs = Array[StringName]([&"farm_field"])
+crew_min = 2
+crew_max = 6
+bin_cap = 30
+rest_here = true

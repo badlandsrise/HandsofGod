@@ -77,7 +77,7 @@ func _finish_at(bid: StringName, at: Vector2) -> Site:
 ## The town as it stands mid Era 3: the street of townhouses, the workshops,
 ## the school and the aqueduct running.
 func _build_town() -> void:
-	for id in [&"reach", &"grip_3", &"grip_4", &"rain", &"warmth", &"calm_waters", &"guiding_light"]:
+	for id in [&"strong_arms", &"grip_3", &"grip_4", &"rain", &"warmth", &"calm_waters", &"guiding_light"]:
 		Faith.grant(id)
 	w.look.set_weather(0.0, false)
 	for bid in LayoutEra3.PLOT_SPOTS:

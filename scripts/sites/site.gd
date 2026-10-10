@@ -37,6 +37,10 @@ var children_spawned: bool = false
 var origin: Vector3 = Vector3.INF       # moving group jobs (log hauls) start here
 var evergreen: bool = false             # safety net (doc 8.1): in a food crisis this bush never runs dry or sleeps
 var raise_parent: int = 0               # a raising group job (barn, bridge, temple): the plot it finishes
+# Workplaces (scripts/sites/workplace.gd): the farmhouse, the hunting lodge, the woodcutters' camp
+var bin: Dictionary = {}                # goods the crew brought in, waiting for the carter
+var timbers_in: int = 0                 # bridge timbers the hand has set on this plot (Strong Arms)
+var claims: Dictionary = {}             # workplace: task site uid -> crew heading there or at it (not saved)
 
 # --- fields (Era 2 farming: sow, water and weed, harvest before the frost) ----------
 enum Field { TILLED, SPROUTS, GROWING, RIPE, STUBBLE }
@@ -106,7 +110,7 @@ func _init_from_defs() -> void:
 		for k in building.cost:
 			delivered[k] = 0
 			incoming[k] = 0
-		if building.cost.is_empty():
+		if building.cost.is_empty() and building.timbers <= 0:
 			state = State.BUILDING      # a field to clear: work, no materials
 	elif building != null and start_finished:
 		_finish(true)
@@ -130,6 +134,40 @@ func is_shelter() -> bool:
 
 func is_fire() -> bool:
 	return job != null and job.id == &"tend_fire"
+
+## A workplace (doc 4): a finished building the hand staffs whose crew works
+## every task site in its radius on its own (the farmhouse, the hunting lodge).
+func is_workplace() -> bool:
+	return state == State.FINISHED and building != null and building.workplace
+
+## A task site only a workplace's crew works (a field, a deer herd, a field
+## being cleared): the hand never sets people down on it.
+func workplace_only() -> bool:
+	if building != null and building.id == &"field":
+		return true
+	return job != null and not is_plot() and WORKPLACE_ONLY.has(job.id)
+
+const WORKPLACE_ONLY: Array[StringName] = [&"farm_field", &"hunt"]
+
+## The finished workplace whose radius takes in this task site (null when
+## none). Looked up once a second at most: the hand and the bot ask a lot.
+func covering_workplace() -> Site:
+	if job == null and not (building != null and building.id == &"field"):
+		return null
+	if absf(Clock.total_t - _cover_t) < 1.0 and (_cover == null or is_instance_valid(_cover)):
+		return _cover
+	_cover_t = Clock.total_t
+	_cover = Workplace.covering(self)
+	return _cover
+
+var _cover: Site = null
+var _cover_t: float = -INF
+
+## The hand cannot place people here: the task belongs to a workplace's crew.
+func hand_blocked() -> bool:
+	if workplace_only():
+		return true
+	return not is_plot() and job != null and Workplace.task_job(job.id) and covering_workplace() != null
 
 ## A farmed field (Era 2): a TEND job with crop stages.
 func is_field() -> bool:
@@ -186,6 +224,8 @@ func title() -> String:
 
 ## [hand] slots in total (people who can work, or shelter, here).
 func max_slots() -> int:
+	if is_workplace():
+		return Workplace.crew_cap(self)
 	if is_plot():
 		return 0 if awaiting_raise() else building.build_slots
 	if job != null:
@@ -203,6 +243,8 @@ func slots_filled() -> int:
 ## [hand] true if `n` more people can be placed here right now.
 func can_accept(n: int = 1) -> bool:
 	if is_queued_for_deletion():
+		return false
+	if hand_blocked():
 		return false
 	if job != null and not is_plot():
 		if job.needs_power != &"" and not Faith.has(job.needs_power):
@@ -235,7 +277,7 @@ func slot_position(i: int) -> Vector3:
 		var p0 := global_position + global_basis * Vector3(col * fp.x * 0.28, 0.0, row * fp.y * 0.36)
 		p0.y = Site.ground(p0.x, p0.z)
 		return p0
-	if building != null and building.id == &"bridge" and state != State.FINISHED:
+	if building != null and BRIDGES.has(building.id) and state != State.FINISHED:
 		# the bridge is built from its near bank: the builders stand on the shore
 		var along := global_basis * Vector3(1, 0, 0)
 		if (global_position + along).z < (global_position - along).z:
@@ -254,6 +296,8 @@ func slot_position(i: int) -> Vector3:
 	p.y = Site.ground(p.x, p.z)
 	return p
 
+const BRIDGES: Array[StringName] = [&"bridge", &"footbridge"]
+
 ## Index of a person's slot (their position in the workers list).
 func slot_of(p) -> int:
 	var i := workers.find(p)
@@ -261,12 +305,17 @@ func slot_of(p) -> int:
 
 ## [hand] short label for the hover tooltip, e.g. "Haul a log 2/3".
 func hover_text() -> String:
+	var wt := Workplace.hover(self)
+	if wt != "":
+		return wt
 	if awaiting_raise():
 		return "%s  ready to raise: place %d people on the crew at once" % [title(), _raise_need()]
 	if is_plot():
 		var parts: Array = []
 		for k in building.cost:
 			parts.append("%s %d/%d" % [k, int(delivered.get(k, 0)), int(building.cost[k])])
+		if building.timbers > 0:
+			parts.append("timbers %d/%d (the hand carries them)" % [timbers_in, building.timbers])
 		var line := ", ".join(parts) if state == State.PLOT else "building %d%%" % int(100.0 * build_progress())
 		return "%s  %s  [%d/%d]" % [title(), line, slots_filled(), max_slots()]
 	if job == null and is_shelter():
@@ -294,6 +343,8 @@ func hover_text() -> String:
 		t += "  (only the blessed can do this)"
 	if amount >= 0 and job.node_amount > 1:
 		t += "  %d left" % amount
+	if str(get_meta("layout_tag", "")) == "wolf_den":
+		t += "  (by the wolves' den: they come out at dusk)"
 	if not can_work_now():
 		if _winter_stopped():
 			t += "  (resting for winter)"
@@ -320,7 +371,7 @@ func pick_radius() -> float:
 			&"fetch_water", &"fish_by_hand": return 2.0
 			&"hunt", &"great_elk_hunt": return 2.2
 			&"festival": return 2.4
-			&"haul_log", &"carry_log": return 1.4
+			&"haul_log", &"carry_log", &"cart_haul": return 1.4
 			&"raft_launch": return 2.2
 			&"harvest_festival": return 3.0
 	if raise_parent != 0:
@@ -338,10 +389,15 @@ func claim(p) -> void:
 func release(p) -> void:
 	workers.erase(p)
 	inside.erase(p)
+	Workplace.unclaim(self, p)
 	if group_running and _present().size() < job.min_people:
 		_stop_group()
 
 func enter_shelter(p) -> bool:
+	if is_workplace() and building.rest_here and workers.has(p) and burn <= 0.0 and damage <= 0.0 and not lift_held:
+		if not inside.has(p):
+			inside.append(p)
+		return true          # the crew sleeps at the farmhouse, not a long walk home
 	if not is_shelter():
 		return false
 	if inside.has(p):
@@ -476,8 +532,8 @@ func warmth_radius() -> float:
 		if building.jobs.has(&"tend_fire"):
 			return building.warmth_radius if lit() else 0.0
 		return building.warmth_radius
-	if is_fire() and building == null:
-		return FIRE_PIT_RADIUS if lit() else 0.0
+	if is_fire() and (building == null or state != State.FINISHED):
+		return FIRE_PIT_RADIUS if lit() else 0.0    # a bare pit, or one getting its ring of stones
 	return 0.0
 
 func joy_radius() -> float:
@@ -485,7 +541,7 @@ func joy_radius() -> float:
 		if building.jobs.has(&"tend_fire"):
 			return building.joy_radius if lit() else 0.0
 		return building.joy_radius
-	if is_fire() and building == null and lit():
+	if is_fire() and (building == null or state != State.FINISHED) and lit():
 		return FIRE_PIT_RADIUS
 	return 0.0
 
@@ -562,6 +618,43 @@ func materials_done() -> bool:
 	for k in building.cost:
 		if int(delivered.get(k, 0)) < int(building.cost[k]):
 			return false
+	return timbers_in >= building.timbers
+
+## The first dream's fire circle (Progression.ring_the_fire): this bare fire
+## becomes a fire_circle plot in place. It keeps its tend_fire job, so it is
+## still the fire (and keeps burning) while the stones are set round it.
+func ring_fire(bd: BuildingDef) -> void:
+	for p in _valid_workers().duplicate():
+		p.go_idle()
+	workers.clear()
+	building = bd
+	state = State.PLOT
+	delivered.clear()
+	incoming.clear()
+	for k in bd.cost:
+		delivered[k] = 0
+		incoming[k] = 0
+	build_done = 0.0
+	children_spawned = true
+	if fuel_t > 0.0:
+		fuel_t = maxf(fuel_t, 240.0)       # a burning fire is kept in while they work
+	rebuild_visual()
+
+## A bridge plot still waiting for timbers the hand carries (Strong Arms).
+func wants_timber() -> bool:
+	return building != null and building.timbers > 0 and state != State.FINISHED and timbers_in < building.timbers
+
+## The hand set a bridge timber on this plot. True if it was wanted.
+func add_timber() -> bool:
+	if not wants_timber():
+		return false
+	timbers_in += 1
+	Village.stats["timbers_set"] = int(Village.stats.get("timbers_set", 0)) + 1
+	if state == State.PLOT and materials_done():
+		state = State.BUILDING
+		if awaiting_raise():
+			_begin_raise()
+	rebuild_visual()
 	return true
 
 func build_progress() -> float:
@@ -603,6 +696,8 @@ func _finish(silent: bool) -> void:
 			p.go_idle()
 	if is_inside_tree():
 		_spawn_extra_job_sites()
+		if not silent:
+			Workplace.lay_out(self)
 		rebuild_visual()
 	if not silent:
 		Events.building_finished.emit(self)
@@ -676,7 +771,7 @@ func _season_label(waiting: bool) -> void:
 	_season_note.visible = true
 
 func _materials_fraction() -> float:
-	var need := 0; var got := 0
+	var need := building.timbers; var got := mini(timbers_in, building.timbers)
 	for k in building.cost:
 		need += int(building.cost[k]); got += int(delivered.get(k, 0))
 	return float(got) / float(maxi(need, 1))
@@ -714,11 +809,17 @@ func _sim_group(dt: float) -> void:
 	progress += dt * rate * bonus / maxf(job.work_time, 0.1)
 	if moves_to_store():
 		var to := carry_target()
-		var p3 := origin.lerp(to, minf(progress, 1.0) * (1.0 if job.carry_to == &"fire" else 0.85))
+		var p3 := origin.lerp(to, Site.heave(progress) * (1.0 if job.carry_to == &"fire" else 0.85))
 		p3.y = Site.ground(p3.x, p3.z)
 		global_position = p3
 	if progress >= 1.0:
 		_complete_group(present)
+
+## A heavy log gets going slowly: the haulers lean in, find their pace and
+## ease it down at the end (Austin's Era 1 notes: it moved "too fast").
+static func heave(t: float) -> float:
+	t = clampf(t, 0.0, 1.0)
+	return t * t * (3.0 - 2.0 * t)
 
 func _stop_group() -> void:
 	group_running = false
@@ -879,15 +980,15 @@ func _sim_field(dt: float) -> void:
 					return
 			else:
 				_dry_t = 0.0
-			var k := (0.3 + 0.7 * moisture) * (1.25 if _tended > 0.0 else 1.0)
+			var k := 0.3 + 0.7 * moisture       # it grows on its own once sown; water helps
 			field_grow = minf(field_grow + dt * k / FIELD_GROW_TIME, 1.0)
 			field_quality = lerpf(field_quality, moisture, minf(dt / 60.0, 1.0))
 			var st := Field.SPROUTS if field_grow < 0.4 else Field.GROWING
 			if field_grow >= 1.0:
 				st = Field.RIPE
 				field_work = 0.0
-				if _valid_workers().is_empty():
-					Events.alert.emit("The grain is ripe. Bring the harvest in before the frost", global_position)
+				if covering_workplace() == null:
+					Events.alert.emit("The grain is ripe, but no farmhouse crew is near to bring it in", global_position)
 			_set_field_stage(st)
 		Field.RIPE:
 			if winter:
@@ -918,11 +1019,14 @@ func _lose_crop(why: String) -> void:
 	_set_field_stage(Field.STUBBLE)
 
 ## A farmer present at the field does `w` person-seconds of work on what it
-## needs now: sow, water and weed, harvest, or fight the blight. Returns true
-## when a harvest came in (the farmer's cycle is done).
-func field_tend(w: float) -> bool:
+## needs now: sow, water, harvest, or fight the blight. Returns true when a
+## step is done (sown, harvested, saved). `keep`: the harvest stays with the
+## farmer (last_yield) to carry to the farmhouse bin instead of the stores.
+## `crew`: farmers at the field now (-1: count the field's own workers).
+var last_yield: int = 0
+func field_tend(w: float, keep: bool = false, crew: int = -1) -> bool:
 	if is_blighted():
-		if _present().size() < 2:
+		if (crew if crew >= 0 else _present().size()) < 2:
 			return false       # one alone cannot keep up with it: it takes two
 		field_cure += w
 		if field_cure >= FIELD_CURE_WORK:
@@ -959,7 +1063,9 @@ func field_tend(w: float) -> bool:
 			if field_work >= FIELD_HARVEST_WORK:
 				field_work = 0.0
 				var yield_n := roundi(float(job.outputs.get(&"grain", 10)) * lerpf(0.6, 1.2, clampf(field_quality, 0.0, 1.0)))
-				Village.add_store(&"grain", yield_n)
+				last_yield = yield_n
+				if not keep:
+					Village.add_store(&"grain", yield_n)
 				Village.stats["harvests"] = int(Village.stats.get("harvests", 0)) + 1
 				Village.stats["grain_harvested"] = int(Village.stats.get("grain_harvested", 0)) + yield_n
 				Faith.add(HARVEST_FAITH, global_position)     # they thank the hand for the harvest
@@ -1014,6 +1120,7 @@ func rebuild_visual() -> void:
 	visual.name = "Visual"
 	add_child(visual)
 	_on_amount_changed()
+	Workplace.bin_visual(self)
 	_fire_fx = null
 	_update_fire_fx()
 	_update_damage_look()
@@ -1158,11 +1265,19 @@ func save_state() -> Dictionary:
 		"raise_parent": raise_parent,
 		"burn": burn,
 		"damage": damage,
+		"bin": _bin_saved(),
+		"timbers_in": timbers_in,
 		"field": [field_stage, field_grow, field_work, field_cure, field_quality, moisture, blight_t, dry_land, _field_rest] if is_field() else [],
 		"meta": _saved_meta(),
 	}
 
-const SAVED_META: Array[StringName] = [&"raise_r", &"layout_tag", &"evergreen"]
+const SAVED_META: Array[StringName] = [&"raise_r", &"layout_tag", &"evergreen", &"suggested"]
+
+func _bin_saved() -> Dictionary:
+	var b := {}
+	for k in bin:
+		b[str(k)] = bin[k]
+	return b
 
 func _saved_meta() -> Dictionary:
 	var m := {}
@@ -1211,6 +1326,12 @@ func load_state(d: Dictionary) -> void:
 	raise_parent = int(d.get("raise_parent", 0))
 	burn = float(d.get("burn", 0.0))
 	damage = float(d.get("damage", 0.0))
+	bin.clear()
+	var bd: Dictionary = d.get("bin", {})
+	for k in bd:
+		bin[StringName(k)] = int(bd[k])
+	timbers_in = int(d.get("timbers_in", 0))
+	claims.clear()
 	if burn > 0.0:
 		add_to_group(&"burning"); add_to_group(&"hazard")
 	var fd: Array = d.get("field", [])

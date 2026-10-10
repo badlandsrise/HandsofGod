@@ -3,9 +3,15 @@ class_name Progression extends Node
 ##  - discoveries: stone tools after the first knapped stone (+25% gathering,
 ##    felling trees), hide clothes after the first hunts (less cold in winter);
 ##  - family wishes that lay out plots: another hut when homes are full, a food
-##    store before the first winter, a drying rack after the first hunt;
-##  - what Blessing opens: the first festival at the fire circle (+15 faith)
-##    and the great elk hunt in the Valley Floor (only the blessed can win it);
+##    store before the first winter, a drying rack after the first hunt, a
+##    hunting lodge once the Valley Floor is open and the hand can carry a
+##    party, a woodcutters' camp once there are stone tools, and a second fire
+##    circle only when the village has outgrown the first (8+ people);
+##  - the first dream's fire circle is a ring of stones round the fire that is
+##    already burning (ring_the_fire), not a second fire beside it;
+##  - what Blessing opens: the first festival at the fire circle (+15 faith),
+##    and after it the great elk hunt in the Valley Floor (only the blessed can
+##    win it);
 ##  - faith for a night or season survived with no losses (+5);
 ##  - names the hand gives (Events.names_given).
 
@@ -17,6 +23,12 @@ const FESTIVAL_FAITH := 15.0
 const SURVIVED_FAITH := 5.0
 const FESTIVAL_SPOT_OFFSET := Vector3(0, 0, 4.5)
 const ELK_SPOT := Vector2(78.0, -6.0)
+## Era 1 workplaces (doc 4): the hunting lodge by the deer, the woodcutters'
+## camp by the timber of the Valley Floor.
+const LODGE_SPOT := Vector2(52.0, 18.0)
+const WOODCUTTER_SPOT := Vector2(64.0, -22.0)
+const SECOND_FIRE_POP := 8
+const SECOND_FIRE_HUTS := 3
 
 var _acc: float = 0.0
 var _threat_deaths: Dictionary = {}     # threat id -> deaths + bites when it began
@@ -75,7 +87,7 @@ func _on_job_completed(site) -> void:
 			Village.stats["stone_knapped"] = int(Village.stats.get("stone_knapped", 0)) + 1
 		&"hunt":
 			if Flags.set_flag(&"first_hunt"):
-				Flags.remember("Four of us hunted together for the first time, and the hand carried us there.")
+				Flags.remember("Our hunters went out from the lodge together and brought home a deer.")
 		&"festival":
 			if Flags.set_flag(&"festival"):
 				Faith.add(FESTIVAL_FAITH, site.global_position)
@@ -111,6 +123,50 @@ func _family_plots() -> void:
 		var r := _add_plot(&"drying_rack")
 		if r != null:
 			Events.alert.emit("They want a rack to dry the meat for winter", r.global_position)
+	var w = Game.world
+	var valley_open: bool = Village.era == 1 and w != null and is_instance_valid(w) and w.is_region_open(&"valley_floor")
+	if not Village.stats.get("wish_lodge", false) and valley_open and Faith.has(&"grip_2"):
+		Village.stats["wish_lodge"] = true
+		var l := _spawn_plot(&"hunting_lodge", LODGE_SPOT)
+		if l != null:
+			Events.alert.emit("Deer in the Valley Floor. They want a hunting lodge: its hunters go out to the herds on their own", l.global_position)
+	if not Village.stats.get("wish_woodcutter", false) and valley_open and Flags.has(&"stone_tools"):
+		Village.stats["wish_woodcutter"] = true
+		var c := _spawn_plot(&"woodcutter_camp", WOODCUTTER_SPOT)
+		if c != null:
+			Events.alert.emit("With stone axes they want a woodcutters' camp by the trees", c.global_position)
+	if not Village.stats.get("wish_fire_2", false) and Village.era == 1 and Village.population() >= SECOND_FIRE_POP and _count_finished(&"hut") >= SECOND_FIRE_HUTS:
+		Village.stats["wish_fire_2"] = true
+		var f := _add_plot(&"fire_circle")
+		if f != null:
+			Events.alert.emit("So many now that they do not all fit round one fire. They want a second fire circle", f.global_position)
+
+func _spawn_plot(bid: StringName, at: Vector2) -> Site:
+	var w = Game.world
+	if w == null or not is_instance_valid(w) or not w.has_method("spawn_plot"):
+		return null
+	return w.spawn_plot(bid, Vector3(at.x, 0, at.y))
+
+static func _count_finished(bid: StringName) -> int:
+	var n := 0
+	for s in Village.sites:
+		if is_instance_valid(s) and s.is_finished_building(bid):
+			n += 1
+	return n
+
+## The first dream asks for a fire circle: they set stones round the fire that
+## is already burning (the tend_fire site becomes a fire_circle plot and keeps
+## burning while it is built), instead of a second fire beside the first.
+static func ring_the_fire() -> Site:
+	if Village.stats.get("fire_ringed", false):
+		return null
+	var bd: BuildingDef = Defs.building(&"fire_circle")
+	var f := Site.nearest(Vector3(Valley.FIRE.x, Site.ground(Valley.FIRE.x, Valley.FIRE.y), Valley.FIRE.y), 4.0, func(s): return s.is_fire() and s.building == null)
+	if bd == null or f == null:
+		return null
+	Village.stats["fire_ringed"] = true
+	f.ring_fire(bd)
+	return f
 
 func _dreaming_started() -> bool:
 	return Dreams.done_list().size() > 0 or str(Village.stats.get("dream_active", "")) != ""
@@ -167,7 +223,7 @@ func _blessing_sites() -> void:
 			var s: Site = w.spawn_site(&"festival", circle.global_position + FESTIVAL_SPOT_OFFSET)
 			if s != null:
 				Events.alert.emit("They want to dance at the fire. Bless the dancers with the hand", s.global_position)
-	if not Flags.has(&"great_elk") and not Village.stats.get("elk_site", false) and w.is_region_open(&"valley_floor"):
+	if Flags.has(&"festival") and not Flags.has(&"great_elk") and not Village.stats.get("elk_site", false) and w.is_region_open(&"valley_floor"):
 		Village.stats["elk_site"] = true
 		var e: Site = w.spawn_site(&"great_elk_hunt", Vector3(ELK_SPOT.x, 0, ELK_SPOT.y))
 		if e != null:

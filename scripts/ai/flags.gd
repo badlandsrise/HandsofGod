@@ -47,11 +47,11 @@ static func onboarding_done() -> bool:
 
 ## Difficulty (Game.options["difficulty"]: gentle / normal / harsh) as a
 ## multiplier: &"cold" (warmth lost), &"wolves" (chance of a pack and of a
-## cold snap), &"food" (how fast people get hungry).
+## cold snap), &"food" and &"water" (how fast people get hungry and thirsty).
 const DIFFICULTY := {
-	"gentle": {&"cold": 0.7, &"wolves": 0.5, &"food": 0.8},
-	"normal": {&"cold": 1.0, &"wolves": 1.0, &"food": 1.0},
-	"harsh": {&"cold": 1.35, &"wolves": 1.5, &"food": 1.2},
+	"gentle": {&"cold": 0.7, &"wolves": 0.5, &"food": 0.7, &"water": 0.75},
+	"normal": {&"cold": 1.0, &"wolves": 1.0, &"food": 1.0, &"water": 1.0},
+	"harsh": {&"cold": 1.35, &"wolves": 1.5, &"food": 1.2, &"water": 1.15},
 }
 
 static func difficulty() -> String:

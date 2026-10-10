@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="JobDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/defs/job_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"work_lodge"
+title = "Hunt from the lodge"
+era = 1
+kind = 8
+anim = &"spear_ready"
+skill = &"gathering"
+max_people = 4
+outputs = {&"meat": 1, &"hide": 1}
+work_time = 1.0
+needs_power = &"grip_2"

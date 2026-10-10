@@ -157,10 +157,27 @@ func _economy() -> void:
 	e2._discoveries()
 	check(Flags.has(&"pottery") and Village.store_cap == cap2 + VillageEra2.POTTERY_CAP, "pottery: the pots keep more")
 	check(Flags.has(&"woven_clothes") and Flags.has(&"bronze_tools"), "woven clothes and bronze tools are discovered")
-	# family wishes
+	# suggestions: one plot at a time (a calmer Era 2)
 	Village.stats["era_started_t"] = Clock.total_t - 700.0
-	e2._wishes()
-	check(_sites(&"well").size() == 1 and _sites(&"mill").size() == 1 and _sites(&"sheep_pen").size() == 1, "the village wishes for a well, a mill and a sheep pen as it grows")
+	Village.stats.erase("suggest_t")
+	var fields0 := _sites(&"field").size()
+	var s1: Site = e2._suggest()
+	check(s1 != null and s1.has_meta(&"suggested") and s1.is_plot(), "the village suggests a plot")
+	Village.stats["suggest_t"] = Clock.total_t - VillageEra2.SUGGEST_GAP - 1.0
+	check(e2._suggest() == null, "one suggestion at a time: the next waits while this one waits for its materials")
+	var laid: Array = [s1]
+	for i in 12:
+		for s in laid:
+			if is_instance_valid(s):
+				s.set_meta(&"suggested", Clock.total_t - VillageEra2.SUGGEST_HOLD - 1.0)
+		Village.stats["suggest_t"] = Clock.total_t - VillageEra2.SUGGEST_GAP - 1.0
+		var n: Site = e2._suggest()
+		if n == null:
+			break
+		laid.append(n)
+	check(laid.size() >= 4, "and the next come one by one (%d)" % laid.size())
+	check(_sites(&"farmhouse").size() == 1 and _sites(&"well").size() == 1 and _sites(&"mill").size() == 1 and _sites(&"sheep_pen").size() == 1, "a farmhouse, a well, a mill and a sheep pen as it grows")
+	check(_sites(&"field").size() == fields0, "no loose field wishes: the farmhouse lays its own fields")
 	await get_tree().process_frame
 
 # ---------------------------------------------------------------- raising
@@ -188,16 +205,44 @@ func _raising() -> void:
 # ---------------------------------------------------------------- regions
 
 func _regions() -> void:
-	check(not Faith.can_buy(&"reach"), "Reach waits until they long for the far bank")
+	check(Defs.power(&"reach") == null and not Faith.can_buy(&"strong_arms"), "Strong Arms (it replaced Reach) waits until they long for the far bank")
 	var e2: VillageEra2 = w.village_ai.era2
 	Village.stats["era_started_t"] = Clock.total_t - VillageEra2.FAR_BANK_AFTER - 10.0
 	e2._far_bank()
 	Faith.total = 2000.0
-	check(Flags.has(&"far_bank_seen") and Faith.can_buy(&"reach"), "then the hand can learn Reach")
+	check(Flags.has(&"far_bank_seen") and Faith.can_buy(&"strong_arms"), "then the hand can learn Strong Arms")
 	var joined_before := int(Village.stats.get("joined", 0))
-	Faith.buy(&"reach")
+	var tm0: Array = e2.timbers()
+	check(tm0.is_empty(), "no timbers before Strong Arms")
+	Faith.buy(&"strong_arms")
 	await get_tree().process_frame
-	check(w.is_region_open(&"east_bank"), "Reach opens the East Bank")
+	var fbs := _sites(&"footbridge")
+	check(fbs.size() == 1 and fbs[0].wants_timber() and Faith.strength >= Timber.WEIGHT, "Strong Arms lays the footbridge plot, and the hand can lift a timber")
+	var fb: Site = fbs[0]
+	check(Vector2(fb.global_position.x, fb.global_position.z).distance_to(VillageEra2.FOOTBRIDGE) < 0.5 and w.is_water(fb.global_position) and w.region_at(fb.global_position + Vector3(0, 0, 10)) == &"east_bank", "it spans the shallows to the East Bank")
+	check(e2.timbers().size() == 2, "two timbers lie by the bridge yard")
+	check(not w.is_region_open(&"east_bank"), "the East Bank waits for the bridge")
+	for k in fb.building.cost:
+		fb.deliver(k, int(fb.building.cost[k]))
+	check(fb.state == Site.State.PLOT and fb.raise_site() == null, "wood alone is not enough: it waits for its timbers")
+	var t0: Timber = e2.timbers()[0]
+	t0.on_lifted()
+	t0.on_placed(fb.global_position + Vector3(30, 0, -20))
+	check(fb.timbers_in == 0 and not (Village.stats["timbers"][t0.key] as Array).is_empty(), "a timber set down far off stays where it lies")
+	for t in e2.timbers():
+		t.on_lifted()
+		t.on_placed(fb.global_position + Vector3(0, 0, -6))
+	await get_tree().process_frame
+	check(fb.timbers_in == 2 and e2.timbers().is_empty() and int(Village.stats.get("timbers_set", 0)) == 2, "the hand sets both timbers on the plot")
+	var fr: Site = fb.raise_site()
+	check(fr != null and fr.job.id == &"footbridge_raising" and fr.job.min_people == 3 and not w.is_water(fr.global_position), "a crew of three raises it, from the near bank")
+	check(fr != null and fr.global_position.z < fb.global_position.z, "the crew gathers on the village side")
+	fr._complete_group([])
+	await get_tree().process_frame
+	check(fb.state == Site.State.FINISHED and Flags.has(&"footbridge"), "the footbridge is raised")
+	check(w.is_region_open(&"east_bank"), "the footbridge opens the East Bank")
+	if w.has_method("add_crossing") or ("drops" in w and w.drops != null):
+		check(not ("drops" in w) or w.drops == null or w.drops.accessible(&"east_bank"), "the hand may set people down across the footbridge")
 	check(_sites(&"camp").size() == 1 and _sites(&"camp")[0].is_store() and _sites(&"camp")[0].is_shelter(), "a camp on the far bank: a store and a shelter")
 	check(_jobs(&"dig_clay").size() == 2 and _jobs(&"mine_ore").size() == 2, "clay pits and copper ore on the East Bank")
 	check(int(Village.stats.get("joined", 0)) == joined_before + 3, "three wanderers come in on the East Bank")
@@ -249,16 +294,12 @@ func _threats() -> void:
 	t._start()
 	check(f.is_blighted() and f.field_want() == &"cure", "the field turns black")
 	check(not f.field_tend(100.0) and f.field_cure == 0.0, "nobody there: no one fights it")
-	var two := Village.alive().filter(func(p): return p.stage == Person.Stage.ADULT).slice(0, 2)
-	for p in two:
-		p.join(f, false)
-		p.global_position = f.slot_position(f.slot_of(p))
-	f.field_tend(100.0)
-	check(not f.is_blighted() and int(Village.stats.get("blights_cured", 0)) == 1, "two people at once save the field")
+	check(not f.can_accept(1), "the hand cannot set people on a field: the farmhouse crew works it")
+	check(not f.field_tend(100.0, true, 1) and f.is_blighted(), "one farmer alone cannot fight it")
+	f.field_tend(100.0, true, 2)
+	check(not f.is_blighted() and int(Village.stats.get("blights_cured", 0)) == 1, "two farmers at once save the field")
 	t._tick(1.0)
 	check(not t.active(), "and the threat ends")
-	for p in two:
-		p.go_idle()
 	# flood: low fields lose their crop, grain rots without a granary (there is one)
 	Village.add_store(&"grain", 20)
 	var g := Village.store(&"grain")
