@@ -5,9 +5,12 @@
 [resource]
 script = ExtResource("1_def")
 id = &"mill_grain"
-title = "Mill grain"
+title = "Mill grain into flour"
 era = 2
 kind = 1
 skill = &"crafting"
 min_people = 1
-max_people = 1
+max_people = 2
+inputs = {&"grain": 2}
+outputs = {&"flour": 2}
+work_time = 8.0

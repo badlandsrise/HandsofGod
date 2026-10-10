@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="BuildingDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/defs/building_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"watchtower"
+title = "Watchtower"
+era = 2
+footprint = Vector2(3.6, 3.6)
+cost = {&"wood": 8, &"stone": 2}
+build_work = 26.0
+build_slots = 2
+jobs = Array[StringName]([&"keep_watch"])
+weight = 40.0

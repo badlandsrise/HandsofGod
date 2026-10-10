@@ -6,8 +6,10 @@ class_name EraTransition extends Node
 ##      the era_complete stinger and moves to the next era's music);
 ##   4. Events.era_complete_shown(old_era) asks the UI for the "Era N complete"
 ##      card; its numbers are in Village.stats["era_summary"][str(old_era)].
-## M2: Era 2 is a placeholder (EraDef.playable = false), so play continues in
-## free mode with no new dreams.
+## Each new era opens in spring (the time-lapse runs on through the rest of
+## the year; a winter it skips counts as lived through). Entering Era 2 the
+## families rebuild their huts as cottages where they stand (doc 5, CORE).
+## An era without content (EraDef.playable = false) is free play with no dreams.
 
 signal finished(era: int)
 
@@ -25,6 +27,12 @@ func _ready() -> void:
 	name = "EraTransition"
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	Events.dream_done.connect(_on_dream_done)
+	_resume.call_deferred()
+
+## A save made during the transition: carry on from where it was.
+func _resume() -> void:
+	if int(Village.stats.get("era_gate_done", 0)) == Village.era and Defs.era(Village.era + 1) != null and not running:
+		begin(Village.era)
 
 func _on_dream_done(id: StringName) -> void:
 	var d := Defs.dream(id)
@@ -55,6 +63,8 @@ static func summary(era: int) -> Dictionary:
 	return s
 
 func begin(era: int) -> void:
+	if running:
+		return
 	running = true
 	from_era = era
 	_t = 0.0
@@ -107,6 +117,45 @@ static func enter_era(next: int) -> bool:
 	Village.era = next
 	Village.stats["era_started_t"] = Clock.total_t
 	Village.stats["free_mode"] = not Defs.era(next).playable
+	Village.stats["era_started_winters"] = int(Village.stats.get("winters_survived", 0))
 	Clock.apply_era(Defs.era(next))
+	EraTransition.turn_to_spring()
+	if next == 2:
+		EraTransition.huts_to_cottages()
 	Events.era_changed.emit(next)
 	return true
+
+## Runs the clock's seasons on to the next spring (season events fire, so a
+## skipped winter is counted). Day and total time are left alone.
+static func turn_to_spring() -> void:
+	var guard := 0
+	while Clock.season != Clock.Season.SPRING and guard < 4:
+		guard += 1
+		Clock.season = (Clock.season + 1) % 4
+		if Clock.season == Clock.Season.SPRING:
+			Clock.year += 1
+		Clock.season_t = 0.0
+		Events.season_changed.emit(Clock.season)
+	Clock.season_t = minf(Clock.season_t, 1.0)
+
+## Every finished hut becomes a cottage in place: same family, more room.
+static func huts_to_cottages() -> int:
+	var cottage := Defs.building(&"cottage")
+	if cottage == null:
+		return 0
+	var n := 0
+	for s in Village.sites.duplicate():
+		if not is_instance_valid(s) or s.building == null or s.building.id != &"hut" or s.state != Site.State.FINISHED:
+			continue
+		s.building = cottage
+		s.build_done = cottage.build_work
+		s.delivered = cottage.cost.duplicate()
+		s.rebuild_visual()
+		n += 1
+		var w = Game.world
+		if w != null and is_instance_valid(w) and w.has_method("_on_building_finished"):
+			w._on_building_finished(s)
+	Village.stats["cottages_from_huts"] = n
+	if n > 0:
+		Flags.remember("We rebuilt our huts as cottages, with stone footings and room for a family")
+	return n

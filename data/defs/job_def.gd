@@ -18,6 +18,8 @@ enum Kind { GATHER, CRAFT, BUILD, GROUP, TEND, HAUL, LEAD, DEVOTION }
 @export var node_amount: int = -1                # GATHER: units before depleted (-1 = infinite)
 @export var regrow_time: float = 0.0             # GATHER: seconds to regrow one unit (0 = never)
 @export var winter_stops: bool = false
+@export var only_season: int = -1               # only in this Clock.Season (-1 = any): the bridge piers go in when the river runs low, in winter
+@export var season_note: String = ""            # said when the work is ready but out of season
 @export var needs_power: StringName = &""        # job only available once this power is unlocked
 @export var needs_discovery: StringName = &""     # a Village.stats["flags"] entry (e.g. &"stone_tools")
 @export var needs_blessed: bool = false          # GROUP: only blessed workers make progress (the great elk hunt)

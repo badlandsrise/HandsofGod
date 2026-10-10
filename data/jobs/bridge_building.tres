@@ -5,9 +5,15 @@
 [resource]
 script = ExtResource("1_def")
 id = &"bridge_building"
-title = "Build the bridge"
+title = "Raise the bridge"
 era = 2
 kind = 3
 skill = &"building"
 min_people = 6
 max_people = 6
+work_time = 40.0
+node_amount = 1
+wait_before_wander = 25.0
+only_season = 3
+season_note = "The bridge timbers are ready. The piers can only go in when the river runs low, in winter."
+

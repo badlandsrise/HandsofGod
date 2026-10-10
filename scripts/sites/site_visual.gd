@@ -5,7 +5,9 @@ class_name SiteVisual extends Node3D
 ## Slot pips and hover rings are drawn by the hand.
 
 ## BuildingDef id -> catalog id, when the names differ.
-const BUILDING_ART := {&"granary": &"food_store", &"cottage": &"era2_cottage", &"temple": &"shrine"}
+const BUILDING_ART := {&"camp": &"era2_shed", &"market": &"market_stall"}
+## Moving parts in the Era 2 kit (scripts/assets/spinner.gd) turn while someone works.
+const SPINNERS: Array[StringName] = [&"Sails", &"Wheel", &"Windlass"]
 
 var site: Site = null
 var _fill_nodes: Array[Node3D] = []   # berries, sticks, deer: shown in proportion to amount
@@ -14,6 +16,10 @@ var _rising: Node3D = null            # building model that grows with build pro
 var _rising_s := 1.0                  # the rising model's fitted scale
 var _rising_from := 0.15              # height fraction at progress 0
 var _hut_stage := -1                  # huts: 0 plot, 1 frame, 2 walls rising
+var _spinners: Array[Node] = []       # spinner nodes (mill sails, potter's wheel, well windlass)
+var _spin_t := 0.0
+var _staged := false                  # the building has <id>_plot / <id>_frame art (Era 2 kit)
+var _symbol: Node3D = null            # the painted hand, once the people love the hand
 
 static func make(s: Site) -> SiteVisual:
 	var v := SiteVisual.new()
@@ -24,11 +30,19 @@ static func make(s: Site) -> SiteVisual:
 		return v
 	if s.is_plot():
 		v._plot(s, seed_v)
+	elif s.is_field():
+		v._field(s)
 	elif s.building != null:
 		v._building(s.building.id, s.building.footprint, seed_v)
+		if s.building.era >= 2:
+			v._hand_symbol(s)
 	elif s.job != null:
 		v._job(s.job.id, seed_v)
 	v.rotation.y = 0.0
+	for n in v.find_children("*", "", true, false):
+		if SPINNERS.has(StringName(n.name)) and "spinning" in n:
+			v._spinners.append(n)
+			n.set("spinning", false)
 	return v
 
 func set_fill(f: float) -> void:
@@ -37,15 +51,28 @@ func set_fill(f: float) -> void:
 		if is_instance_valid(_fill_nodes[i]):
 			_fill_nodes[i].visible = float(i) < f * float(n) - 0.01
 
-func _process(_dt: float) -> void:
+func _process(dt: float) -> void:
 	if site == null or not is_instance_valid(site):
 		return
+	if not _spinners.is_empty():
+		_spin_t -= dt
+		if _spin_t <= 0.0:
+			_spin_t = 0.5
+			var on := site.busy()
+			for n in _spinners:
+				if is_instance_valid(n):
+					n.set("spinning", on)
+	if _symbol != null and not _symbol.visible and Trust.village_loves_hand():
+		_symbol.visible = true
 	if _flame != null:
 		var on := site.lit()
 		if _flame.visible != on:
 			_flame.set("burning", on)
 	if _hut_stage == 1 and site.state == Site.State.BUILDING and site.build_progress() >= HUT_WALLS_AT:
 		site.rebuild_visual.call_deferred()      # the frame gets its walls and roof
+		_hut_stage = 2
+	if _staged and _hut_stage == 1 and site.state == Site.State.BUILDING and site.build_progress() >= HUT_WALLS_AT and not site.awaiting_raise():
+		site.rebuild_visual.call_deferred()
 		_hut_stage = 2
 	if _rising != null and site.state == Site.State.BUILDING:
 		var p := site.build_progress()
@@ -147,6 +174,39 @@ func _job(id: StringName, seed_v: int) -> void:
 			for i in 8:
 				var a := TAU * i / 8.0
 				_art(&"flowers", i + seed_v, Vector3(cos(a), 0, sin(a)) * 2.3, rng.randf() * TAU, 0.9)
+		&"harvest_festival":
+			# sheaves in a ring, a haystack and flowers: the harvest home
+			for i in 6:
+				var a := TAU * i / 6.0
+				_art(&"sheaves", i, Vector3(cos(a), 0, sin(a)) * 3.2, -a)
+				_art(&"flowers", i + seed_v, Vector3(cos(a + 0.5), 0, sin(a + 0.5)) * 3.6, rng.randf() * TAU, 0.8)
+			_art(&"haystack", 0, Vector3(0, 0, -0.5), 0.3, 0.7)
+		&"dig_clay":
+			_art(&"clay_pit", seed_v, Vector3.ZERO, rng.randf() * TAU)
+			_art(&"tool_shovel", 0, Vector3(1.9, 0.0, 1.2), 0.8)
+		&"mine_ore":
+			_art(&"copper_ore", seed_v, Vector3.ZERO, rng.randf() * TAU, 1.2)
+			_art(&"tool_pickaxe_bronze", 0, Vector3(1.4, 0.0, 0.9), 0.4)
+		&"quarry_stone":
+			# a ledge of cut stone on the quarry face
+			_art(&"rock_large" if AssetCatalog.has(&"rock_large") else &"rock_small", seed_v, Vector3(0, 0, -1.2), rng.randf() * TAU, 1.6)
+			_art(&"rock_small", seed_v + 1, Vector3(1.2, 0, 0.6), rng.randf() * TAU, 1.3)
+			_art(&"tool_pickaxe_bronze", 0, Vector3(-1.0, 0.0, 0.8), 1.2)
+		&"raft_launch":
+			_art(&"raft_frame", 0, Vector3.ZERO, 0.0)
+		&"fish_boat":
+			var wl := 0.0
+			var w = Game.world
+			if w != null and is_instance_valid(w) and w.get("valley") != null:
+				var sp := site.global_position + Vector3(0, 0, 5.0)
+				wl = w.valley.water_level(sp.x, sp.z)
+				wl = (wl - site.global_position.y) if wl > -INF else -0.4
+			_art(&"raft", 0, Vector3(0, wl - 0.1, 5.0), 0.2, 0.8)
+			_art(&"rowboat", 0, Vector3(2.2, wl - 0.1, 6.5), -0.3)
+			_art(&"barrels", 0, Vector3(-1.2, 0, 0.6), 0.5, 0.7)
+		&"temple_raising", &"bridge_building", &"barn_raising":
+			# coils of rope and a ladder's worth of timber for the crew
+			_art(&"planks_pile", 0, Vector3(0, 0, 0), 0.4, 0.6)
 		_:
 			_art(&"rock_small", seed_v)
 
@@ -168,6 +228,15 @@ func _plot(s: Site, seed_v: int) -> void:
 	var span := maxf(fp.x, fp.y)
 	var bid := s.building.id
 	var id := _art_id(bid)
+	if bid == &"field":
+		# clearing the ground for a new field: stubble and stakes
+		_art(&"field_stubble", 0, Vector3.ZERO, 0.0, 1.0)
+		_ghost(_art(&"field_tilled", 0, Vector3(0, 0.02, 0), 0.0, 1.0))
+		return
+	if id != &"" and AssetCatalog.has(StringName(str(id) + "_plot")):
+		_staged_plot(s, id, seed_v)
+		_material_piles(s, span)
+		return
 	var is_hut := bid == &"hut"
 	var ks := 1.0 if is_hut else maxf(span / 3.9, 0.8)
 	if s.state == Site.State.PLOT:
@@ -192,19 +261,74 @@ func _plot(s: Site, seed_v: int) -> void:
 			_rising_s = _fit(id, fp)
 			_rising = _art(id, seed_v, Vector3.ZERO, 0.0, _rising_s)
 			_rising.scale.y = _rising_s * lerpf(_rising_from, 1.0, s.build_progress())
+	_material_piles(s, span)
+
+## Era 2 kit buildings: <id>_plot (pegged out, materials stacked), then
+## <id>_frame (timber frame, scaffold), then the building rising out of it.
+func _staged_plot(s: Site, id: StringName, seed_v: int) -> void:
+	_staged = true
+	var plot_id := StringName(str(id) + "_plot")
+	var frame_id := StringName(str(id) + "_frame")
+	if s.state == Site.State.PLOT:
+		_hut_stage = 0
+		_art(plot_id, 0)
+		_ghost(_art(id, seed_v))
+	elif s.awaiting_raise() or s.build_progress() < HUT_WALLS_AT or not AssetCatalog.has(id):
+		_hut_stage = 1
+		_art(frame_id if AssetCatalog.has(frame_id) else plot_id, 0)
+	else:
+		_hut_stage = 2
+		_art(plot_id, 0)
+		_rising_s = 1.0
+		_rising_from = 0.55
+		_rising = _art(id, seed_v)
+		_rising.scale.y = _rising_from
+
+func _material_piles(s: Site, span: float) -> void:
 	# Material piles grow as builders deliver.
 	var i := 0
 	for k in s.building.cost:
 		var got := int(s.delivered.get(k, 0))
 		var need := maxi(int(s.building.cost[k]), 1)
-		if got > 0:
+		if got > 0 and s.state == Site.State.PLOT:
 			var f := clampf(float(got) / float(need), 0.15, 1.0)
 			var at := Vector3(span * 0.5 + 0.8, 0, -span * 0.25 + i * 1.6)
+			var pile: StringName = PILE_ART.get(k, &"rock_small")
 			if k == &"wood":
 				_art(&"firewood_pile", 0, at, 0.3, lerpf(0.45, 0.9, f))
+			elif pile != &"rock_small" and AssetCatalog.has(pile):
+				_art(pile, 0, at, 0.3, lerpf(0.6, 1.0, f))
 			else:
 				_art(&"rock_small", i, at, 0.0, lerpf(0.8, 1.6, f))
 		i += 1
+
+## A pile for each building material as it is delivered.
+const PILE_ART := {&"clay": &"clay_pile", &"pots": &"pots", &"cloth": &"cloth_bolts", &"bronze": &"bronze_ingots",
+	&"blocks": &"rock_small", &"grain": &"grain_sacks"}
+
+## Field art by crop stage: tilled, sprouts, growing, ripe, stubble; blighted
+## and parched when the threats land.
+func _field(s: Site) -> void:
+	var id := StringName("field_" + str(Site.Field.keys()[clampi(s.field_stage, 0, 4)]).to_lower())
+	if s.is_blighted():
+		id = &"field_blighted"
+	elif s.field_stage in [Site.Field.SPROUTS, Site.Field.GROWING] and s.moisture < 0.15:
+		id = &"field_parched"
+	_art(id if AssetCatalog.has(id) else &"field", 0)
+	if s.field_stage == Site.Field.RIPE:
+		_art(&"scarecrow", 0, Vector3(3.2, 0, -2.2), 0.6)
+
+## The painted hand (doc 7: the hand symbol, Era 2 "painted on pots and on the
+## temple doors"): once the village loves the hand, its buildings carry the
+## sign above their doors.
+func _hand_symbol(s: Site) -> void:
+	if s.building == null or s.building.camp or s.building.id == &"temple" or s.building.id == &"field":
+		return
+	var fp := s.building.footprint
+	_symbol = HandSymbol.make(0.55)
+	_symbol.position = Vector3(0, minf(2.6, 1.0 + fp.y * 0.25), fp.y * 0.5 + 0.06)
+	_symbol.visible = Trust.village_loves_hand()
+	add_child(_symbol)
 
 ## A see-through preview of the building to come, so a plot never reads as a blob.
 func _ghost(n: Node3D) -> void:
@@ -230,6 +354,23 @@ func _fit(id: StringName, fp: Vector2) -> float:
 
 func _building(bid: StringName, fp: Vector2, seed_v: int) -> void:
 	match bid:
+		&"market":
+			for i in 3:
+				_art(&"market_stall", i, Vector3((i - 1) * 2.7, 0, -0.4 if i == 1 else 0.6), (i - 1) * -0.25)
+			_art(&"barrels", 0, Vector3(3.4, 0, 1.8), 0.4, 0.8)
+			_art(&"pots", 0, Vector3(-3.3, 0, 1.9), 0.0, 0.9)
+			return
+		&"sheep_pen":
+			_art(&"sheep_pen", seed_v)
+			for i in 4:
+				_fill_nodes.append(_art(&"sheep", i, Vector3((i % 2) * 2.4 - 1.2, 0, (i / 2) * 2.0 - 1.0), i * 1.3, 0.9))
+			return
+		&"camp":
+			_art(&"era2_shed", seed_v)
+			_art(&"campfire", 0, Vector3(2.6, 0, 1.6), 0.0, 0.8)
+			_art(&"barrels", 0, Vector3(-2.2, 0, 1.2), 0.3, 0.7)
+			_art(&"era2_crate", 0, Vector3(-2.4, 0, -0.4), 0.2)
+			return
 		&"fire_circle":
 			var fire := _art(&"campfire", 0, Vector3.ZERO, 0.0, 1.4)
 			_flame = fire.find_child("Fire", true, false) as Node3D

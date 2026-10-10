@@ -5,9 +5,12 @@
 [resource]
 script = ExtResource("1_def")
 id = &"reach"
-title = "Reach"
 era = 2
+title = "Reach"
 cost = 80.0
+requires = Array[StringName]([&"grip_2"])
 opens_region = &"east_bank"
+requires_flags = Array[StringName]([&"far_bank_seen"])
+flag_hint = "When they long for the far bank"
 what_it_does = "Place people across the great river"
-what_it_opens = "The east bank (clay, ore) before the bridge exists"
+what_it_opens = "The East Bank: clay, copper ore, fish and bears, before there is a bridge"

@@ -9,6 +9,7 @@ const COLD_ID := &"cold_snap"
 const WINTER_ID := &"first_winter"
 
 var wolves: Wolves
+var era2: Era2Threats
 var cold_warned: bool = false
 var cold_active: bool = false
 var cold_warn_t: float = -1.0
@@ -19,6 +20,8 @@ func _ready() -> void:
 	name = "Threats"
 	wolves = Wolves.new()
 	add_child(wolves)
+	era2 = Era2Threats.new()
+	add_child(era2)
 	Events.day_started.connect(_on_dawn)
 	Events.night_started.connect(_on_night)
 	Events.season_changed.connect(_on_season)
@@ -34,7 +37,11 @@ func quiet() -> bool:
 	return Clock.total_t < float(Village.stats.get("quiet_until", -1.0))
 
 func major_active() -> bool:
-	return wolves.active or wolves.warned or cold_active or cold_warned
+	return wolves.active or wolves.warned or cold_active or cold_warned or era2.active()
+
+## The Era 2 drought is on (fields dry three times as fast).
+func drought_active() -> bool:
+	return era2.drought_active()
 
 func cold() -> bool:
 	return cold_active
@@ -48,7 +55,7 @@ func _process(delta: float) -> void:
 	if not Clock.is_night and not wolves.warned and Clock.phase_t >= Clock.day_seconds - warn_s and Village.era <= 2:
 		var min_pop := wd.min_population if wd else 3
 		var chance := (wd.chance_per_day if wd else 0.55) * Flags.diff_k(&"wolves")
-		if Village.population() >= min_pop and not cold_active and not cold_warned and not quiet():
+		if Village.population() >= min_pop and not cold_active and not cold_warned and not era2.active() and not quiet():
 			# the hunt for the dusk roll happens once per day
 			if not has_meta("rolled_day") or int(get_meta("rolled_day")) != Clock.day:
 				set_meta("rolled_day", Clock.day)
@@ -122,6 +129,7 @@ func _fire() -> Vector3:
 
 func reset() -> void:
 	wolves.clear_all()
+	era2.reset()
 	cold_active = false
 	cold_warned = false
 	_set_frost(0.0)
@@ -129,11 +137,12 @@ func reset() -> void:
 		remove_meta("rolled_day")
 
 func save_state() -> Dictionary:
-	return {"cold_active": cold_active, "winter_warned_year": winter_warned_year}
+	return {"cold_active": cold_active, "winter_warned_year": winter_warned_year, "era2": era2.save_state()}
 
 func load_state(d: Dictionary) -> void:
 	reset()
 	cold_active = d.get("cold_active", false)
 	winter_warned_year = d.get("winter_warned_year", 0)
+	era2.load_state(d.get("era2", {}))
 	if cold_active:
 		_set_frost(0.6)

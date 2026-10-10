@@ -4,10 +4,12 @@
 
 [resource]
 script = ExtResource("1_def")
-id = &"sow_field"
-title = "Sow a field"
+id = &"draw_water"
+title = "Draw water from the well"
 era = 2
-kind = 4
-skill = &"farming"
+kind = 0
+skill = &"gathering"
 min_people = 1
 max_people = 2
+outputs = {&"water": 1}
+work_time = 3.5

@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="JobDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/defs/job_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"forge_tools"
+title = "Forge bronze tools"
+era = 2
+kind = 1
+skill = &"metalwork"
+min_people = 1
+max_people = 2
+inputs = {&"bronze": 1, &"charcoal": 1}
+outputs = {&"tools": 1}
+work_time = 14.0

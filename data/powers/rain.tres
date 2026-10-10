@@ -5,10 +5,13 @@
 [resource]
 script = ExtResource("1_def")
 id = &"rain"
-title = "Rain"
 era = 2
+title = "Rain"
 cost = 100.0
 gesture = true
+requires = Array[StringName]([&"reach"])
+requires_dreams = Array[StringName]([&"granary"])
+min_population = 22
 opens_region = &"southern_plains"
-what_it_does = "Hold over fields to water them"
-what_it_opens = "The dry southern plains become farmland"
+what_it_does = "Hold E over a field to rain on it"
+what_it_opens = "The dry Southern Plains become farmland; the answer to a drought"

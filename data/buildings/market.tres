@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="BuildingDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/defs/building_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"market"
+title = "Market"
+era = 2
+footprint = Vector2(8.0, 6.0)
+cost = {&"wood": 10, &"cloth": 3, &"pots": 3}
+build_work = 30.0
+build_slots = 3
+jobs = Array[StringName]([&"keep_market"])
+joy_radius = 18.0
+weight = 40.0

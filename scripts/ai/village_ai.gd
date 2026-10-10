@@ -13,6 +13,7 @@ var gifts: Gifts
 var progression: Progression
 var hand_powers: HandPowers
 var era_transition: EraTransition
+var era2: VillageEra2
 var _last_season: int = -1
 
 func _ready() -> void:
@@ -25,10 +26,13 @@ func _ready() -> void:
 	progression = Progression.new(); add_child(progression)
 	hand_powers = HandPowers.new(); add_child(hand_powers)
 	era_transition = EraTransition.new(); add_child(era_transition)
+	era2 = VillageEra2.new(); add_child(era2)
 	_last_season = Clock.season
 	Events.season_changed.connect(_on_season)
 
 func _on_season(s: int) -> void:
+	if not is_inside_tree():
+		return          # an old game's AI, removed and waiting to be freed
 	if _last_season == Clock.Season.WINTER and s == Clock.Season.SPRING:
 		Village.stats["winters_survived"] = int(Village.stats.get("winters_survived", 0)) + 1
 		Flags.remember("We lived through winter number %d." % int(Village.stats["winters_survived"]))

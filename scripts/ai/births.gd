@@ -82,7 +82,8 @@ static func _siblings(a: Person, b: Person) -> bool:
 ## Population cap for births: a little above the era's band.
 static func cap() -> int:
 	var e := Defs.era(Village.era)
-	return int(e.population_band.y * 1.25) if e else 30
+	# the top of the era's band: newcomers and the next era's homes carry it on
+	return e.population_band.y if e else 30
 
 ## A bonded pair lives here.
 static func _has_family(hut: Site) -> bool:
@@ -193,7 +194,7 @@ static func have_child(a: Person, b: Person) -> Person:
 
 ## Gives homeless people a hut with room. Partners share; babies live with a parent.
 static func assign_homes() -> void:
-	var huts: Array = Village.sites.filter(func(s): return is_instance_valid(s) and s.is_shelter())
+	var huts: Array = Village.sites.filter(func(s): return is_instance_valid(s) and s.is_shelter() and not s.building.camp)
 	if huts.is_empty():
 		return
 	# Families first: single adults give up their places, a bonded pair moves

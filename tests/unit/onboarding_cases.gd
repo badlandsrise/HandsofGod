@@ -129,7 +129,7 @@ func _rules() -> void:
 	# Dreams: winters and flags
 	var sc := Defs.dream(&"stone_circle")
 	check(sc.gate and sc.needs_population == 12 and Dreams.winters_needed(sc) == 2 and sc.needs_flags.has(&"festival"), "the Stone Circle gate needs 12 people, two winters and the festival")
-	check(Defs.era(1).dreams.size() == 3 and not Defs.era(2).playable, "three Era 1 milestones; Era 2 is a placeholder")
+	check(Defs.era(1).dreams.size() == 3 and Defs.era(2).playable and Defs.era(2).dreams.size() == 3, "three Era 1 milestones, three Era 2 dreams")
 	# The evergreen safety net only works in a crisis
 	var ever: Site = null
 	for s in Village.sites:
@@ -205,10 +205,11 @@ func _rules() -> void:
 	Dreams.complete(sc)
 	check(Village.era == 1 and w.village_ai.era_transition.running, "the gate starts the era transition, still in Era 1")
 	check(await _until(func(): return not shown.is_empty(), 15.0), "the transition ends with era_complete_shown")
-	check(Village.era == 2 and shown == [1] and Village.stats.get("free_mode", false), "then Village.era is 2, in free mode")
+	check(Village.era == 2 and shown == [1] and not Village.stats.get("free_mode", false), "then Village.era is 2, and it is playable")
+	check(Clock.season == Clock.Season.SPRING, "Era 2 opens in spring")
 	var summ: Dictionary = (Village.stats.get("era_summary", {}) as Dictionary).get("1", {})
 	check(summ.has("population") and summ.has("faith_earned") and summ.has("minutes"), "the Era 1 card has its numbers")
-	check(Dreams.active_dream() == null, "no dreams in the placeholder Era 2")
+	check(Dreams.active_dream() != null and Dreams.active_dream().id == &"granary", "the first Era 2 dream is the granary")
 	var changes: Array = []
 	Events.era_changed.connect(func(e): changes.append(e))
 	w.begin_era(2)

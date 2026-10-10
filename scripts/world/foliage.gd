@@ -29,6 +29,9 @@ var rock_points: Array = []          # [Vector3, radius] big rocks and logs, for
 var contact_points: Array = []       # [Vector3, radius, 0] small things that shade the ground (ground mask)
 var counts: Dictionary = {}          # id -> instances placed (for tests and tuning)
 var _keep_out: Array = []            # [Vector2 centre, radius] clear zones (sites, cave, gaps)
+var _ko_grid: Dictionary = {}        # Vector2i cell (KO_CELL m) -> zones that touch it
+const KO_CELL := 32.0
+const KO_PAD := 4.0                  # the largest pad _blocked is asked for
 var _mmis: Array = []                # [MultiMeshInstance3D, id, variant]
 var _season: StringName = &""
 
@@ -36,6 +39,16 @@ func build(v: Valley, t: Terrain, keep_out: Array) -> void:
 	valley = v
 	terrain = t
 	_keep_out = keep_out
+	_ko_grid.clear()
+	for k in _keep_out:
+		var c: Vector2 = k[0]
+		var r := float(k[1]) + KO_PAD
+		for i in range(floori((c.x - r) / KO_CELL), floori((c.x + r) / KO_CELL) + 1):
+			for j in range(floori((c.y - r) / KO_CELL), floori((c.y + r) / KO_CELL) + 1):
+				var key := Vector2i(i, j)
+				if not _ko_grid.has(key):
+					_ko_grid[key] = []
+				_ko_grid[key].append(k)
 	name = "Foliage"
 	visual = Node3D.new()
 	visual.name = "Visual"
@@ -414,7 +427,7 @@ func _bucket(buckets: Dictionary, kind: String, x: float, z: float, xf: Transfor
 
 func _blocked(x: float, z: float, pad: float) -> bool:
 	var p := Vector2(x, z)
-	for k in _keep_out:
+	for k in _ko_grid.get(Vector2i(floori(x / KO_CELL), floori(z / KO_CELL)), []):
 		if p.distance_to(k[0]) < k[1] + pad:
 			return true
 	return false

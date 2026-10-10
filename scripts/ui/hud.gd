@@ -12,13 +12,17 @@ const FOOD_PER_PERSON_PER_DAY := 1.0
 ## Materials that matter in each era even at zero (food is always shown).
 const RELEVANT := {
 	1: [&"wood", &"stone"],
-	2: [&"wood", &"stone", &"clay", &"grain"],
+	2: [&"wood", &"stone", &"grain", &"flour", &"water"],
 	3: [&"wood", &"stone", &"iron", &"cloth"],
 	4: [&"steel", &"fuel", &"parts"],
 }
 const STORE_COLORS := {
 	&"food": Color(0.92, 0.42, 0.45), &"wood": Color(0.72, 0.5, 0.3), &"stone": Color(0.7, 0.72, 0.75),
 	&"clay": Color(0.8, 0.5, 0.35), &"grain": Color(0.95, 0.82, 0.4), &"iron": Color(0.55, 0.6, 0.68),
+	&"flour": Color(0.96, 0.93, 0.85), &"water": Color(0.45, 0.65, 0.9), &"pots": Color(0.78, 0.45, 0.3),
+	&"ore": Color(0.4, 0.62, 0.55), &"charcoal": Color(0.25, 0.24, 0.24), &"bronze": Color(0.8, 0.6, 0.3),
+	&"tools": Color(0.7, 0.55, 0.35), &"wool": Color(0.95, 0.95, 0.9), &"cloth": Color(0.6, 0.45, 0.7),
+	&"blocks": Color(0.78, 0.76, 0.7),
 }
 const SEASONS := ["Spring", "Summer", "Autumn", "Winter"]
 const ALERT_SECONDS := 10.0

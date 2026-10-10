@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="BuildingDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/defs/building_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"barn"
+title = "Barn"
+era = 2
+footprint = Vector2(8.0, 10.0)
+cost = {&"wood": 18, &"stone": 4}
+build_work = 1.0
+build_slots = 4
+raise_job = &"barn_raising"
+store_bonus = 40
+weight = 60.0

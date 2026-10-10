@@ -6,8 +6,11 @@
 script = ExtResource("1_def")
 id = &"bears"
 era = 2
-warning_seconds = 25.0
-only_at_night = false
+warning_seconds = 30.0
+duration_seconds = 120.0
 season = -1
-min_population = 10
-chance_per_day = 0.15
+min_population = 14
+chance_per_day = 0.2
+needs_region = &"east_bank"
+warning_text = "Claw marks on the trees by the far bank. A bear is near."
+start_text = "A bear comes out of the woods! Shoo it with a flick of the hand, or lift it away with Strength II."

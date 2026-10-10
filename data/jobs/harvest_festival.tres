@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="JobDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/defs/job_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"harvest_festival"
+title = "Harvest festival"
+era = 2
+kind = 3
+skill = &"scholarship"
+min_people = 6
+max_people = 10
+work_time = 25.0
+node_amount = 1
+wait_before_wander = 25.0
+once = true
+group_bonus = 0.1

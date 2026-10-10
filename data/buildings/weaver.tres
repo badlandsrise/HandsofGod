@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="BuildingDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/defs/building_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"weaver"
+title = "Weaver's house"
+era = 2
+footprint = Vector2(4.8, 4.1)
+cost = {&"wood": 8, &"stone": 2}
+build_work = 30.0
+build_slots = 3
+jobs = Array[StringName]([&"weave_cloth"])
+weight = 40.0

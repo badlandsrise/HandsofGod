@@ -16,6 +16,8 @@ class_name PowerDef extends Resource
 @export var requires_regions: Array[StringName] = []   # regions that must be open before it can be bought
 @export var requires_dreams: Array[StringName] = []    # dreams that must be done first
 @export var min_population: int = 0
+@export var requires_flags: Array[StringName] = []   # Village flags (e.g. &"far_bank_seen", set when the people first look across the river)
+@export var flag_hint: String = ""                    # HUD line while a requires_flags entry is missing
 
 ## Gameplay prerequisites beyond other powers (Faith.can_buy asks this), so a
 ## power can't be afforded long before its region or job is needed (doc 6).
@@ -26,6 +28,9 @@ func prerequisites_met() -> bool:
 	var done: Array = Village.stats.get("dreams_done", [])
 	for d in requires_dreams:
 		if not done.has(str(d)):
+			return false
+	for f in requires_flags:
+		if not Flags.has(f):
 			return false
 	return min_population <= 0 or Village.population() >= min_population
 
@@ -41,4 +46,7 @@ func locked_reason() -> String:
 			return "After \"%s\"" % (dd.text if dd else str(d))
 	if min_population > 0 and Village.population() < min_population:
 		return "Needs %d people" % min_population
+	for f in requires_flags:
+		if not Flags.has(f):
+			return flag_hint if flag_hint != "" else "Not yet"
 	return ""

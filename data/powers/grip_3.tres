@@ -5,11 +5,12 @@
 [resource]
 script = ExtResource("1_def")
 id = &"grip_3"
-title = "Grip III"
 era = 2
+title = "Grip III"
 cost = 80.0
 grip = 5
 requires = Array[StringName]([&"grip_2"])
+requires_dreams = Array[StringName]([&"granary"])
 opens_jobs = Array[StringName]([&"barn_raising", &"raft_launch"])
-what_it_does = "Lift 5; wider scoop"
-what_it_opens = "Barn raising and the raft crew"
+what_it_does = "Lift 5 people at once; a wider scoop"
+what_it_opens = "Barn raising (8 at once) and the raft crew (5)"

@@ -5,9 +5,13 @@
 [resource]
 script = ExtResource("1_def")
 id = &"barn_raising"
-title = "Barn raising"
+title = "Raise the barn"
 era = 2
 kind = 3
 skill = &"building"
 min_people = 8
 max_people = 8
+work_time = 30.0
+node_amount = 1
+wait_before_wander = 25.0
+needs_power = &"grip_3"

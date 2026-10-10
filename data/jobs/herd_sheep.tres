@@ -5,9 +5,11 @@
 [resource]
 script = ExtResource("1_def")
 id = &"herd_sheep"
-title = "Herd sheep"
+title = "Herd the sheep"
 era = 2
-kind = 4
+kind = 0
 skill = &"farming"
 min_people = 1
 max_people = 2
+outputs = {&"wool": 1}
+work_time = 8.0

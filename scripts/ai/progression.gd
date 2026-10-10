@@ -184,7 +184,8 @@ func _finished(bid: StringName) -> Site:
 # ---------------------------------------------------------------- survived
 
 func _losses() -> int:
-	return int(Village.stats.get("deaths", 0)) * 10 + int(Village.stats.get("wolf_bites", 0))
+	return int(Village.stats.get("deaths", 0)) * 10 + int(Village.stats.get("wolf_bites", 0)) \
+		+ int(Village.stats.get("bear_swipes", 0)) + int(Village.stats.get("flood_hurt", 0)) + int(Village.stats.get("crops_lost", 0))
 
 func _on_threat_started(id: StringName, _at: Vector3) -> void:
 	if not _threat_deaths.has(id):
@@ -197,7 +198,8 @@ func _on_threat_ended(id: StringName) -> void:
 	_threat_deaths.erase(id)
 	if _losses() == before and Village.population() > 0:
 		Faith.add(SURVIVED_FAITH, _at_stash())
-		var what: String = {&"wolves": "the wolves' night", &"cold_snap": "the cold snap", &"first_winter": "the winter"}.get(id, "it")
+		var what: String = {&"wolves": "the wolves' night", &"cold_snap": "the cold snap", &"first_winter": "the winter",
+			&"drought": "the drought", &"crop_blight": "the blight", &"bears": "the bear", &"flood": "the flood"}.get(id, "it")
 		Events.toast.emit("Everyone came through %s (+%d faith)" % [what, int(SURVIVED_FAITH)])
 
 # ---------------------------------------------------------------- names

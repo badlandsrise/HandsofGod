@@ -6,8 +6,10 @@
 script = ExtResource("1_def")
 id = &"drought"
 era = 2
-warning_seconds = 60.0
-only_at_night = false
+warning_seconds = 50.0
+duration_seconds = 150.0
 season = 1
-min_population = 10
-chance_per_day = 0.15
+min_population = 14
+chance_per_day = 0.25
+warning_text = "The soil is cracking and the young crops wilt. A dry spell is coming."
+start_text = "Drought. The fields are drying out: rain on them, or set farmers to water them."

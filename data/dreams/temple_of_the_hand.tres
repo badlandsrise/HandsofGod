@@ -6,7 +6,13 @@
 script = ExtResource("1_def")
 id = &"temple_of_the_hand"
 era = 2
-text = "A temple for the hand."
+text = "A temple for the hand, with our hand painted on its doors."
+voice = "We are a village now, with bread and bronze and cloth. By our fifth winter in this valley we will raise a temple where the shrine stands, big enough for all of us, with the hand on its doors."
 gate = true
 needs_buildings = {&"temple": 1}
+needs_population = 50
+needs_flags = Array[StringName]([&"harvest_festival"])
+needs_regions = Array[StringName]([&"hill_quarry"])
+needs_winters = 5
+quiet_before = 120.0
 reward_faith = 15.0

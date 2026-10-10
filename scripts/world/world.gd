@@ -30,6 +30,7 @@ var regions: Regions
 var nav: Nav
 var threats: Threats
 var wolves: Wolves
+var era2: Era2World
 var fire: FirePit
 var storm: StormOpening
 var dynamic: Node3D
@@ -123,6 +124,9 @@ func build() -> void:
 	dynamic = Node3D.new()
 	dynamic.name = "Dynamic"
 	add_child(dynamic)
+	era2 = Era2World.new()
+	add_child(era2)
+	era2.setup(self)
 	threats = Threats.new()
 	add_child(threats)
 	wolves = threats.wolves
@@ -135,6 +139,7 @@ func build() -> void:
 	Events.building_finished.connect(_on_building_finished)
 	Events.job_started.connect(_on_job_started)
 	Events.dream_started.connect(ensure_plots_for_dream)
+	Events.era_changed.connect(_on_era_changed)
 	built = true
 	build_ms = Time.get_ticks_msec() - t0
 	print("world: built in %d ms" % build_ms)
@@ -146,6 +151,7 @@ func _keep_out_zones() -> Array:
 	for id in LayoutEra1.PLOT_SPOTS:
 		for spot in LayoutEra1.PLOT_SPOTS[id]:
 			z.append([spot, 5.0 if id == &"stone_circle" else 3.5])
+	z.append_array(LayoutEra2.keep_out())
 	return z
 
 func _v3(p: Vector2, lift: float = 0.0) -> Vector3:
@@ -387,7 +393,12 @@ func start_play() -> void:
 
 ## Ground height at x,z (terrain is a heightmap). People and the hand use this.
 func ground_y(x: float, z: float) -> float:
-	return valley.ground_y(x, z) if valley else 0.0
+	if valley == null:
+		return 0.0
+	var g := valley.ground_y(x, z)
+	if era2 != null:
+		g = maxf(g, era2.deck_y(x, z))     # the great bridge's deck
+	return g
 
 ## Ground normal at x,z.
 func ground_normal(x: float, z: float) -> Vector3:
@@ -509,7 +520,11 @@ func spawn_plot(building_id: StringName, at: Vector3) -> Site:
 	s.job = null
 	s.state = Site.State.PLOT
 	if s is Node3D:
-		s.position = Vector3(at.x, ground_y(at.x, at.z), at.z)
+		var y := ground_y(at.x, at.z)
+		if building_id == &"bridge" and era2 != null:
+			y = era2.bank_height(Vector2(at.x, at.z))    # rests on the banks, over the water
+		s.position = Vector3(at.x, y, at.z)
+		s.rotation.y = b.yaw
 	dynamic.add_child(s)
 	return s as Site
 
@@ -561,7 +576,10 @@ func fire_lit() -> bool:
 
 ## Scares threats (wolves) near `at`. The hand calls this on a fast flick.
 func scare_threats(at: Vector3, radius: float) -> int:
-	return wolves.scare(at, radius) if wolves else 0
+	var n: int = wolves.scare(at, radius) if wolves else 0
+	if threats and threats.era2:
+		n += threats.era2.scare(at, radius)
+	return n
 
 ## Nearest point people can walk to (navmesh), or `p` before the first bake.
 func walkable_point(p: Vector3) -> Vector3:
@@ -593,6 +611,8 @@ func _open_region_visual(id: StringName, instant: bool) -> void:
 	if id == &"western_meadow":
 		for i in logs.size():
 			nav.remove_obstacle("meadow_log_%d" % i)
+	if era2 != null:
+		era2.on_region_opened(id, instant)
 	if instant:
 		return
 	regions.lighten(id)
@@ -647,11 +667,20 @@ func is_water(p: Vector3) -> bool:
 ## newest open region, else over the meadow logs into the Clearing.
 func edge_point(region: StringName) -> Vector3:
 	var r := Valley.canon(region)
+	if LayoutEra2.EDGES.has(r) and is_region_open(r):
+		return _v3(LayoutEra2.EDGES[r])
 	if r == &"western_meadow" or (r == &"" and is_region_open(&"western_meadow")):
 		return _v3(Vector2(-185.0, 8.0))
 	if r == &"valley_floor" or (r == &"" and is_region_open(&"valley_floor")):
 		return _v3(Vector2(180.0, 15.0))
 	return _v3(Vector2(Valley.WEST_GAP.x + 7.0, Valley.WEST_GAP.y + 4.0))
+
+## A bigger village wants a wider view: the camera may pull further back each era.
+func _on_era_changed(e: int) -> void:
+	if camera_rig != null and "max_dist" in camera_rig:
+		camera_rig.max_dist = minf(75.0 + 20.0 * float(e - 1), 120.0)
+	if era2 != null:
+		era2.refresh()
 
 func _on_building_finished(site) -> void:
 	if not is_instance_valid(site) or not (site is Node3D):
@@ -659,6 +688,8 @@ func _on_building_finished(site) -> void:
 	var size := Vector2(3, 3)
 	if "building" in site and site.building != null:
 		size = site.building.footprint
+		if site.building.id in [&"field", &"bridge", &"market"]:
+			return        # walked on (or over), not round
 	nav.set_box_obstacle("bld_%d" % site.get_instance_id(), site.global_position, size * 0.9, site.global_rotation.y)
 	nav.rebake()
 
@@ -675,12 +706,12 @@ func ensure_plots_for_dream(id: StringName) -> int:
 		for s in Village.sites:
 			if is_instance_valid(s) and not s.is_queued_for_deletion() and s.building != null and s.building.id == bid:
 				have += 1
-		var spots: Array = LayoutEra1.PLOT_SPOTS.get(bid, [])
+		var spots: Array = plot_spots(bid)
 		for spot in spots:
 			if have >= want:
 				break
 			var at := Vector3(spot.x, 0, spot.y)
-			if site_near(at, 2.5) != null:
+			if _spot_taken(bid, at):
 				continue
 			if spawn_plot(bid, at) != null:
 				have += 1
@@ -688,6 +719,27 @@ func ensure_plots_for_dream(id: StringName) -> int:
 		if have < want:
 			push_warning("world: no free build spot for %s (dream %s)" % [bid, id])
 	return added
+
+## A build spot is taken by any site on it, except what the building replaces
+## (the temple goes up over the shrine, which comes down when it is finished).
+func _spot_taken(bid: StringName, at: Vector3) -> bool:
+	var b: BuildingDef = Defs.building(bid)
+	var other: Site = site_near(at, 2.5, func(s): return not _replaced_by(b, s))
+	return other != null
+
+static func _replaced_by(b: BuildingDef, s: Site) -> bool:
+	if b == null or b.replaces.is_empty():
+		return false
+	if s.building != null:
+		return s.state == Site.State.FINISHED and b.replaces.has(s.building.id)
+	# a replaced building's extra job site (the shrine's prayer spot)
+	return s.job != null and s.job.kind == JobDef.Kind.DEVOTION
+
+## Authored build spots for a building, from the Era 1 and Era 2 layouts.
+func plot_spots(building_id: StringName) -> Array:
+	var out: Array = LayoutEra1.PLOT_SPOTS.get(building_id, []).duplicate()
+	out.append_array(LayoutEra2.spots(building_id))
+	return out
 
 func _ensure_active_dream_plots() -> void:
 	var active := str(Village.stats.get("dream_active", ""))
@@ -697,9 +749,9 @@ func _ensure_active_dream_plots() -> void:
 ## A plot for `building_id` at its next free authored spot (family wishes:
 ## another hut, the food store before winter). Null when no spot is free.
 func add_plot(building_id: StringName) -> Site:
-	for spot in LayoutEra1.PLOT_SPOTS.get(building_id, []):
+	for spot in plot_spots(building_id):
 		var at := Vector3(spot.x, 0, spot.y)
-		if site_near(at, 2.5) != null:
+		if _spot_taken(building_id, at):
 			continue
 		return spawn_plot(building_id, at)
 	return null
@@ -740,6 +792,8 @@ func clear_dynamic() -> void:
 			n.queue_free()
 	if threats:
 		threats.reset()
+	if era2:
+		era2.reset()
 	trunk_site = null
 	_restart_village_ai()
 
@@ -762,6 +816,7 @@ func new_game() -> void:
 	Village.load_state({"stats": {"births": 0, "deaths": 0, "joined": 0, "winters_survived": 0, "gifts": 0}})
 	Clock.set_speed(1)
 	Clock.apply_era(Defs.era(1))
+	AssetCatalog.set_era(1)
 	opened_at = {&"clearing": 0.0}
 	Onboarding.reset()
 	Village.stats["era_started_t"] = 0.0
@@ -775,6 +830,7 @@ func new_game() -> void:
 	_ensure_active_dream_plots()
 	_frame_play_camera()
 	storm.begin(branch, huddled)
+	_on_era_changed(Village.era)
 	look.update_now()
 	nav.rebake()
 
@@ -790,6 +846,7 @@ func save_state() -> Dictionary:
 		"storm": storm.state,
 		"weather": [look.rain_target, look.storm],
 		"threats": threats.save_state(),
+		"era2": era2.save_state(),
 		"opened_at": opened_at.keys().map(func(k): return [str(k), opened_at[k]]),
 	}
 
@@ -816,7 +873,10 @@ func load_state(d: Dictionary, nodes: Array) -> void:
 	regions.sync_instant()
 	var w: Array = d.get("weather", [0.0, false])
 	look.set_weather(float(w[0]) if w.size() > 0 else 0.0, bool(w[1]) if w.size() > 1 else false)
+	AssetCatalog.set_era(Village.era)      # before the people are rebuilt, so they dress for the era
+	Clock.apply_era(Defs.era(Village.era))
 	Save.restore_nodes(dynamic, nodes)
+	era2.load_state(d.get("era2", {}))
 	threats.load_state(d.get("threats", {}))
 	apply_safety_net()
 	_ensure_active_dream_plots()
@@ -828,5 +888,6 @@ func load_state(d: Dictionary, nodes: Array) -> void:
 	else:
 		storm.skip()
 		nav.remove_obstacle("storm_branch")
+	_on_era_changed(Village.era)
 	look.update_now()
 	nav.rebake()

@@ -108,6 +108,13 @@ func apply_look(skin_i: int, hair_i: int, height: float, elder: bool, stage: int
 	body.scale = Vector3.ONE * height
 	_push_look()
 
+## Era clothes: hides in Era 1, wool and linen in Era 2 (VillagerVisual.set_era).
+func set_era(e: int) -> void:
+	_build()
+	if villager != null:
+		villager.set_era(e)
+		_push_look()
+
 func set_job_colour(skill: StringName) -> void:
 	_build()
 	_skill = skill

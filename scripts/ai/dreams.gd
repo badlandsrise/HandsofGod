@@ -36,6 +36,7 @@ func update() -> void:
 			return
 		Village.stats["dream_active"] = str(d.id)
 		Village.stats["dream_started_t"] = Clock.total_t
+		Village.stats["dream_started_winters"] = int(Village.stats.get("winters_survived", 0))
 		Events.dream_started.emit(d.id)
 		if d.voice != "":
 			Events.toast.emit(d.voice)
@@ -79,7 +80,24 @@ static func met(d: DreamDef) -> bool:
 	for f in d.needs_flags:
 		if not Flags.has(f):
 			return false
+	if Dreams.winters_since_start(d) < d.winters_after_start:
+		return false
+	for r in d.needs_regions:
+		if not Village.regions.has(r):
+			return false
 	return true
+
+## Winters lived through since this dream appeared (0 if it is not the active one).
+static func winters_since_start(d: DreamDef) -> int:
+	if str(Village.stats.get("dream_active", "")) != str(d.id):
+		return 0
+	return int(Village.stats.get("winters_survived", 0)) - int(Village.stats.get("dream_started_winters", 0))
+
+static func region_title(r: StringName) -> String:
+	return {&"east_bank": "the East Bank", &"southern_plains": "the Southern Plains", &"hill_quarry": "the Hill Quarry"}.get(r, str(r).replace("_", " "))
+
+static func flag_title(f: StringName) -> String:
+	return {&"festival": "the first festival", &"harvest_festival": "a harvest festival"}.get(f, str(f).replace("_", " "))
 
 ## 0..1 how far along the dream is (pips for the HUD).
 static func progress(d: DreamDef) -> float:
@@ -98,6 +116,12 @@ static func progress(d: DreamDef) -> float:
 	for f in d.needs_flags:
 		need += 1.0
 		have += 1.0 if Flags.has(f) else 0.0
+	if d.winters_after_start > 0:
+		need += 1.0
+		have += minf(float(Dreams.winters_since_start(d)) / float(d.winters_after_start), 1.0)
+	for r in d.needs_regions:
+		need += 1.0
+		have += 1.0 if Village.regions.has(r) else 0.0
 	return have / need if need > 0.0 else 1.0
 
 ## Line for the UI, e.g. "Hut 1/1, Fire circle 0/1, people 4/6".
@@ -117,7 +141,11 @@ static func progress_text(d: DreamDef) -> String:
 	elif wn > 1:
 		parts.append("winters %d/%d" % [mini(int(Village.stats.get("winters_survived", 0)), wn), wn])
 	for f in d.needs_flags:
-		parts.append(("the first festival" if f == &"festival" else str(f).replace("_", " ")) + (" (done)" if Flags.has(f) else ""))
+		parts.append(Dreams.flag_title(f) + (" (done)" if Flags.has(f) else ""))
+	if d.winters_after_start > 0:
+		parts.append("a winter on the stores" + (" (done)" if Dreams.winters_since_start(d) >= d.winters_after_start else ""))
+	for r in d.needs_regions:
+		parts.append(Dreams.region_title(r) + (" (open)" if Village.regions.has(r) else " (closed)"))
 	return ", ".join(parts)
 
 static func complete(d: DreamDef) -> void:

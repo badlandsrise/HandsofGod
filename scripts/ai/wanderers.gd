@@ -7,7 +7,8 @@ class_name Wanderers extends Node
 ## where they appear; otherwise they come from a ring around the stash.
 
 const EDGE_RADIUS := 28.0
-const REGION_WANDERERS: Dictionary = {&"valley_floor": 2, &"western_meadow": 4}
+const REGION_WANDERERS: Dictionary = {&"valley_floor": 2, &"western_meadow": 4,
+	&"east_bank": 3, &"southern_plains": 4, &"hill_quarry": 3}
 
 var _net_t: float = 0.0
 

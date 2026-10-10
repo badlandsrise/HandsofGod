@@ -24,6 +24,10 @@ const NEED_KEYS: Array[StringName] = [&"food", &"water", &"warmth", &"joy"]
 const MEAL_BELOW := 0.65
 ## Gatherers carry this many cycles' worth to the store in one trip.
 const ARMFUL := 3
+## Builders fetching for a far plot carry a bundle: one more piece for every
+## this many metres of walk, up to BUNDLE_MAX.
+const BUNDLE_PER_M := 45.0
+const BUNDLE_MAX := 4
 const DECAY: Dictionary = {&"food": 0.0045, &"water": 0.006, &"joy": 0.002}
 const WALK_SPEED := 3.0
 const RUN_SPEED := 5.0
@@ -31,7 +35,8 @@ const GRAVITY := 20.0
 const HAND_NEAR := 4.0
 const ARRIVE := 0.35
 const SKILL_PER_CYCLE := 0.04
-const LIGHT_JOBS: Array[StringName] = [&"gather_berries", &"fetch_water"]   # children, from Era 2
+const LIGHT_JOBS: Array[StringName] = [&"gather_berries", &"fetch_water", &"draw_water", &"herd_sheep", &"rich_berries"]   # children, from Era 2
+const HOME_RANGE := 90.0                # beyond this a worker sleeps at the nearest shelter (a far-bank camp)
 const WISH_LIFETIME := 90.0
 const WISH_GAP := Vector2(600.0, 1100.0)    # game seconds between a granted wish and the next
 const WISH_GIFT_CHANCE := 0.12         # a granted wish sometimes leaves a gift as well
@@ -111,6 +116,7 @@ var _armful: int = 0
 var _stuck_ref := Vector3.INF
 var _stuck_t: float = 0.0
 var _no_nav_t: float = 0.0
+var _offering: Site = null              # walking to the shrine with an offering (trust 4+)
 
 static func stage_for_age(a: float) -> int:
 	var s := Stage.BABY
@@ -143,6 +149,7 @@ func _ready() -> void:
 		Events.sim_tick.connect(sim)
 		Events.day_started.connect(_on_day)
 		Events.night_started.connect(_on_night)
+		Events.era_changed.connect(_on_era)
 	_decide_t = Game.rng.randf_range(0.2, 2.0)
 
 func _exit_tree() -> void:
@@ -215,6 +222,10 @@ func _build_nodes() -> void:
 		nav.radius = 0.35
 		nav.avoidance_enabled = false
 		add_child(nav)
+
+func _on_era(e: int) -> void:
+	if visual != null:
+		visual.set_era(e)
 
 func _refresh_look() -> void:
 	if visual == null:
@@ -320,7 +331,9 @@ func rate() -> float:
 	var jd := _job_def()
 	if jd != null:
 		r *= 1.0 + 0.1 * float(stars(_family(jd.skill)) - 1)
-		if jd.kind == JobDef.Kind.GATHER and Flags.has(&"stone_tools"):
+		if Flags.has(&"bronze_tools") and jd.kind in [JobDef.Kind.GATHER, JobDef.Kind.CRAFT, JobDef.Kind.TEND]:
+			r *= 1.5           # bronze tools: +50% (doc 4, Era 2)
+		elif jd.kind == JobDef.Kind.GATHER and Flags.has(&"stone_tools"):
 			r *= 1.25          # stone tools: +25% gather speed (doc 4)
 	return r
 
@@ -398,6 +411,7 @@ func join(s: Site, by_hand: bool = true) -> bool:
 		return false
 	if not s.can_accept(1) or not can_do(s):
 		return false
+	_offering = null
 	_leave_job()
 	if s.job == null and s.is_shelter():
 		_enter_shelter_site(s)
@@ -477,6 +491,7 @@ func go_eat() -> void:
 		return
 	if job_site != null and is_instance_valid(job_site):
 		_resume = job_site
+	_offering = null
 	_leave_job()
 	state = S.EAT
 	_go(_store_slot(), WALK_SPEED)
@@ -487,12 +502,13 @@ func go_rest() -> void:
 		return
 	if job_site != null and is_instance_valid(job_site):
 		_resume = job_site
+	_offering = null
 	_leave_job()
 	var hut: Site = null
-	if home != null and is_instance_valid(home) and home.shelter_room() > 0:
+	if home != null and is_instance_valid(home) and home.shelter_room() > 0 and home.global_position.distance_to(global_position) < HOME_RANGE:
 		hut = home
 	else:
-		hut = Site.nearest(global_position, 80.0, func(s): return s.is_shelter() and s.shelter_room() > 0)
+		hut = Site.nearest(global_position, 80.0, func(s): return s.is_shelter() and s.shelter_room() > 0 and (s.building.camp or s == home or not _others_home(s)))
 	if hut != null:
 		state = S.SHELTER
 		_phase = "to_hut"
@@ -505,6 +521,10 @@ func go_rest() -> void:
 	var c := fire.global_position if fire else Site.store_point(global_position)
 	var a := float(uid) * 2.39996
 	_go(c + Vector3(cos(a), 0, sin(a)) * Game.rng.randf_range(1.8, 2.8), WALK_SPEED)
+
+## True when this shelter is someone else's family home with no room to spare.
+func _others_home(s: Site) -> bool:
+	return s.shelter_room() <= 1 and Births.home_residents(s) >= s.building.shelter - 1
 
 func wake() -> void:
 	if state == S.SHELTER or state == S.SLEEP:
@@ -571,6 +591,8 @@ func sim(dt: float) -> void:
 		S.WALK:
 			if _arrived():
 				state = S.IDLE
+				if _offering != null:
+					_leave_offering()
 		S.WORK: _sim_work(dt)
 		S.WAIT_GROUP: _sim_wait(dt)
 		S.EAT: _sim_eat()
@@ -610,7 +632,9 @@ func _sim_needs(dt: float) -> void:
 		var loss := (0.012 if Clock.season == Clock.Season.WINTER else 0.007)
 		if Game.world != null and is_instance_valid(Game.world) and Game.world.threats != null and Game.world.threats.cold():
 			loss *= 1.8        # a cold snap
-		if Flags.has(&"hide_clothes"):
+		if Flags.has(&"woven_clothes"):
+			loss *= 0.45       # wool and linen from the loom (Era 2)
+		elif Flags.has(&"hide_clothes"):
 			loss *= 0.6        # hide clothes from the hunt
 		w -= loss * Flags.diff_k(&"cold") * dt
 	else:
@@ -727,6 +751,9 @@ func _sim_idle(dt: float) -> void:
 	if Village.era >= 3 and autonomy_hook.is_valid() and stage != Stage.CHILD:
 		if autonomy_hook.call(self):
 			return
+	# Era 2 autonomy (doc 3): children copy a parent's light job.
+	if Village.era >= 2 and stage == Stage.CHILD and not Clock.is_night and _copy_parent_job():
+		return
 	# Utility scoring: the best-scoring sensible thing to do.
 	var best := &"wander"
 	var score := 0.15
@@ -762,6 +789,50 @@ func _sim_idle(dt: float) -> void:
 			var off := Vector3(Game.rng.randf_range(-3.5, 3.5), 0, Game.rng.randf_range(-3.5, 3.5))
 			if global_position.distance_to(anchor) > 6.0 or Game.rng.randf() < 0.6:
 				_walk(anchor + off)
+
+func _copy_parent_job() -> bool:
+	var par := _a_parent()
+	if par == null or par.job_site == null or not is_instance_valid(par.job_site):
+		return false
+	var s: Site = par.job_site
+	var jd := s.work_job()
+	if jd == null or not LIGHT_JOBS.has(jd.id):
+		return false
+	if s.can_accept(1):
+		return join(s, false)
+	var near := Site.nearest(s.global_position, 25.0, func(o): return o.job != null and o.job.id == jd.id and o.can_accept(1) and not o.is_plot())
+	return near != null and join(near, false)
+
+## Devoted people (trust 4+) bring the hand things (doc 7): they walk to the
+## shrine or temple and leave an offering there.
+func bring_offering(shrine: Site) -> bool:
+	if shrine == null or stage == Stage.BABY:
+		return false
+	if state == S.WORK and job_site != null and is_instance_valid(job_site) and not job_site.is_group() and not job_site.is_plot():
+		_resume = job_site       # back to work afterwards
+		_leave_job()
+		state = S.IDLE
+	if state != S.IDLE:
+		return false
+	_offering = shrine
+	_walk(shrine.global_position + Vector3(Game.rng.randf_range(-1.5, 1.5), 0, shrine.pick_radius() + 1.0))
+	return true
+
+func _leave_offering() -> void:
+	var s := _offering
+	_offering = null
+	if s == null or not is_instance_valid(s):
+		return
+	var g := Gifts.spawn_gift(self)
+	if g != null:
+		g.faith_value = maxf(g.faith_value, 4.0)
+		Village.stats["offerings"] = int(Village.stats.get("offerings", 0)) + 1
+		adjust_trust(0.05)
+		VillageEra2.hint("offering", "%s brought the hand an offering at the shrine. Pick it up" % given_name, g.global_position)
+	if _resume != null and is_instance_valid(_resume):
+		var r := _resume
+		_resume = null
+		join(r, false)
 
 func _anchor() -> Vector3:
 	if stage == Stage.CHILD:
@@ -832,7 +903,10 @@ func _sim_work(dt: float) -> void:
 		JobDef.Kind.DEVOTION:
 			_work_pray(dt, s)
 		JobDef.Kind.TEND, JobDef.Kind.CRAFT:
-			_work_craft(dt, s)
+			if s.is_field():
+				_work_field(dt, s)
+			else:
+				_work_craft(dt, s)
 		_:
 			_work_gather(dt, s)
 
@@ -910,6 +984,24 @@ func _work_craft(dt: float, s: Site) -> void:
 		_placement_faith()
 		s.on_cycle_done(self)
 
+## Farming (Era 2): sow, water and weed, harvest, fight the blight. The field
+## says what it needs; with nothing to do they wait for the crop to grow.
+func _work_field(dt: float, s: Site) -> void:
+	_target = s.slot_position(s.slot_of(self))
+	if not _arrived():
+		return
+	var want := s.field_want()
+	if want == &"" and s.field_stage != Site.Field.SPROUTS and s.field_stage != Site.Field.GROWING:
+		_waiting_for = &"growing" if Site.sowing_season() else &"spring"
+		_phase = "wait"
+		return
+	_waiting_for = &""
+	_phase = "work"
+	_first_work(s)
+	if s.field_tend(dt * rate()):
+		_gain_skill(&"farming", SKILL_PER_CYCLE * 2.0)
+		_placement_faith()
+
 func _work_pray(dt: float, s: Site) -> void:
 	_target = s.slot_position(s.slot_of(self))
 	if not _arrived():
@@ -947,10 +1039,14 @@ func _work_build(dt: float, s: Site) -> void:
 				_phase = "fetch"
 				_go(_store_slot(), WALK_SPEED)
 			if _arrived():
-				var n := 1
-				if has_trait(&"strong") and s.remaining(_reserved) > 0 and Village.store(_reserved) >= 2:
-					n = 2
-					s.reserve(_reserved, 1)
+				# a bundle for a long walk (the bridge, a far-bank plot), one more if strong
+				var want := 1 + clampi(int(global_position.distance_to(s.global_position) / BUNDLE_PER_M), 0, BUNDLE_MAX - 1)
+				if has_trait(&"strong"):
+					want += 1
+				var extra := mini(want - 1, mini(s.remaining(_reserved), Village.store(_reserved) - 1))
+				extra = maxi(extra, 0)
+				s.reserve(_reserved, extra)
+				var n := 1 + extra
 				if Village.take_store(_reserved, n):
 					_waiting_for = &""
 					_cargo = {_reserved: n}
@@ -958,8 +1054,8 @@ func _work_build(dt: float, s: Site) -> void:
 					_phase = "deliver"
 					_go(s.slot_position(s.slot_of(self)), WALK_SPEED)
 				else:
-					if n == 2:
-						s.unreserve(_reserved, 1)
+					if extra > 0:
+						s.unreserve(_reserved, extra)
 					_waiting_for = _reserved
 					# none in the store: drop the claim and fetch something the store has
 					s.unreserve(_reserved, 1)
@@ -1364,6 +1460,7 @@ func _activity_text() -> String:
 		S.SLEEP: return "sleeping"
 		S.SHELTER: return "sheltering"
 		S.FLEE: return "running away"
+		S.WALK when _offering != null: return "bringing the hand an offering"
 		S.DEAD: return "at rest"
 		S.WAIT_GROUP:
 			var need := job_site.group_needs() if job_site and is_instance_valid(job_site) else 0
@@ -1375,6 +1472,10 @@ func _activity_text() -> String:
 				t = "building a %s" % job_site.building.title.to_lower()
 			if _waiting_for == &"regrowth":
 				return t + " (waiting for regrowth)"
+			if _waiting_for == &"growing":
+				return t + " (the crop is growing)"
+			if _waiting_for == &"spring":
+				return t + " (resting until spring)"
 			if _waiting_for != &"":
 				return t + " (needs %s)" % _waiting_for
 			return t

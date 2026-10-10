@@ -568,7 +568,7 @@ func _site_at(p: Vector3, cam: Camera3D) -> Site:
 	var best: Site = null
 	var bd := INF
 	for s in Village.sites:
-		if not (s is Site) or not is_instance_valid(s) or not s.is_visible_in_tree():
+		if not (s is Site) or not is_instance_valid(s) or not s.is_visible_in_tree() or s.hand_ignores():
 			continue
 		var d := _flat_dist(s.global_position, p)
 		if d <= s.pick_radius() + 0.4 and d < bd:
@@ -579,7 +579,7 @@ func _site_at(p: Vector3, cam: Camera3D) -> Site:
 		var mp := aim_screen()
 		var bpx := PICK_PX * 1.3
 		for s in Village.sites:
-			if not (s is Site) or not is_instance_valid(s) or not s.is_visible_in_tree():
+			if not (s is Site) or not is_instance_valid(s) or not s.is_visible_in_tree() or s.hand_ignores():
 				continue
 			if cam.is_position_behind(s.global_position):
 				continue

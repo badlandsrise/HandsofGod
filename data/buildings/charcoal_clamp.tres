@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="BuildingDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/defs/building_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"charcoal_clamp"
+title = "Charcoal clamp"
+era = 2
+footprint = Vector2(5.0, 3.4)
+cost = {&"wood": 6}
+build_work = 16.0
+build_slots = 2
+jobs = Array[StringName]([&"burn_charcoal"])
+weight = 20.0

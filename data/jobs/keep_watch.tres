@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="JobDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/defs/job_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"keep_watch"
+title = "Keep watch"
+era = 2
+kind = 4
+skill = &"gathering"
+min_people = 1
+max_people = 1
+work_time = 20.0

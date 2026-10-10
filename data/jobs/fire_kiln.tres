@@ -5,9 +5,12 @@
 [resource]
 script = ExtResource("1_def")
 id = &"fire_kiln"
-title = "Fire the kiln"
+title = "Fire pots in the kiln"
 era = 2
 kind = 1
 skill = &"crafting"
 min_people = 1
-max_people = 1
+max_people = 2
+inputs = {&"clay": 2, &"wood": 1}
+outputs = {&"pots": 2}
+work_time = 12.0

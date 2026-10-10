@@ -13,6 +13,7 @@ var valley: Valley
 var obstacles: Dictionary = {}       # key -> PackedVector3Array outline (y ignored)
 var tree_points: Array = []
 var use_tree_obstacles := true    # small holes so people walk round trunks
+var extra_faces := PackedVector3Array()   # walkable faces off the heightmap (the bridge deck)
 var _baking := false
 var _again := false
 var bake_count := 0
@@ -71,6 +72,8 @@ func rebake() -> void:
 	var bounds := _open_rect()
 	nm.filter_baking_aabb = AABB(Vector3(bounds.position.x, -20.0, bounds.position.y), Vector3(bounds.size.x, 200.0, bounds.size.y))
 	src.add_faces(_terrain_faces(bounds), Transform3D.IDENTITY)
+	if not extra_faces.is_empty():
+		src.add_faces(extra_faces, Transform3D.IDENTITY)
 	for key in obstacles:
 		var pts: PackedVector3Array = obstacles[key]
 		var c := Vector3.ZERO

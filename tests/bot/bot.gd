@@ -19,6 +19,14 @@ extends Node
 ##   --expect-gate          FAIL if Era 1 is not complete when the bot quits
 ##   --speed=N              Engine.time_scale (default 4 headless, 2 with shots)
 ##   --verbose              per-person lines in the daily report
+##   --save-gate=path.json  write a save as soon as Era 2 begins (to start the bot there later)
+##   --load=path.json       start from that save (e.g. tests/bot/era2_start.json) instead of the storm
+##
+## Era 2 play (tests/bot/bot_era2.gd): fields by what they need, the craft
+## chains by their inputs, raising crews, rain on dry fields, the rockfall,
+## the bear, flood evacuation and the blight. With --until-era=3 the bot plays
+## through the Era 2 gate; each era FAILS if it completes under its
+## gate_min_minutes, and deaths are reported by cause (old age vs anything else).
 
 const THINK := 1.5               # game seconds between hand actions (a human pace)
 const WOLF_REACT := 0.6          # chance per think to shoo a stalking wolf
@@ -50,6 +58,12 @@ var _quitting: bool = false
 var _era_done_t: float = -1.0
 var _pop_log: Array = []         # [t, pop] each dawn
 var _faith_at_gate: float = -1.0
+var era2 = null                  # tests/bot/bot_era2.gd
+var _era_start: Dictionary = {1: 0.0}   # era -> game time it began
+var _era_done: Dictionary = {}   # era -> game time its gate completed
+var _death_causes: Dictionary = {}
+var _loaded_from: String = ""
+var _threats: Array = []         # [t, id]
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -61,7 +75,7 @@ func _ready() -> void:
 	if f.has("until-era"):
 		until_era = int(f["until-era"])
 		if not f.has("quit-after-game"):
-			quit_after = 4800.0
+			quit_after = 4800.0 if until_era <= 2 else 4800.0 + 4500.0 * (until_era - 2)
 	var paths: Array = []
 	if f.has("shot"):
 		paths = str(f["shot"]).split(",", false)
@@ -77,10 +91,14 @@ func _ready() -> void:
 	if f.has("speed"):
 		speed = float(f["speed"])
 	Engine.time_scale = speed
+	era2 = load("res://tests/bot/bot_era2.gd").new(self)
+	Events.era_changed.connect(_on_era_changed)
+	if f.has("load"):
+		_load_save.call_deferred(str(f["load"]))
 	Events.dream_started.connect(func(id): _dream_start[id] = Clock.total_t; print("BOT dream started: %s at %s" % [id, _mmss(Clock.total_t)]))
 	Events.dream_done.connect(func(id): _dreams[id] = Clock.total_t; print("BOT dream done: %s at %s (pop %d, faith %.0f)" % [id, _mmss(Clock.total_t), Village.population(), Faith.total]))
 	Events.region_opened.connect(func(id): _regions[id] = Clock.total_t; print("BOT region opened: %s at %s" % [id, _mmss(Clock.total_t)]))
-	Events.person_died.connect(func(p): _deaths += 1; print("BOT death: %s at %s" % [p.given_name, _mmss(Clock.total_t)]))
+	Events.person_died.connect(_on_died)
 	Events.person_born.connect(func(p): print("BOT birth: %s at %s (pop %d)" % [p.given_name, _mmss(Clock.total_t), Village.population()]))
 	Events.person_joined.connect(func(_p): pass)
 	Events.day_started.connect(func(_d): _pop_log.append([Clock.total_t, Village.population()]); _report())
@@ -89,7 +107,7 @@ func _ready() -> void:
 	if Game.flags.has("verbose"):
 		Events.night_started.connect(func(_d): _last_day = -1; _report())
 	Events.power_unlocked.connect(func(id): _powers[id] = Clock.total_t; print("BOT power unlocked: %s at %s" % [id, _mmss(Clock.total_t)]))
-	Events.threat_warned.connect(func(id, _at): print("BOT threat warned: %s at %s" % [id, _mmss(Clock.total_t)]))
+	Events.threat_warned.connect(func(id, _at): _threats.append([Clock.total_t, id]); print("BOT threat warned: %s at %s" % [id, _mmss(Clock.total_t)]))
 	Events.alert.connect(func(t, _at): print("BOT alert: %s" % t))
 	print("BOT start: quit after %.0f game s, until era %d, speed %.1f, shots %s" % [quit_after, until_era, speed, str(shots)])
 
@@ -97,11 +115,55 @@ static func _mmss(t: float) -> String:
 	return "%d:%02d" % [int(t) / 60, int(t) % 60]
 
 func _on_era_complete(era: int) -> void:
-	_era_done_t = float(Village.stats.get("era_complete_t", Clock.total_t))
-	_faith_at_gate = Faith.total
-	print("BOT era %d complete at %s (%.1f game min)" % [era, _mmss(_era_done_t), _era_done_t / 60.0])
+	var done_t := float(Village.stats.get("era_complete_t", Clock.total_t))
+	_era_done[era] = done_t
+	if era == 1:
+		_era_done_t = done_t
+		_faith_at_gate = Faith.total
+	var began := float(_era_start.get(era, 0.0))
+	print("BOT era %d complete at %s (%.1f game min total, %.1f min in the era)" % [era, _mmss(done_t), done_t / 60.0, (done_t - began) / 60.0])
 	if until_era > 0 and Village.era >= until_era:
 		quit_after = minf(quit_after, Clock.total_t + 20.0)
+
+func _on_era_changed(e: int) -> void:
+	_era_start[e] = Clock.total_t
+	print("BOT era %d begins at %s" % [e, _mmss(Clock.total_t)])
+	if e == 2 and Game.flags.has("save-gate"):
+		_save_gate.call_deferred(str(Game.flags["save-gate"]))
+
+func _abs(path: String) -> String:
+	return path if path.is_absolute_path() else ProjectSettings.globalize_path("res://").path_join(path)
+
+func _save_gate(path: String) -> void:
+	var f := FileAccess.open(_abs(path), FileAccess.WRITE)
+	if f == null:
+		print("BOT could not write %s" % path)
+		return
+	f.store_string(JSON.stringify(Save.snapshot(), " "))
+	f.close()
+	print("BOT saved the start of Era 2 to %s" % path)
+
+func _load_save(path: String) -> void:
+	var txt := FileAccess.get_file_as_string(_abs(path))
+	var d = JSON.parse_string(txt)
+	if not (d is Dictionary):
+		print("BOT FAIL could not read save %s" % path)
+		get_tree().quit(1)
+		return
+	Save.apply(Save.migrate(d))
+	Clock.running = true
+	_loaded_from = path
+	_era_start[Village.era] = float(Village.stats.get("era_started_t", Clock.total_t))
+	var ec: Dictionary = Village.stats.get("era_summary", {})
+	for k in ec:
+		_era_done[int(k)] = float(Village.stats.get("era_complete_t", 0.0)) if int(k) == Village.era - 1 else 0.0
+	print("BOT loaded %s: era %d, %s, pop %d, faith %.0f" % [path, Village.era, _mmss(Clock.total_t), Village.population(), Faith.total])
+
+func _on_died(p) -> void:
+	_deaths += 1
+	var cause := "old age" if p.age >= p.death_age - 1.0 else "other"
+	_death_causes[cause] = int(_death_causes.get(cause, 0)) + 1
+	print("BOT death: %s (%s, age %.0f) at %s" % [p.given_name, cause, p.age, _mmss(Clock.total_t)])
 
 func _process(_delta: float) -> void:
 	if _quitting:
@@ -158,6 +220,8 @@ func _think() -> void:
 	_wolves()
 	_warm()
 	_bless()
+	if era2.think():
+		return
 	# 5. the meadow logs, once the hand is strong enough
 	if not Village.regions.has(&"western_meadow") and "logs" in w:
 		for i in w.logs.size():
@@ -243,6 +307,8 @@ func _movable() -> Array:
 			continue
 		if p.state in [Person.S.SHELTER, Person.S.SLEEP, Person.S.EAT, Person.S.FLEE, Person.S.FALL, Person.S.HELD]:
 			continue
+		if p._offering != null and p.state == Person.S.WALK:
+			continue                      # on the way to the shrine with a gift: let them go
 		var js = p.job_site
 		if js != null and is_instance_valid(js) and (js.is_group() or (js.is_plot() and js.state == Site.State.BUILDING)):
 			continue
@@ -284,6 +350,9 @@ func _food_target() -> int:
 ## A person on this job would do more good elsewhere.
 func _wasted(s, p = null) -> bool:
 	var j: JobDef = s.get("job")
+	var e2: int = era2.wasted(s, p)
+	if e2 >= 0:
+		return e2 == 1
 	if s.is_plot():
 		return s.state == Site.State.PLOT and not _plot_can_progress(s)
 	if j == null:
@@ -330,9 +399,12 @@ func _site_ok(s) -> bool:
 	if not s.can_accept(1):
 		return false
 	var w = Game.world
-	if w.has_method("is_region_open") and not w.is_region_open(w.region_at(s.global_position)):
+	var at: Vector3 = s.slot_position(0) if s.building != null and s.building.id == &"bridge" else s.global_position
+	if w.has_method("is_region_open") and not w.is_region_open(w.region_at(at)):
 		return false
 	if s.job != null and not s.is_plot() and not s.is_group() and s.job.kind == JobDef.Kind.GATHER and not s.can_work_now():
+		return false
+	if era2.site_blocked(s):
 		return false
 	return true
 
@@ -346,10 +418,17 @@ func _score(s, idle_n: int) -> float:
 		var d := Dreams.active_dream()
 		if d != null and d.needs_buildings.has(b.id):
 			dream = true
-		var home := b.id == &"hut" and b.shelter > 0
-		return (8.0 if dream else (7.2 if home else 5.5)) if ready else 0.5
+		var home := (b.id == &"hut" or b.id == &"cottage") and b.shelter > 0
+		# in Era 2 the village feeds itself from the fields: building outranks foraging
+		var other := 5.5
+		if Village.era >= 2:
+			other = 7.0 if b.id == &"field" else 6.2     # a field is next season's bread
+		return (8.0 if dream else (7.2 if home else other)) if ready else 0.5
 	if j == null:
 		return 0.0
+	var e2: float = era2.score(s, idle_n)
+	if e2 >= 0.0:
+		return e2
 	var food_low := Village.food() < _food_target()
 	var sc := 1.0
 	match j.id:
@@ -546,6 +625,17 @@ func _report() -> void:
 	print("BOT day %d %s %s y%d | pop %d | stores %s | faith %.0f (avail %.0f) | dream %s | deaths %d | fps %.0f | actions %d" % [
 		Clock.day, _mmss(Clock.total_t), ["spring", "summer", "autumn", "winter"][Clock.season], Clock.year, Village.population(), _stores_text(),
 		Faith.total, Faith.available(), str(Village.stats.get("dream_active", "")), _deaths, fps, _actions])
+	if Village.era >= 2:
+		var plots: Array = []
+		for s in Village.sites:
+			if is_instance_valid(s) and s.building != null and s.state != Site.State.FINISHED:
+				plots.append("%s:%s%s w%d" % [s.building.id, "raise" if s.awaiting_raise() else Site.State.keys()[s.state].to_lower(), "" if s.awaiting_raise() else " %d%%" % int(100.0 * (s._materials_fraction() if s.state == Site.State.PLOT else s.build_progress())), s.workers.size()])
+		var built: Array = []
+		for id in [&"cottage", &"field", &"granary", &"mill", &"bakery", &"kiln", &"smelter", &"smithy", &"weaver", &"market", &"barn", &"bridge", &"temple", &"camp"]:
+			var n := Village.count_buildings(id)
+			if n > 0:
+				built.append("%s %d" % [id, n])
+		print("BOT   built: %s | plots: %s" % [", ".join(built), ", ".join(plots)])
 	if Game.flags.has("verbose"):
 		for p in Village.alive():
 			var js = p.job_site
@@ -569,6 +659,18 @@ func _report() -> void:
 		for s in Village.sites:
 			if is_instance_valid(s) and s.building != null and s.state != Site.State.FINISHED:
 				print("BOT   plot %s %s at %s | workers %d | ok %s score %.1f | delivered %s incoming %s progress %.2f" % [s.building.id, Site.State.keys()[s.state], str(s.global_position.snapped(Vector3.ONE)), s.workers.size(), str(_site_ok(s)), _score(s, 1), str(s.delivered), str(s.incoming), s.progress])
+				_why(s)
+			elif Village.era >= 2 and is_instance_valid(s) and s.job != null and s.job.era >= 2 and s.job.id != &"farm_field":
+				print("BOT   site %s at %s | workers %d | ok %s score %.1f" % [s.job.id, str(s.global_position.snapped(Vector3.ONE)), s.workers.size(), str(_site_ok(s)), _score(s, 1)])
+				_why(s)
+
+## Verbose: why _site_ok refuses a site.
+func _why(s) -> void:
+	if _site_ok(s):
+		return
+	var w = Game.world
+	var at: Vector3 = s.slot_position(0) if s.building != null and s.building.id == &"bridge" else s.global_position
+	print("BOT     why: accept %s (slots %d/%d) region %s open %s work_now %s blocked %s" % [str(s.can_accept(1)), s.slots_filled(), s.max_slots(), str(w.region_at(at)), str(w.is_region_open(w.region_at(at))), str(s.can_work_now()), str(era2.site_blocked(s))])
 
 func _shot(path: String) -> void:
 	if DisplayServer.get_name() == "headless":
@@ -596,8 +698,13 @@ func _timeline() -> void:
 		rows.append([_powers[id], "power: %s" % id])
 	for id in _regions:
 		rows.append([_regions[id], "region: %s" % id])
-	if _era_done_t >= 0.0:
-		rows.append([_era_done_t, "ERA 1 COMPLETE"])
+	for e in _era_start:
+		if e > 1:
+			rows.append([_era_start[e], "ERA %d BEGINS" % e])
+	for e in _era_done:
+		rows.append([_era_done[e], "ERA %d COMPLETE (%.1f min in the era)" % [e, (_era_done[e] - float(_era_start.get(e, 0.0))) / 60.0]])
+	for th in _threats:
+		rows.append([th[0], "threat: %s" % th[1]])
 	rows.sort_custom(func(a, b): return a[0] < b[0])
 	for r in rows:
 		print("BOT   %s  %s" % [_mmss(r[0]), r[1]])
@@ -618,18 +725,36 @@ func _finish() -> void:
 		_fps_sum / maxf(_fps_n, 1), _fps_min if _fps_min < INF else 0.0])
 	if not summary.is_empty():
 		print("BOT era 1 card: %s" % str(summary))
+	var s2: Dictionary = (Village.stats.get("era_summary", {}) as Dictionary).get("2", {})
+	if not s2.is_empty():
+		print("BOT era 2 card: %s" % str(s2))
+	print("BOT deaths by cause: %s | era 2 play: %s" % [str(_death_causes), era2.summary()])
+	print("BOT era 2 stats: harvests %d grain %d crops lost %d | offerings %d | bear swipes %d raided %d | flood hurt %d | blights cured %d | trust avg %.2f (%s) | flags %s" % [
+		int(Village.stats.get("harvests", 0)), int(Village.stats.get("grain_harvested", 0)), int(Village.stats.get("crops_lost", 0)),
+		int(Village.stats.get("offerings", 0)), int(Village.stats.get("bear_swipes", 0)), int(Village.stats.get("bear_raided", 0)),
+		int(Village.stats.get("flood_hurt", 0)), int(Village.stats.get("blights_cured", 0)), Trust.average(), Trust.stage_name(), str(Village.stats.get("flags", []))])
 	print("BOT audio: set %s | layers on %s | stingers %s | voices %d" % [Audio._set, str(Audio.layer_seen.keys()), str(Audio.stinger_log), Audio.voice_count])
 	var ok := Game.world != null and Village.population() >= 0
 	var why := ""
 	# Pacing regression: Era 1 must never finish under its floor (35 game minutes).
 	var e1 := Defs.era(1)
 	var floor_min: float = e1.gate_min_minutes if e1 else 35.0
-	if _era_done_t >= 0.0 and _era_done_t / 60.0 < floor_min:
+	if _era_done_t >= 0.0 and _era_done_t / 60.0 < floor_min and _loaded_from == "":
 		ok = false
 		why = "pacing regression: Era 1 finished in %.1f min (< %.0f)" % [_era_done_t / 60.0, floor_min]
-	if Game.flags.has("expect-gate") and _era_done_t < 0.0:
+	var gate_era := maxi(until_era - 1, 1)
+	if Game.flags.has("expect-gate") and not _era_done.has(gate_era):
 		ok = false
-		why = "Era 1 not complete after %s" % _mmss(Clock.total_t)
+		why = "Era %d not complete after %s" % [gate_era, _mmss(Clock.total_t)]
+	if _era_done.has(2):
+		var e2d := Defs.era(2)
+		var m2: float = (float(_era_done[2]) - float(_era_start.get(2, 0.0))) / 60.0
+		if m2 < (e2d.gate_min_minutes if e2d else 45.0):
+			ok = false
+			why = "pacing regression: Era 2 finished in %.1f min (< %.0f)" % [m2, e2d.gate_min_minutes if e2d else 45.0]
+	if int(_death_causes.get("other", 0)) > 0:
+		ok = false
+		why = "%d deaths not of old age" % int(_death_causes["other"])
 	if _era_done_t >= 0.0 and Village.era < 2:
 		ok = false
 		why = "the gate is done but Village.era is still %d" % Village.era
