@@ -130,6 +130,30 @@ func score(s, idle_n: int) -> float:
 			return (4.6 if Village.store(&"charcoal") < 10 else 0.5) if _has(&"wood", 5) else 0.0
 	return -1.0
 
+## [era3] Era 3 workplaces: first crew before most other work, then more
+## hands while the bench, the ledges, the seams or the bins have work and the
+## chain is wanted. -1 = not an Era 3 workplace.
+func workplace_score(s) -> float:
+	if Village.era < 3 or not s.is_workplace() or s.building.era < 3:
+		return -1.0
+	var have: int = s.slots_filled()
+	if have >= Workplace.crew_cap(s) or not s.discovered():
+		return 0.0
+	var busy := Workplace.bench_need(s) > 0.0
+	if not busy:
+		for t in Workplace.tasks(s):
+			if Workplace.need(t) > 0.0:
+				busy = true
+				break
+	var base := 4.0
+	match s.building.id:
+		&"mason": base = 7.6 if short(&"blocks") > 0 or Village.store(&"blocks") < 20 else 5.0
+		&"forge": base = 7.6 if short(&"iron") > 0 or short(&"iron_ore") > 0 or Village.store(&"iron") < 8 else 4.6
+		&"watermill", &"windmill": base = 5.6 if Village.food() < bot._food_target() else 3.6
+	if have < s.building.crew_min:
+		return base + 0.6
+	return base - 1.2 if busy else 0.4
+
 ## A plot whose workshop the open plots are waiting on (the forge while they
 ## wait for iron, the printing house for books, the harbour for island tin).
 func plot_score(b: BuildingDef) -> float:
@@ -293,4 +317,8 @@ func _storm() -> bool:
 	return false
 
 func summary() -> String:
-	return "ship launches %d | calms %d | guiding light %d | rain on fire %d | to clinic %d | storm shields %d" % [launches, calms, guides, fire_rains, to_clinic, shields]
+	return "ship launches %d | calms %d | guiding light %d | rain on fire %d | to clinic %d | storm shields %d" % [launches, calms, guides, fire_rains, to_clinic, shields] \
+		+ " | [era3] roads paved %d | bench cycles %d | mill fetches %d | foreman joins %d | caravans %d | suggestions %d | threats %s" % [
+			int(Village.stats.get("roads_paved", 0)), int(Village.stats.get("bench_cycles", 0)), int(Village.stats.get("mill_fetches", 0)),
+			int(Village.stats.get("foreman_joins", 0)), int(Village.stats.get("caravans", 0)), int(Village.stats.get("suggestions", 0)),
+			str(Village.stats.get("era3_threats_seen", []))]

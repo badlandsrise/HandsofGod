@@ -526,6 +526,9 @@ func _score(s, idle_n: int) -> float:
 ## work, then more hands up to the grip while it has tasks waiting; a farmhouse
 ## with grain in its bin wants a carter. -1.0 = not a workplace or its cart.
 func _workplace_score(s) -> float:
+	var e3w: float = era3.workplace_score(s)     # [era3] the mason's yard, the forge, the mills
+	if e3w >= 0.0:
+		return e3w
 	if s.is_workplace():
 		var have: int = s.slots_filled()
 		if have >= Workplace.crew_cap(s) or not s.discovered():
