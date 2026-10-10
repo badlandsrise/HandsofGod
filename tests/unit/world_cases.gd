@@ -34,6 +34,15 @@ func run() -> void:
 	Clock.running = false
 	await get_tree().process_frame
 	print("world build ms: %d" % w.build_ms)
+	# ---- the hand, camera and HUD exist exactly once, even after a second new_game
+	w.new_game()
+	await get_tree().process_frame
+	for sp in ["res://scripts/hand/hand.gd", "res://scripts/world/camera_rig.gd", "res://scripts/ui/hud.gd"]:
+		var n := 0
+		for node in get_tree().root.find_children("*", "", true, false):
+			if node.get_script() != null and node.get_script().resource_path == sp:
+				n += 1
+		check(n == 1, "%s instanced exactly once (%d)" % [sp.get_file(), n])
 	# ---- heightmap
 	var y: float = w.ground_y(0, -13)
 	check(y > 2.0 and y < 7.0, "Clearing floor height is sane (%.2f)" % y)

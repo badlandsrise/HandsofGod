@@ -281,6 +281,8 @@ func _on_era(era: int) -> void:
 func _on_hand_lifted(people: Array) -> void:
 	if people.is_empty():
 		return
+	if _set != &"":
+		set_layer(&"melody", 1.0)   # at once; the director turns it off once the hand is empty
 	var p = people[randi() % people.size()]
 	var t := int(p.get("trust")) if p.get("trust") != null else 2
 	voice(p, &"worry" if t <= 0 else (&"question" if t <= 1 else &"happy"))
