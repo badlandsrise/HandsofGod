@@ -505,6 +505,8 @@ func _score(s, idle_n: int) -> float:
 		var d := Dreams.active_dream()
 		if d != null and d.needs_buildings.has(b.id):
 			dream = true
+		if b.id == &"drying_rack" and not Site.has_drying_rack():
+			dream = true          # Era 1: the hunting lodge waits for the meat rack
 		if b.id == &"footbridge" or _dream_chain().has(b.id):
 			dream = true          # the way across, and the workshops the dream's goods come from (the clamp and smelter for the bridge's bronze)
 		var key: float = era3.plot_score(b)
