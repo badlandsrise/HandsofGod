@@ -156,7 +156,7 @@ machine's speed. It puts engine options before `--`:
   a `.wav` (lossless, best for editing). `.ogv` is Ogg Theora.
 - `--fixed-fps 30`: the frame rate of the movie. Movie Maker forces a fixed
   rate anyway, and this option sets it.
-- `--resolution 1920x1080`: the frame size. Use `3840x2160` for 4K.
+- Frame size: the movie is always the game's own viewport, **1600x900** (16:9). `--resolution` is ignored by Movie Maker in this project (checked on Linux, and the Windows exe's AVIs also report 1600x900), so for 1080p or 4K upscale afterwards, e.g. `ffmpeg -i in.avi -vf scale=1920:1080:flags=lanczos out.mp4`.
 - Recording runs slower than real time on a slow machine, but the footage
   plays at full speed.
 
@@ -167,39 +167,39 @@ and the seeds run on that same step. Two recordings of the same command give
 the same frames, and the log prints a `state hash` at the end of each demo to
 confirm it.
 
-**Worker placement, 1080p30 AVI (exported build):**
+**Worker placement, 1600x900 30 fps AVI (exported build):**
 
 ```bat
-%GAME% --write-movie %OUT%\worker_placement_era1.avi --fixed-fps 30 --resolution 1920x1080 -- --capture --era=1 --demo=worker_placement --hide-ui --hand-visible --quit-after
+%GAME% --write-movie %OUT%\worker_placement_era1.avi --fixed-fps 30 -- --capture --era=1 --demo=worker_placement --hide-ui --hand-visible --quit-after
 ```
 
 **Village life, PNG sequence (exported build):**
 
 ```bat
-%GAME% --write-movie %OUT%\village_life_era3\frame.png --fixed-fps 30 --resolution 1920x1080 -- --capture --era=3 --demo=village_life --hide-ui --quit-after
+%GAME% --write-movie %OUT%\village_life_era3\frame.png --fixed-fps 30 -- --capture --era=3 --demo=village_life --hide-ui --quit-after
 ```
 
 **The same from the project folder (editor binary):**
 
 ```bat
-%GODOT% --path %PROJECT% --write-movie %OUT%\worker_placement_era2.avi --fixed-fps 30 --resolution 1920x1080 -- --capture --era=2 --demo=worker_placement --hide-ui --hand-visible --quit-after
-%GODOT% --path %PROJECT% --write-movie %OUT%\village_life_era1.avi --fixed-fps 30 --resolution 1920x1080 -- --capture --era=1 --demo=village_life --hide-ui --quit-after
+%GODOT% --path %PROJECT% --write-movie %OUT%\worker_placement_era2.avi --fixed-fps 30 -- --capture --era=2 --demo=worker_placement --hide-ui --hand-visible --quit-after
+%GODOT% --path %PROJECT% --write-movie %OUT%\village_life_era1.avi --fixed-fps 30 -- --capture --era=1 --demo=village_life --hide-ui --quit-after
 ```
 
 **A held preset or a camera move.** `--quit-after=S` stops after S seconds of
 footage:
 
 ```bat
-%GAME% --write-movie %OUT%\valley_wide_era1.avi --fixed-fps 30 --resolution 1920x1080 -- --capture --era=1 --cam=valley_wide --hide-ui --quit-after=8
-%GAME% --write-movie %OUT%\valley_wide_era2.avi --fixed-fps 30 --resolution 1920x1080 -- --capture --era=2 --cam=valley_wide --hide-ui --quit-after=8
-%GAME% --write-movie %OUT%\valley_wide_era3.avi --fixed-fps 30 --resolution 1920x1080 -- --capture --era=3 --cam=valley_wide --hide-ui --quit-after=8
-%GAME% --write-movie %OUT%\crane_reveal_era3.avi --fixed-fps 30 --resolution 1920x1080 -- --capture --era=3 --cam=crane_reveal --hide-ui --quit-after=26
+%GAME% --write-movie %OUT%\valley_wide_era1.avi --fixed-fps 30 -- --capture --era=1 --cam=valley_wide --hide-ui --quit-after=8
+%GAME% --write-movie %OUT%\valley_wide_era2.avi --fixed-fps 30 -- --capture --era=2 --cam=valley_wide --hide-ui --quit-after=8
+%GAME% --write-movie %OUT%\valley_wide_era3.avi --fixed-fps 30 -- --capture --era=3 --cam=valley_wide --hide-ui --quit-after=8
+%GAME% --write-movie %OUT%\crane_reveal_era3.avi --fixed-fps 30 -- --capture --era=3 --cam=crane_reveal --hide-ui --quit-after=26
 ```
 
 **SPOILER, liftoff:**
 
 ```bat
-%GAME% --write-movie %OUT%\SPOILER_liftoff.avi --fixed-fps 30 --resolution 1920x1080 -- --capture --spoiler=goodbye --cam=liftoff --hide-ui --quit-after=24
+%GAME% --write-movie %OUT%\SPOILER_liftoff.avi --fixed-fps 30 -- --capture --spoiler=goodbye --cam=liftoff --hide-ui --quit-after=24
 ```
 
 The demo's `--quit-after` (after `--`) is not the same as Godot's own
@@ -212,8 +212,8 @@ next to the executable.
 The Godot 4.6.1 Windows release export template (`windows_release_x86_64.exe`)
 was checked here. It contains the `--write-movie` and `--fixed-fps` command-line
 handling and the MJPEG/PNG movie writers, so `HandsOfGod.exe --write-movie ...`
-is expected to record. That could not be run on Windows from this machine. If
-an exported build ignores `--write-movie` (no file appears), use the
+records: it was tested on a Windows PC with a GPU, and both demos produced AVIs
+with no script errors. If an exported build ignores `--write-movie` (no file appears), use the
 project-folder route: the official Godot 4.6.1 editor binary with
 `--path <project>`, as in the examples above. It always supports Movie Maker,
 gives the same footage, and needs the project folder (the repository), not the
