@@ -829,18 +829,20 @@ func tooltip_text() -> String:
 			var t := hover_site.hover_text()
 			if not hover_site.can_accept(1):
 				t += " (full)"
-			return "%s · %s" % [who, t] if t != "" else who
+			var line := "%s · %s" % [who, t] if t != "" else who
+			var young := PersonInfo.held_note(held, hover_site)      # [ui hook] a child over work
+			return line + ("\n" + young if young != "" else "")
 		return who
 	if hover_person != null:
-		var s := hover_person.status_text()
-		return hover_person.given_name + ("\n" + s if s != "" else "")
+		return PersonInfo.tooltip(hover_person)                  # [ui hook] who, why idle, wants
 	if hover_thing != null:
 		if hover_thing.is_in_group(&"gift"):
 			return "A gift"
 		var w: float = hover_thing.lift_weight() if hover_thing.has_method(&"lift_weight") else 1.0
 		return ("%s · too heavy" if w > Faith.strength else "%s") % _thing_name(hover_thing)
 	if is_instance_valid(hover_site):
-		return hover_site.hover_text()
+		var note := PersonInfo.site_note(hover_site)             # [ui hook] what it is for
+		return hover_site.hover_text() + ("\n" + note if note != "" else "")
 	return ""
 
 func _thing_name(n: Node) -> String:

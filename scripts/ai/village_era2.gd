@@ -195,7 +195,7 @@ func _maybe_cottage() -> void:
 	var s2: Site = w.add_plot(&"cottage")
 	if s2 != null:
 		Village.stats["cottage_wishes"] = int(Village.stats.get("cottage_wishes", 0)) + 1
-		Events.alert.emit("A family wants a cottage of their own", s2.global_position)
+		Events.alert.emit(PersonInfo.home_wish_line("cottage"), s2.global_position)   # [ui hook] names the pair
 
 func _raft() -> void:
 	if Village.stats.get("raft_site", false):

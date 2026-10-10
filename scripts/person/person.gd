@@ -727,54 +727,12 @@ func _near_someone(r: float) -> bool:
 			return true
 	return false
 
+## [ui hook] wants are optional bonuses now (scripts/ai/wants.gd owns the rules).
 func _sim_wish(dt: float) -> void:
-	if stage == Stage.BABY:
-		return
-	if not Flags.onboarding_done() and wish == &"":
-		return             # the first minutes teach one wish at a time (onboarding.gd)
-	wish_t -= dt
-	if wish != &"":
-		if wish_t <= 0.0:
-			wish = &""                       # ignored: a little less trust
-			adjust_trust(-0.1)
-			wish_t = Game.rng.randf_range(WISH_GAP.x * 0.5, WISH_GAP.y * 0.5)
-			_show_wish()
-		return
-	if needs[&"warmth"] < 0.3 and Faith.has(&"warmth"):
-		wish = &"warmth"
-		wish_t = WISH_LIFETIME
-		_show_wish()
-		return
-	if wish_t > 0.0 or stage == Stage.CHILD:
-		return
-	var options: Array[StringName] = []
-	var mine := _job_def()
-	for s in Village.sites:
-		if not is_instance_valid(s) or s.is_plot() or s.job == null:
-			continue
-		var id: StringName = s.job.id
-		if (mine != null and id == mine.id) or options.has(id) or not s.can_accept(1):
-			continue
-		options.append(id)
-		# Favour work they are good at.
-		if stars(_family(s.job.skill)) >= 2:
-			options.append(id)
-	if options.is_empty():
-		wish_t = 20.0
-		return
-	wish = options[Game.rng.randi() % options.size()]
-	wish_t = WISH_LIFETIME
-	_show_wish()
+	Wants.sim(self, dt)
 
 func _grant_wish() -> void:
-	wish = &""
-	wish_t = Game.rng.randf_range(WISH_GAP.x, WISH_GAP.y)
-	adjust_trust(1.0)
-	needs[&"joy"] = minf(needs[&"joy"] + 0.3, 1.0)
-	Faith.add(Game.rng.randf_range(WISH_FAITH.x, WISH_FAITH.y) if Flags.onboarding_done() else 2.0, global_position)
-	if Game.rng.randf() < WISH_GIFT_CHANCE and Flags.onboarding_done():
-		Gifts.spawn_gift(self)
-	_show_wish()
+	Wants.grant(self)
 
 func _show_wish() -> void:
 	if visual == null:

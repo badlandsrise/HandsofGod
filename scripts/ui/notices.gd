@@ -147,7 +147,10 @@ static func alert_card(text: String, at: Vector3, on_click: Callable) -> Button:
 	b.custom_minimum_size = Vector2(300, 64)
 	b.theme = UiTheme.paper_theme()
 	var who := person_for_alert(text, at)
-	var warm := text.to_lower().contains("arrived") or text.to_lower().contains("born") or text.to_lower().contains("friend")
+	var low := text.to_lower()
+	var warm := false
+	for w in ["arrived", "born", "friend", "gift", "baby", "festival", "wanderer", "learned", "clothes", "hunt brought"]:
+		warm = warm or low.contains(w)
 	var accent := UiTheme.LEAF if warm else UiTheme.INK_RED
 	var n := InkBox.make(Color(UiTheme.PAPER, 0.96), Color(accent, 0.85), 10.0, 10.0, 2.0)
 	n.shadow = Color(0, 0, 0, 0.3)

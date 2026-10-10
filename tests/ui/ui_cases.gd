@@ -51,6 +51,15 @@ func _run() -> void:
 	await test_era_card()
 	test_options()
 	test_alerts()
+	# the clarity pass (playtest era 1 section 1, era 2 clarity)
+	test_goal_checklist()
+	await test_dream_card()
+	test_power_locks()
+	test_person_lines()
+	test_wants()
+	await test_guidance()
+	await test_hud_idle()
+	await test_save_page_fits()
 	print("UI tests: %d passed, %d failed" % [passes, fails])
 	finished = true
 
@@ -337,3 +346,267 @@ func test_alerts() -> void:
 	check(card is Button and card.get_child_count() > 0, "alerts: card builds")
 	card.free()
 	_reset()
+
+# ---------------------------------------------------------------- clarity: the goal
+
+func test_goal_checklist() -> void:
+	_reset()
+	var era0 := Village.era
+	Village.era = 1
+	Village.stats["onboarding"] = Onboarding.Beat.DONE
+	Village.stats["dreams_done"] = []
+	Village.stats.erase("dream_active")
+	var st := GoalPanel.state()
+	check(st["mode"] == &"teaser" and str(st["hint"]) != "", "goal: before a dream appears, a teaser with a hint (%s)" % [st.get("hint", "")])
+	Village.stats["dream_active"] = "shelter_of_our_own"
+	st = GoalPanel.state()
+	var keys: Array = (st.get("items", []) as Array).map(func(it): return it["key"])
+	check(st["mode"] == &"dream" and keys.has("b:hut") and keys.has("b:fire_circle"), "goal: the dream's checklist (%s)" % [keys])
+	Village.stats["dreams_done"] = ["shelter_of_our_own", "shrine_to_the_hand"]
+	Village.stats["dream_active"] = "stone_circle"
+	var sc: DreamDef = Defs.dream(&"stone_circle")
+	var fest: Dictionary = {}
+	for it in Dreams.checklist(sc):
+		if it["key"] == "f:festival":
+			fest = it
+	check(str(fest.get("text", "")) == "The first festival: bless the dancers at the fire circle", "goal: the festival line says what to do")
+	check(str(fest.get("hint", "")).contains("Blessing"), "goal: the festival hint names Blessing")
+	# the checklist agrees with Dreams.met in every state set up here
+	var agree := true
+	for step in 4:
+		match step:
+			1: Flags.set_flag(&"festival")
+			2: Village.stats["winters_survived"] = 2
+			3: Village.stats["winters_survived"] = 0
+		for e in [1, 2, 3]:
+			var ed := Defs.era(e)
+			if ed == null:
+				continue
+			for id in ed.dreams:
+				var d: DreamDef = Defs.dream(id)
+				if d != null and Dreams.checklist_met(d) != Dreams.met(d):
+					agree = false
+					print("  disagree: ", id, " step ", step)
+	check(agree, "goal: checklist_met == met for every dream")
+	var fest_done := false
+	for it in Dreams.checklist(sc):
+		if it["key"] == "f:festival":
+			fest_done = it["done"]
+	check(fest_done and Dreams.progress_text(sc) != "", "goal: a done line ticks")
+	Village.stats["dreams_done"] = ["shelter_of_our_own", "shrine_to_the_hand", "stone_circle"]
+	check(GoalPanel.state()["mode"] == &"age_done", "goal: the age's dreams all done")
+	var panel := GoalPanel.new()
+	root.add_child(panel)
+	Village.stats["dreams_done"] = ["shelter_of_our_own", "shrine_to_the_hand"]
+	panel.refresh()
+	check(panel.mode == &"dream" and panel.dream_id == &"stone_circle", "goal: the panel builds the stone circle")
+	panel.free()
+	Village.era = era0
+	_reset()
+
+# ---------------------------------------------------------------- clarity: dream card
+
+func test_dream_card() -> void:
+	_reset()
+	var card := DreamCard.new()
+	root.add_child(card)
+	await _frames(1)
+	var c := DreamCard.content(Defs.dream(&"stone_circle"))
+	check(c["kicker"] == "THE GREAT DREAM OF THIS AGE" and (c["rewards"] as Array).has("+15 faith"), "dream card: kicker and rewards (%s)" % [c["rewards"]])
+	check((c["items"] as Array).size() >= 4 and str(c["voice"]) != "", "dream card: the voice and the checklist")
+	Clock.set_speed(2)
+	var closed: Array = []
+	card.closed.connect(func(id): closed.append(id))
+	card.show_dream(&"stone_circle")
+	await _frames(1)
+	check(card.is_open() and Clock.speed_index == 0, "dream card: shows and pauses until clicked")
+	card.accept()
+	await _frames(1)
+	check(not card.is_open() and Clock.speed_index == 2 and closed == [&"stone_circle"], "dream card: accept restores the speed")
+	card.free()
+	Clock.set_speed(1)
+
+# ---------------------------------------------------------------- clarity: power locks
+
+func test_power_locks() -> void:
+	_reset()
+	var keep := Faith.save_state()
+	var regions0: Dictionary = Village.regions.duplicate()
+	Village.era = 1
+	Faith.total = 13.0
+	Faith.spent = 0.0
+	Faith.unlocked = {&"grip_2": true}
+	Village.stats["dreams_done"] = []
+	Village.regions.erase(&"valley_floor")
+	var d: PowerDef = Defs.power(&"strength_1")
+	var reqs := PowerInfo.requirements(d)
+	var cost: Dictionary = reqs.filter(func(r): return r["key"] == "cost")[0]
+	check(cost["done"] and str(cost["text"]) == "10 faith (you have 13)", "powers: the cost is met with 13 faith (%s)" % [cost["text"]])
+	var line := PowerInfo.locked_line(d)
+	check(line.contains("Valley Floor") and line.contains("shelter") and not line.contains("needs 10 faith"), "powers: the lock says the real reasons (%s)" % line)
+	check(PowerInfo.state(d) == &"locked", "powers: locked, not 'needs faith'")
+	Village.regions[&"valley_floor"] = true
+	Village.stats["dreams_done"] = ["shelter_of_our_own"]
+	check(PowerInfo.state(d) == &"affordable" and PowerInfo.locked_line(d) == "", "powers: all met, ready to unlock")
+	Faith.total = 5.0
+	check(PowerInfo.state(d) == &"faith" and PowerInfo.locked_line(d).contains("You have 5"), "powers: only faith missing says so")
+	var pc := PowerInfo.Card.new()
+	root.add_child(pc)
+	pc.show_power(&"strength_1")
+	check(pc.visible and pc.power_id == &"strength_1", "powers: the hover card builds")
+	pc.free()
+	Faith.load_state(keep)
+	Village.regions = regions0
+	Village.stats["dreams_done"] = []
+
+# ---------------------------------------------------------------- clarity: people
+
+func test_person_lines() -> void:
+	_reset()
+	Village.era = 1
+	Clock.is_night = false
+	var kid := _spawn("Kai", "m", {"age": 8.5 * 60.0})
+	var a := _spawn("Ama", "f", {"age": 25.0 * 60.0})
+	var b := _spawn("Bo", "m", {"age": 26.0 * 60.0})
+	check(PersonInfo.header(kid) == "Kai · child, 8", "people: the child badge (%s)" % PersonInfo.header(kid))
+	check(PersonInfo.too_young(kid) and PersonInfo.too_young_line(kid) == "Kai is too young to work (age 8)", "people: too young to work, with the age")
+	check(PersonInfo.idle_reason(a) == "idle: no work. Set them on a job", "people: an idle reason (%s)" % PersonInfo.idle_reason(a))
+	Clock.is_night = true
+	check(PersonInfo.idle_reason(a).contains("night"), "people: resting at night")
+	Clock.is_night = false
+	a.partner = b.uid
+	b.partner = a.uid
+	check(PersonInfo.home_wish_line("home") == "Ama and Bo want a home of their own", "people: the home wish names the pair (%s)" % PersonInfo.home_wish_line("home"))
+	check(PersonInfo.discovery_line(&"stone_tools").contains("because"), "people: a discovery says why")
+	check(PersonInfo.tooltip(a).begins_with("Ama\n"), "people: the tooltip leads with the name")
+	_reset()
+
+# ---------------------------------------------------------------- clarity: wants
+
+func test_wants() -> void:
+	_reset()
+	Village.stats["onboarding"] = Onboarding.Beat.DONE
+	var a := _spawn("Ama", "f", {"age": 25.0 * 60.0})
+	var b := _spawn("Bo", "m", {"age": 26.0 * 60.0})
+	a.wish = &"gather_berries"
+	a.wish_t = 1.0
+	a.set_meta(&"wish_why", "the food is running low")
+	check(Wants.line(a) == "Ama would love to %s: the food is running low" % a._wish_title(), "wants: a line with the reason (%s)" % Wants.line(a))
+	var trust0: float = a.trust_f
+	Wants.sim(a, 2.0)
+	check(a.wish == &"" and is_equal_approx(a.trust_f, trust0) and a.wish_t >= Wants.GAP.x, "wants: an unanswered want just fades, no blame")
+	a.wish = &"gather_berries"
+	var f0 := Faith.total
+	Wants.grant(a)
+	check(a.wish == &"" and Faith.total - f0 >= Wants.FAITH.x - 0.01 and Faith.total - f0 <= Wants.FAITH.y + 0.01, "wants: granted, bonus faith (%.1f)" % (Faith.total - f0))
+	check(Wants.max_active() == 1, "wants: one at a time in a small village")
+	a.wish = &"gather_berries"
+	b.wish = &""
+	b.wish_t = 0.0
+	Wants.sim(b, 0.1)
+	check(b.wish == &"", "wants: no second want past the cap")
+	_reset()
+
+# ---------------------------------------------------------------- clarity: guidance
+
+func test_guidance() -> void:
+	_reset()
+	Clock.running = true
+	var g := Guidance.new(null)
+	root.add_child(g)
+	await _frames(1)
+	var a := _spawn("Ona", "f", {"age": 25.0 * 60.0})
+	var baby := _spawn("Vek", "m", {"age": 0.0, "parents": [a.uid]})
+	Events.person_born.emit(baby)
+	await _frames(1)
+	var bc := Beacon.on(baby)
+	check(bc != null, "guidance: a newborn gets a beacon")
+	check(Village.stats.get("guide_first_birth", false) and g.busy(), "guidance: the first birth is a camera beat")
+	check(not g.beat(a, "again", "first_birth"), "guidance: a keyed beat runs once")
+	a.bless(15.0)
+	var old_world := Game.world
+	var w3 := Node3D.new()
+	root.add_child(w3)
+	Game.world = w3
+	g.scan()
+	var ring: Node = null
+	for r in tree.get_nodes_in_group(&"bless_ring"):
+		if r.person == a:
+			ring = r
+	check(ring != null and absf(ring.fraction() - 0.5) < 0.05, "guidance: a blessed person gets a timer ring at half")
+	a.blessed_t = 0.0
+	await _frames(3)
+	check(ring == null or not is_instance_valid(ring) or ring.ending(), "guidance: the ring fades when the blessing ends")
+	var m := g.mark(a, 2.0)
+	check(m != null and Beacon.on(a) == m, "guidance: the Book's find marks the person")
+	g.free()
+	for bb in tree.get_nodes_in_group(&"beacon"):
+		bb.free()
+	for r in tree.get_nodes_in_group(&"bless_ring"):
+		r.free()
+	Game.world = old_world
+	w3.free()
+	Clock.running = false
+	_reset()
+
+# ---------------------------------------------------------------- clarity: call idle
+
+class IdleWorld extends Node3D:
+	var called_at: Vector3 = Vector3.INF
+	func call_idle(to: Vector3) -> int:
+		called_at = to
+		return 2
+
+func test_hud_idle() -> void:
+	_reset()
+	var hud: Hud = load("res://scenes/ui/hud.tscn").instantiate()
+	root.add_child(hud)
+	await _frames(2)
+	check(hud.call_idle() == 0, "idle: nobody idle, nothing to call")
+	var a := _spawn("Ama", "f", {"age": 25.0 * 60.0})
+	var b := _spawn("Bo", "m", {"age": 26.0 * 60.0})
+	await _frames(1)
+	check(PersonInfo.idle_people().size() == 2, "idle: two idle adults counted")
+	var old_world := Game.world
+	if Hud.idle_caller() == null:
+		hud.call_idle()
+		check(Beacon.on(a) != null or Beacon.on(b) != null, "idle: without call_idle, the camera finds one and marks them")
+	var mock := IdleWorld.new()
+	root.add_child(mock)
+	Game.world = mock
+	if Village.has_method(&"call_idle"):
+		check(Hud.idle_caller() == Village, "idle: the village's call_idle is used")
+	else:
+		check(Hud.idle_caller() == mock and hud.call_idle() == 2 and mock.called_at.is_finite(), "idle: the world's call_idle is called with a point")
+	Game.world = old_world
+	mock.free()
+	hud.free()
+	for bb in tree.get_nodes_in_group(&"beacon"):
+		bb.free()
+	_reset()
+
+# ---------------------------------------------------------------- the Save page
+
+## Era 2 playtest: the Save page sometimes showed see-through. Opening it a
+## second time (after the menu had been closed) left its parchment the height
+## of its title, with the slots drawn over the valley.
+func test_save_page_fits() -> void:
+	var menu: Node = load("res://scenes/world/title.tscn").instantiate()
+	root.add_child(menu)
+	await _frames(2)
+	var ok := true
+	for i in 3:
+		menu.open_paused()
+		await _frames(1)
+		menu._show_save()
+		await _frames(3)
+		var sub: Control = menu._sub
+		var need: Vector2 = sub.get_combined_minimum_size()
+		ok = ok and sub.visible and sub.size.y >= need.y - 1.0 and need.y > 200.0
+		if not ok:
+			print("  save page %d: size %s, needs %s" % [i, sub.size, need])
+		menu.close()
+		await _frames(1)
+	check(ok, "menu: the Save page's parchment covers its slots every time")
+	menu.free()
+	Clock.running = false

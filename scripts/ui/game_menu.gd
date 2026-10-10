@@ -176,12 +176,29 @@ func _clear_sub(title_text: String, min_w: float = 600.0) -> void:
 	for c in _sub_box.get_children():
 		_sub_box.remove_child(c)
 		c.queue_free()
+	_sub.visible = true
 	_sub.custom_minimum_size = Vector2(min_w, 0)
 	_sub.size = Vector2(min_w, 0)
 	_sub_box.add_child(UiTheme.ink_label(title_text, 40, &"title"))
 	_sub_box.add_child(InkWidgets.Rule.new())
-	_sub.visible = true
 	_confirm = ""
+	_fit_sub.call_deferred()
+
+## The page's parchment must cover everything on it. A PanelContainer outside
+## a container keeps the size it was given, and when the page was rebuilt
+## after the menu had been hidden (Save, close, Esc, Save again) it kept the
+## short height of its title alone: the slots below were drawn straight over
+## the valley, the "see-through Save menu" of the Era 2 playtest. So the page
+## is fitted to its content after every rebuild, and checked while shown.
+func _fit_sub() -> void:
+	if _sub == null or not _sub.visible:
+		return
+	var want := _sub.get_combined_minimum_size()
+	if not _sub.size.is_equal_approx(want):
+		_sub.size = want
+	var sw := _strip.get_combined_minimum_size()
+	if _strip.size.y < sw.y - 0.5:
+		_strip.size = Vector2(maxf(_strip.size.x, sw.x), sw.y)
 
 func _back_row() -> void:
 	var gap := Control.new()
@@ -496,6 +513,7 @@ func _unhandled_input(e: InputEvent) -> void:
 func _process(_delta: float) -> void:
 	if visible:
 		_hide_hand_tip()
+		_fit_sub()
 
 func _hide_hand_tip() -> void:
 	var hand := get_tree().get_first_node_in_group(&"hand")
