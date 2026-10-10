@@ -361,11 +361,22 @@ func _storm() -> void:
 		p.blessed_t = 0.0
 		p.hurt_t = 0.0
 	out[0].warm(20.0)
+	# [era3] out in the open away from the town (the quarry slope): in the town they duck indoors
+	for i in range(1, out.size()):
+		out[i].global_position = w._v3(Vector2(232.0 + 3.0 * i, -100.0))
+	var in_town: Person = _adults(6)[5]
+	in_town.go_idle()
+	in_town.hurt_t = 0.0
+	var home: Site = _sites(&"townhouse")[0]
+	in_town.global_position = home.global_position + Vector3(4, 0, 4)
 	var old: float = Era3Threats.GUST_CHANCE
+	var hurt0 := int(Village.stats.get("storm_hurt", 0))
 	for i in 30:
 		t._gusts()
 	check(out[0].hurt_t <= 0.0, "Warmth held over people shields them from the gusts")
-	check(out.slice(1).any(func(p): return p.hurt_t > 0.0), "people caught out in the open are knocked about")
+	check(out.slice(1).any(func(p): return p.hurt_t > 0.0) or int(Village.stats.get("storm_hurt", 0)) > hurt0, "people caught out in the open are knocked about")
+	check(in_town.hurt_t <= 0.0 or in_town.state == Person.S.HELD, "in the town people duck into a doorway")
+	check(int(t._gust_hurt) <= Era3Threats.GUST_CAP, "a storm knocks about a few at most (%d)" % t._gust_hurt)
 	check(Village.alive().all(func(p): return p.alive()), "but nobody dies")
 	var damaged := Village.sites.filter(func(s): return is_instance_valid(s) and s.damage > 0.0).size()
 	t._tear_roofs(2)

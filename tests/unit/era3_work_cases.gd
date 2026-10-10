@@ -39,6 +39,7 @@ func run() -> void:
 	await _master()
 	await _paving()
 	await _migrate()
+	_calm()
 	w.queue_free()
 	await get_tree().process_frame
 	print("RESULT: %s (%d failures)" % ["PASS" if fails == 0 else "FAIL", fails])
@@ -295,3 +296,37 @@ func _migrate() -> void:
 	_e3()._migrated = false
 	_e3()._migrate_workplaces()
 	check(m.job.id == &"work_mill" and _carter(m) != null, "an old save's mill becomes a workplace with its carter")
+
+# ---------------------------------------------------------------- calmer threats
+
+func _calm() -> void:
+	var t: Era3Threats = w.threats.era3
+	var picks := {}
+	for i in 12:
+		var f := t._fire_target()
+		if f != null:
+			picks[f.building.id] = true
+	var only_fire_work := picks.keys().all(func(k): return Era3Threats.FIRE_WORK.has(k))
+	check(not picks.is_empty() and only_fire_work, "a town fire starts where fire is worked (%s)" % str(picks.keys()))
+	var pop := Village.population()
+	check(pop >= Era3Threats.SICK_POP or not t.can(&"sickness"), "sickness waits for a crowded town (%d people)" % pop)
+	Village.stats["threat_storms"] = Era3Threats.MAX_EACH
+	if not Era3Threats.seen().has("storms"):
+		Era3Threats.seen().append("storms")
+	Village.stats["quiet_until"] = -1.0
+	var rolled := 0
+	var others := 0
+	w.threats.enabled = true
+	Village.stats["era_started_t"] = Clock.total_t - 3000.0
+	for i in 200:
+		t.reset()
+		t._on_dawn(0)
+		if t.current == &"storms":
+			rolled += 1
+		elif t.current != &"":
+			others += 1
+	t.reset()
+	w.threats.enabled = false
+	check(others > 0, "the other threats still come (%d of 200 dawns)" % others)
+	check(rolled == 0, "a threat that has come twice this era does not come again")
+	check(Era3Threats.QUIET_AFTER >= 300.0 and Era3Threats.SICK_START <= 2 and Era3Threats.GUST_CAP <= 4, "after a threat, five minutes of peace; small outbreaks; few hurt by a storm")

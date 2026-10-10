@@ -239,9 +239,9 @@ func suggestions() -> Array:
 	if Village.store(&"wood") < 10 and t > 300.0 or t > 1300.0:
 		out.append(["town_wood", &"woodcutter_camp", "Timber for a town! They want a woodcutters' camp by the eastern woods", false])
 	if t > 780.0 or int(Village.stats.get("threat_town_fire", 0)) > 0:
-		out.append(["fire_station", &"fire_station", "They want a fire station with a bell, and a crew to watch for smoke", false])
+		out.append(["fire_station", &"fire_station", "They want a fire station with a bell, and a crew to watch for smoke", int(Village.stats.get("threat_town_fire", 0)) > 0])
 	if t > 1080.0 or int(Village.stats.get("threat_sickness", 0)) > 0:
-		out.append(["clinic", &"clinic", "They want a clinic, where the sick can rest and be tended", false])
+		out.append(["clinic", &"clinic", "They want a clinic, where the sick can rest and be tended", int(Village.stats.get("threat_sickness", 0)) > 0])
 	if t > 1200.0 and _count(&"market", true) > 0:
 		out.append(["market_hall", &"market_hall", "Traders from up and down the valley. They want a covered market hall", false])
 	if t > 1500.0:
