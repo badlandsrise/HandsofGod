@@ -39,6 +39,7 @@ var root: Control
 var dreams_panel: GoalPanel
 var stores_panel: PanelContainer
 var stores_box: HBoxContainer
+var time_panel: PanelContainer
 var faith_ring: FaithRing
 var power_bar: HBoxContainer
 var time_label: Label
@@ -166,6 +167,7 @@ func _build_stores() -> void:
 func _build_time() -> void:
 	var p := _panel(Control.PRESET_TOP_RIGHT)
 	_chrome.append(p)
+	time_panel = p
 	p.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override(&"separation", 10)
@@ -488,8 +490,54 @@ func refresh() -> void:
 
 var _stores_sig: String = "~"
 
+## How many stores the bar shows besides food; the rest wait behind "+N more".
+const BAR_MAX := 6
+const LOW_AT := 5
+
+## The stores worth watching right now, most pressing first: what the current
+## dream asks for, what open plots are still short of, anything full or nearly
+## out, then the era's staples. A town keeps a dozen stores; the player should
+## only have to read a handful (Austin's Era 3 note).
+func watched_stores() -> Array:
+	var out: Array = []
+	var d: DreamDef = Defs.dream(dreams_panel.dream_id) if dreams_panel != null and dreams_panel.dream_id != &"" else null
+	if d != null:
+		for k in d.needs_stores:
+			if k != &"food" and Village.store(k) < int(d.needs_stores[k]):
+				_add_once(out, k)
+	var short_plots: Array = []
+	for st in Village.sites:
+		if not is_instance_valid(st) or st.building == null or not st.is_plot():
+			continue
+		var for_dream: bool = d != null and d.needs_buildings.has(st.building.id)
+		for k in st.building.cost:
+			if k in Village.FOOD_KINDS or st.remaining(k) <= 0:
+				continue
+			if for_dream:
+				_add_once(out, k)
+			elif not short_plots.has(k):
+				short_plots.append(k)
+	for k in short_plots:
+		if Village.store(k) < LOW_AT:
+			_add_once(out, k)
+	for k in Village.stores:
+		if k in Village.FOOD_KINDS:
+			continue
+		if Village.store(k) >= Village.store_cap:
+			_add_once(out, k)
+	for k in RELEVANT.get(clampi(Village.era, 1, 4), []):
+		_add_once(out, k)
+	for k in short_plots:
+		_add_once(out, k)
+	return out
+
+static func _add_once(a: Array, k) -> void:
+	if not a.has(k):
+		a.append(k)
+
 func _refresh_stores() -> void:
-	var sig := "%d|%d|%d|%s" % [Village.era, Village.food(), Village.population(), str(Village.stores)]
+	var watched := watched_stores()
+	var sig := "%d|%d|%d|%s|%s" % [Village.era, Village.food(), Village.population(), str(Village.stores), str(watched)]
 	if sig == _stores_sig:
 		return
 	_stores_sig = sig
@@ -498,22 +546,57 @@ func _refresh_stores() -> void:
 		c.queue_free()
 	var food := Village.food()
 	stores_box.add_child(_store_item(&"food", "Food", food))
-	var kinds: Array = []
-	for k in RELEVANT.get(clampi(Village.era, 1, 4), []):
-		kinds.append(k)
-	for k in Village.stores:
-		if k in Village.FOOD_KINDS or kinds.has(k):
-			continue
-		if Village.store(k) > 0:
-			kinds.append(k)
-	for k in kinds:
+	var shown := watched.slice(0, BAR_MAX)
+	for k in shown:
 		stores_box.add_child(_store_item(k, String(k).capitalize(), Village.store(k)))
+	var rest: Array = []
+	for k in Village.stores:
+		if k in Village.FOOD_KINDS or shown.has(k) or Village.store(k) <= 0:
+			continue
+		rest.append(k)
+	for k in watched:
+		if not shown.has(k) and not rest.has(k):
+			rest.append(k)
+	if not rest.is_empty():
+		rest.sort_custom(func(x, y): return String(x) < String(y))
+		var lines: Array = ["Also in the stores:"]
+		for k in rest:
+			lines.append("%s %d" % [String(k).capitalize(), Village.store(k)])
+		var more := _label("+%d more" % rest.size(), 15, UiTheme.TEXT_DIM)
+		more.mouse_filter = Control.MOUSE_FILTER_PASS
+		more.tooltip_text = "\n".join(lines)
+		more.name = "MoreStores"
+		stores_box.add_child(more)
 	var pop := Village.population()
 	var days := float(food) / maxf(float(pop) * food_per_person_per_day(), 0.5)
 	var nd := int(floor(days))
 	var dl := _label(("%s day of food" if nd == 1 else "%s days of food") % (str(nd) if nd < 99 else "99+"), 15,
 		UiTheme.WARN if days < 2.0 else UiTheme.TEXT_DIM)
 	stores_box.add_child(dl)
+	_fit_stores.call_deferred()
+
+## Keep the bar clear of the clock, and the goal panel clear of the bar.
+func _fit_stores() -> void:
+	if stores_box == null or not is_instance_valid(stores_box):
+		return
+	var vw := get_viewport().get_visible_rect().size.x
+	var side := (time_panel.get_combined_minimum_size().x if time_panel != null else 280.0) + 28.0
+	stores_box.add_theme_constant_override(&"separation", 18)
+	if stores_box.get_combined_minimum_size().x > vw - 2.0 * side:
+		stores_box.add_theme_constant_override(&"separation", 10)
+	stores_panel.reset_size()
+	if dreams_panel == null:
+		return
+	var top := 14.0
+	var sw := stores_panel.get_combined_minimum_size()
+	var sr := Rect2(Vector2((vw - sw.x) * 0.5, 0.0), sw)
+	var dr := Rect2(Vector2(14.0, 14.0), dreams_panel.get_combined_minimum_size())
+	if sr.intersects(dr):
+		top = sr.end.y + 8.0
+	if not is_equal_approx(dreams_panel.offset_top, top):
+		var hgt := dreams_panel.offset_bottom - dreams_panel.offset_top
+		dreams_panel.offset_top = top
+		dreams_panel.offset_bottom = top + hgt
 
 ## [polish] What one person really eats in a day and a night: the food need
 ## drains (Person.DECAY, slower in Era 1) and each meal refills 0.6.
