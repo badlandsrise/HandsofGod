@@ -305,6 +305,7 @@ func _finish() -> void:
 	var real_s := (Time.get_ticks_msec() - _start_ms) / 1000.0
 	print("BOT summary: game %.0fs in %.1fs real | day %d | pop %d | faith %.0f | dreams %s | regions %s | powers %s | placed %d | gifts %d | deaths %d" % [
 		Clock.total_t, real_s, Clock.day, Village.population(), Faith.total, str(_dreams), str(_regions), str(_bought), _placed, _gifts, _deaths])
+	print("BOT audio: set %s | layers on %s | stingers %s | voices %d" % [Audio._set, str(Audio.layer_seen.keys()), str(Audio.stinger_log), Audio.voice_count])
 	var ok := Game.world != null and Village.population() >= 0
 	print("BOT %s" % ("PASS" if ok else "FAIL"))
 	Engine.time_scale = 1.0

@@ -248,7 +248,7 @@ func _update(delta: float, snap: bool = false) -> void:
 		if _next_bolt <= 0.0:
 			_next_bolt = Game.rng.randf_range(3.5, 9.0)
 			_flash_t = 0.35
-			Audio.sfx("res://assets/audio/sfx/thunder.ogg", Vector3.INF, Game.rng.randf_range(0.85, 1.1))
+			Audio.sfx("res://assets/audio/sfx/heavy.ogg", Vector3.INF, Game.rng.randf_range(0.32, 0.42), -2.0)   # a low rumble
 	var fl := 0.0
 	if _flash_t > 0.0:
 		fl = (_flash_t / 0.35) * (0.6 + 0.4 * sin(_flash_t * 90.0))

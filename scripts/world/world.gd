@@ -67,6 +67,7 @@ func _ready() -> void:
 	if Game.testing():
 		new_game()
 		Clock.running = true
+		Audio.play_set(Audio.era_set(Village.era))
 		if ResourceLoader.exists(BOT_SCRIPT):
 			var bot: Node = load(BOT_SCRIPT).new()
 			bot.name = "Bot"
@@ -74,12 +75,14 @@ func _ready() -> void:
 	elif Game.flags.has("shots") and ResourceLoader.exists(SHOTS_SCRIPT):
 		new_game()
 		Clock.running = true
+		Audio.play_set(Audio.era_set(Village.era))
 		var sd: Node = load(SHOTS_SCRIPT).new()
 		sd.name = "ShotDirector"
 		add_child(sd)
 	elif Game.flags.has("no-title"):
 		new_game()
 		Clock.running = true
+		Audio.play_set(Audio.era_set(Village.era))
 	else:
 		show_title()
 
@@ -343,6 +346,7 @@ func show_title() -> void:
 		title = load(TITLE_SCENE).instantiate()
 		add_child(title)
 	set_title_mode(true)
+	Audio.play_title()
 
 func set_title_mode(on: bool) -> void:
 	if title_camera:
@@ -377,6 +381,7 @@ func _activate_play_camera() -> void:
 func start_play() -> void:
 	set_title_mode(false)
 	Clock.running = true
+	Audio.play_set(Audio.era_set(Village.era))
 
 # ================================================================ API
 
@@ -585,7 +590,6 @@ func _open_region_visual(id: StringName, instant: bool) -> void:
 		return
 	regions.lighten(id)
 	nav.rebake()
-	Audio.sfx("res://assets/audio/sfx/region_open.ogg")
 	region_visual_opened.emit(id)
 
 func _logs_clear() -> bool:

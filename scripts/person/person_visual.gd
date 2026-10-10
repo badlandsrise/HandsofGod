@@ -167,6 +167,9 @@ func animate(delta: float, pose: int, moving: bool, look_at_world: Vector3) -> v
 		st = &"carry"
 	if villager.current_state() != st:
 		villager.play(st, 0.25)
+		# Greeting the hand: a short hum (Audio rate-limits per person and overall).
+		if st == &"wave" or st == &"cheer":
+			Audio.voice(get_parent(), &"happy" if st == &"wave" else &"cheer")
 	# Idle people turn their whole body a little toward the hand.
 	var yaw := 0.0
 	if look_at_world != Vector3.INF and not moving and p in [Pose.WATCH, Pose.WAVE, Pose.POINT, Pose.REACH, Pose.COWER]:

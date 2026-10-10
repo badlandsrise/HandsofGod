@@ -381,7 +381,6 @@ func _on_power_pressed(id: StringName) -> void:
 	if Faith.can_buy(id):
 		if Faith.buy(id):
 			add_toast("%s: %s" % [d.title, d.what_it_opens if d.what_it_opens != "" else d.what_it_does])
-			Audio.sfx("res://assets/audio/sfx/unlock.ogg")
 		return
 	if Faith.has(id):
 		var hand := get_tree().get_first_node_in_group(&"hand")
