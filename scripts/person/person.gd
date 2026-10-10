@@ -1208,7 +1208,9 @@ func _frozen() -> bool:
 func _pose() -> int:
 	match state:
 		S.HELD:
-			return PersonVisual.Pose.COWER if _effective_trust() == 0 else PersonVisual.Pose.HELD
+			# scared people cover up; friends of the hand wave happily while carried
+			var et := _effective_trust()
+			return PersonVisual.Pose.COWER if et == 0 else (PersonVisual.Pose.WAVE if et >= 4 else PersonVisual.Pose.HELD)
 		S.FALL:
 			return PersonVisual.Pose.HELD
 		S.DEAD:

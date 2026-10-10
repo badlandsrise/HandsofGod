@@ -58,6 +58,10 @@ func run() -> void:
 	test_hover_and_tooltip()
 	test_input()
 	test_camera()
+	test_visual_placement()
+	test_visual_pose_and_look()
+	test_held_dangle()
+	test_wave_back()
 	await test_freed_hand_releases()
 	await get_tree().process_frame
 
@@ -301,6 +305,11 @@ func test_input() -> void:
 	mm.position = Vector2(400, 460)
 	hand._unhandled_input(mm)
 	check(hand.scooping and hand.scoop_radius > 2.0, "left-drag on the ground draws a scoop circle")
+	for k in 4:
+		hand.aim_override = Vector3(-9.2 + float(k), 0, -12.5)
+		hand.step(0.05)
+	var vis: HandVisual = hand.get_node("Visual")
+	check((vis.trail.mesh as ImmediateMesh).get_surface_count() > 0 and vis.scoop_ring.visible, "the scoop draws its circle and a sweep trail")
 	_mouse(MOUSE_BUTTON_LEFT, false, Vector2(400, 460))
 	check(hand.held.size() == 3 and not hand.scooping, "releasing the scoop lifts everyone inside up to the grip")
 	# right click: idle ground
@@ -320,6 +329,82 @@ func test_camera() -> void:
 	for i in 60:
 		rig.step(0.05)
 	check(rig.camera.global_position.is_finite() and rig.focus.distance_to(rig.target_focus) < 0.5, "camera glides to its target")
+
+func _steps(n: int, dt: float = 0.1) -> void:
+	for i in n:
+		hand.step(dt)
+
+func test_visual_placement() -> void:
+	_reset()
+	var rig: CameraRig = get_tree().get_first_node_in_group(&"camera_rig")
+	rig.snap_to(Vector3.ZERO, 28.0)
+	hand.aim_override = Vector3(3, 0, -2)
+	_steps(30)
+	var cam := get_viewport().get_camera_3d()
+	var a := cam.unproject_position(hand.air_pos)
+	var g := cam.unproject_position(hand.ground)
+	check(a.distance_to(g) < 2.0, "the hand's anchor is drawn exactly over the cursor (%.1f px)" % a.distance_to(g))
+	check(absf(hand.air_pos.y - Hand.HOVER_H) < 0.4, "empty, the anchor floats at HOVER_H (%.2f)" % hand.air_pos.y)
+	check(hand.global_position.distance_to(hand.ground) < 0.01, "the Hand node follows the aimed ground point (people react to it)")
+	var vis: HandVisual = hand.get_node("Visual")
+	var wrist := cam.unproject_position(vis.model.global_transform * Vector3.ZERO)
+	check(wrist.y < a.y - 20.0, "the wrist trails up and away from the cursor, beside the target")
+	var vh := 2.0 * tan(deg_to_rad(cam.fov) * 0.5) * cam.global_position.distance_to(hand.air_pos)
+	check(vis.hand_len / vh > 0.2 and vis.hand_len / vh < 0.4, "the hand is about a third of the screen tall (%.2f)" % (vis.hand_len / vh))
+	check(vis.model.cuff != null and vis.model.glove.mesh.get_surface_count() == 2, "the glove has its stitches and a cap closing the cuff")
+
+func test_visual_pose_and_look() -> void:
+	_reset()
+	var vis: HandVisual = hand.get_node("Visual")
+	hand.aim_override = Vector3(10, 0, -10)
+	_steps(30)
+	check(vis.solidity < 0.05 and not vis.model.solid, "empty: the glove is a ghost")
+	check(vis.curl[1] < 0.0 and vis.curl[2] < 0.0, "empty: fingers relaxed open")
+	Faith.grip = 5
+	hand.try_lift(people[0])
+	_steps(30)
+	var closed := 0
+	for i in 5:
+		if vis.curl[i] > 0.7:
+			closed += 1
+	check(closed == 1, "holding 1 of 5: one finger curls (got %d)" % closed)
+	check(vis.solidity > 0.99 and vis.model.solid, "holding: the glove is solid")
+	for i in range(1, 5):
+		hand.try_lift(people[i])
+	_steps(30)
+	check(vis.curl[0] > 0.9 and vis.curl[4] > 0.9 and vis.cup > 0.9, "full grip: a fist")
+	hand.release_all()
+
+func test_held_dangle() -> void:
+	_reset()
+	Faith.grip = 3
+	hand.aim_override = people[0].global_position
+	_steps(10)
+	var start: Vector3 = people[0].global_position
+	hand.try_lift(people[0])
+	hand.step(0.05)
+	var target := hand.hold_point()
+	check(people[0].global_position.distance_to(target) > 0.3, "a lifted person rises into the hand instead of snapping")
+	_steps(20)
+	var p: Vector3 = people[0].global_position
+	check(absf(p.y - (hand.air_pos.y - Hand.HOLD_DEPTH)) < 0.25, "held people dangle just below the cupped palm")
+	check(absf(people[0].rotation.x) > 0.0 or absf(people[0].rotation.z) > 0.0, "held people sway")
+	hand.place_on_ground(start)
+	check(people[0].rotation.x == 0.0 and people[0].rotation.z == 0.0, "setting down straightens them")
+
+func test_wave_back() -> void:
+	_reset()
+	var vis: HandVisual = hand.get_node("Visual")
+	var p: Person = people[2]
+	var old := p.trust
+	p.trust = 4
+	hand.aim_override = p.global_position
+	_steps(5, 0.1)
+	check(vis.waving <= 0.0, "no wave at first glance")
+	_steps(6, 0.1)
+	check(hand.hover_person == p and vis.waving > 0.0, "lingering over a friend waves back")
+	p.trust = old
+	_steps(25)
 
 func test_freed_hand_releases() -> void:
 	_reset()

@@ -18,14 +18,18 @@ signal hover_changed(target: Node3D)
 signal hint_shown(text: String)
 
 const SFX := "res://assets/audio/sfx/%s.ogg"
-# Heights of the fingertips' aim point above the ground. The hand is about twelve
-# people long, so it floats high when empty (out of the way), leans in over what it
-# can lift, and lowers gently to set people down.
-const HOVER_H := 8.0            # empty
-const HOVER_H_NEAR := 5.0       # leaning in over something liftable
-const HOVER_H_HOLD := 5.0       # carrying: held people dangle just below
-const HOLD_DEPTH := 2.4         # how far below the fingers held people dangle
-const PLACE_DIP := 2.6          # how far the hand lowers when it sets down
+# Heights of the hand's anchor (fingertips when empty, the cupped palm when
+# holding) above the ground. The anchor rides the camera ray through the aimed
+# ground point, so on screen it always sits exactly on the cursor. It floats
+# high and out of the way when empty, leans in over what it can lift, and lowers
+# gently to set people down.
+const HOVER_H := 6.0            # empty
+const HOVER_H_NEAR := 3.2       # leaning in over something liftable (fingertips at head height)
+const HOVER_H_HOLD := 3.7       # carrying: held people dangle with their feet clear
+const SCOOP_H := 2.2            # sweeping low across the ground
+const HOLD_DEPTH := 1.8         # anchor to feet of a held person (an adult is 1.7)
+const PLACE_DIP := 1.3          # how far the hand lowers when it sets down
+const LIFT_EASE := 0.28         # seconds for a lifted person to rise into the hand
 const PICK_PX := 46.0           # forgiving screen-space pick radius at the reference distance
 const PICK_REF_DIST := 30.0
 const SCOOP_DRAG_PX := 14.0
@@ -80,6 +84,8 @@ var _press_shift: bool = false
 var _gesture_cd: float = 0.0
 var _scoop_hint_done: bool = false
 var _last_hover: Node3D = null
+var _rise: Dictionary = {}              # Person -> [start position, t]
+var _cursor_hidden: bool = false
 
 func is_holding() -> bool: return not held.is_empty() or held_object != null
 
@@ -90,6 +96,7 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	release_all()
+	_set_cursor_hidden(false)
 
 func _process(_delta: float) -> void:
 	step(Clock.real_delta)
@@ -126,6 +133,7 @@ func try_lift(p: Person) -> bool:
 	_take(p)
 	Events.hand_lifted.emit([p])
 	_sfx(&"lift", 1.0 + 0.1 * float(held.size() - 1))
+	_lift_fx([p])
 	return true
 
 ## Lift several at once (scoop). Returns who was lifted.
@@ -138,11 +146,22 @@ func lift_many(people: Array) -> Array:
 	if not got.is_empty():
 		Events.hand_lifted.emit(got)
 		_sfx(&"scoop", 1.0 + 0.05 * float(got.size()))
+		_lift_fx(got)
 	return got
 
 func _take(p: Person) -> void:
 	held.append(p)
+	_rise[p] = [p.global_position, 0.0]
 	p.on_lifted()
+
+func _lift_fx(people: Array) -> void:
+	var pts: Array = []
+	for p in people:
+		if is_instance_valid(p):
+			pts.append(_on_ground((p as Node3D).global_position))
+	var vis := _visual()
+	if vis and vis.has_method(&"lifted"):
+		vis.lifted(pts)
 
 ## Scoop everyone within `radius` of `center`, nearest first, up to the free grip.
 ## Needs Grip II. Returns the number lifted.
@@ -222,7 +241,7 @@ func place_on_site(s: Site) -> int:
 	for i in n:
 		_release_person(placed[i], spots[i], s)
 	Events.hand_placed.emit(placed, s)
-	_after_place()
+	_after_place(spots)
 	return n
 
 ## Where the next `n` people placed on `s` would land (also used for the ghosts).
@@ -248,7 +267,7 @@ func place_on_ground(at: Vector3) -> void:
 	for i in placed.size():
 		_release_person(placed[i], spots[i], null)
 	Events.hand_placed.emit(placed, null)
-	_after_place()
+	_after_place(spots)
 
 ## Right click: set down on the nearest idle ground (not on top of a job).
 func place_idle() -> void:
@@ -266,7 +285,7 @@ func place_object(at: Vector3) -> void:
 		o.global_position = spot
 	Events.hand_placed_object.emit(o, spot)
 	_sfx(&"heavy", 0.9)
-	_after_place()
+	_after_place([spot])
 
 ## Put down everything, safely, right below the hand. Used when the hand is
 ## freed or disabled, so a release always reaches on_placed.
@@ -280,13 +299,22 @@ func _release_person(p: Person, at: Vector3, s: Site) -> void:
 	if not is_instance_valid(p):
 		return
 	var spot := safe_point(at) if s == null else _on_ground(at)
+	_rise.erase(p)
+	p.rotation.x = 0.0
+	p.rotation.z = 0.0
 	p.on_placed(spot, s if is_instance_valid(s) else null)
 
-func _after_place() -> void:
+func _after_place(spots: Array = []) -> void:
 	dip_t = 0.35
 	var vis := _visual()
 	if vis and vis.has_method(&"dip"):
 		vis.dip()
+	if vis and vis.has_method(&"placed"):
+		var pts: Array = []
+		for p in spots:
+			if p is Vector3:
+				pts.append(_on_ground(p))
+		vis.placed(pts)
 	_sfx(&"place")
 
 ## Little circle of drop spots so people don't land on each other.
@@ -440,7 +468,10 @@ func step(dt: float) -> void:
 	update_gesture(gesture_held, dt)
 	_prune_held()
 	_update_air(dt)
-	_follow_held()
+	_follow_held(dt)
+	if ground.is_finite():
+		global_position = ground      # people react to where the hand points
+	_update_cursor()
 	var vis := _visual()
 	if vis and vis.has_method(&"sync"):
 		vis.sync(self, dt)
@@ -558,37 +589,72 @@ func _site_at(p: Vector3, cam: Camera3D) -> Site:
 				best = s
 	return best
 
-func _update_air(dt: float) -> void:
+## The anchor height the hand wants right now.
+func hover_height() -> float:
 	var h := HOVER_H
 	if is_holding():
 		h = HOVER_H_HOLD
+	elif scooping:
+		h = SCOOP_H
 	elif hover_person != null or (hover_thing != null and hover_thing.is_in_group(&"liftable")):
 		h = HOVER_H_NEAR
 	if dip_t > 0.0:
 		h -= PLACE_DIP * sin(dip_t / 0.35 * PI)
 	if is_instance_valid(hover_site) and not held.is_empty() and hover_site.can_accept(1):
-		h -= 1.2      # lower over a job it can fill, ready to set them down
+		h -= 1.3      # lower over a job it can fill, ready to set them down
+	return h
+
+## The anchor rides the camera ray through the ground point at `h` above the
+## ground, so it is always drawn exactly over the cursor.
+func anchor_for(g: Vector3, h: float) -> Vector3:
+	var cam := get_viewport().get_camera_3d() if is_inside_tree() else null
+	if cam == null:
+		return g + Vector3(0, h, 0)
+	var up := cam.global_position - g
+	if up.length() < 0.01:
+		return g + Vector3(0, h, 0)
+	up = up.normalized()
+	if up.y < 0.25:
+		return g + Vector3(0, h, 0)
+	return g + up * (h / up.y)
+
+func _update_air(dt: float) -> void:
 	var g := ground if ground.is_finite() else Vector3.ZERO
-	var target := g + Vector3(0, h + sin(time * 2.0) * 0.12, 0)
+	var target := anchor_for(g, hover_height() + sin(time * 2.0) * 0.1)
 	if not air_pos.is_finite():
 		air_pos = target
-	air_pos = air_pos.lerp(target, minf((14.0 if absf(target.y - air_pos.y) < 1.0 else 7.0) * dt, 1.0))
+	# the sideways glide is quick so the hand stays on the cursor; height eases
+	var k := minf(16.0 * dt, 1.0)
+	var ky := minf((12.0 if absf(target.y - air_pos.y) < 0.8 else 6.0) * dt, 1.0)
+	air_pos = Vector3(lerpf(air_pos.x, target.x, k), lerpf(air_pos.y, target.y, ky), lerpf(air_pos.z, target.z, k))
 
-## Below the palm, where held people dangle.
+## Below the cupped palm, where held people dangle (their feet).
 func hold_point() -> Vector3:
 	return air_pos - Vector3(0, HOLD_DEPTH, 0)
 
-func _follow_held() -> void:
+func _follow_held(dt: float = 0.0) -> void:
 	var n := held.size()
 	var hp := hold_point()
 	for i in n:
 		var p: Person = held[i]
 		var off := Vector3.ZERO
 		if n > 1:
-			var a := TAU * float(i) / float(n) + time * 0.5
-			off = Vector3(cos(a), 0, sin(a)) * (0.22 + 0.11 * sqrt(float(n)))
-		off.y = sin(time * 6.0 + float(i) * 1.7) * 0.05 - 0.04 * float(i % 3)
-		p.held_follow(hp + off)
+			var a := TAU * float(i) / float(n) + time * 0.4
+			off = Vector3(cos(a), 0, sin(a)) * (0.2 + 0.1 * sqrt(float(n)))
+		off.y = sin(time * 3.0 + float(i) * 1.7) * 0.04 - 0.05 * float(i % 3)
+		var want := hp + off
+		# rise smoothly from where they stood into the hand
+		var r: Array = _rise.get(p, [])
+		if not r.is_empty():
+			r[1] = float(r[1]) + dt
+			var u := clampf(float(r[1]) / LIFT_EASE, 0.0, 1.0)
+			if u >= 1.0:
+				_rise.erase(p)
+			else:
+				var e := 1.0 - pow(1.0 - u, 3.0)
+				want = (r[0] as Vector3).lerp(want, e) + Vector3(0, sin(u * PI) * 0.3, 0)
+		p.held_follow(want)
+		_sway(p, i, dt)
 	if is_instance_valid(held_object):
 		var target := hp + Vector3(0, 0.6, 0)
 		if held_object.has_method(&"held_follow"):
@@ -597,6 +663,26 @@ func _follow_held() -> void:
 			held_object.global_position = target
 	elif held_object != null:
 		held_object = null
+
+## Dangling: a pendulum swing, plus a wriggle by trust: frightened people
+## (trust 0-1) tremble and kick, friends (3+) swing happily.
+func _sway(p: Person, i: int, dt: float) -> void:
+	var tr: int = int(p.get(&"trust")) if &"trust" in p else 2
+	var ph := float(i) * 1.9 + float(p.get_instance_id() % 97) * 0.13
+	var rx := 0.0
+	var rz := 0.0
+	if tr <= 1:
+		rx = sin(time * 17.0 + ph) * 0.07
+		rz = sin(time * 13.0 + ph * 1.3) * 0.06
+	elif tr >= 3:
+		rx = sin(time * 2.6 + ph) * 0.16
+		rz = sin(time * 2.1 + ph * 0.7) * 0.12
+	else:
+		rx = sin(time * 4.0 + ph) * 0.06
+		rz = sin(time * 3.3 + ph) * 0.05
+	var k := minf(6.0 * maxf(dt, 0.001), 1.0)
+	p.rotation.x = lerpf(p.rotation.x, rx, k)
+	p.rotation.z = lerpf(p.rotation.z, rz, k)
 
 ## Drop freed or dead people from the hand. A dead person cannot be harmed further,
 ## a freed one cannot be called.
@@ -682,6 +768,24 @@ func _left_release() -> void:
 func step_hover_now() -> void:
 	_update_aim()
 	_update_hover()
+
+## The hand is the cursor over the world: the OS pointer hides there and comes
+## back over the HUD, menus and whenever the hand is not taking input.
+func _update_cursor() -> void:
+	var hide := false
+	if input_enabled and is_inside_tree() and DisplayServer.get_name() != "headless":
+		var vp := get_viewport()
+		var over_ui := vp.gui_get_hovered_control() != null
+		var inside := vp.get_visible_rect().has_point(vp.get_mouse_position())
+		hide = inside and not over_ui and mouse_on_ground and not aim_override.is_finite()
+	_set_cursor_hidden(hide)
+
+func _set_cursor_hidden(h: bool) -> void:
+	if h == _cursor_hidden:
+		return
+	_cursor_hidden = h
+	if Input.mouse_mode == Input.MOUSE_MODE_VISIBLE or Input.mouse_mode == Input.MOUSE_MODE_HIDDEN:
+		Input.mouse_mode = Input.MOUSE_MODE_HIDDEN if h else Input.MOUSE_MODE_VISIBLE
 
 func _ui_has_focus() -> bool:
 	var f := get_viewport().gui_get_focus_owner() if is_inside_tree() else null
