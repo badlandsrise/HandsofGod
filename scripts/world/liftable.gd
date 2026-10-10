@@ -59,6 +59,8 @@ func build_log_visual(len_m: float, radius: float, branchy: bool) -> void:
 		br.position = Vector3(len_m * 0.5, radius + 0.1, 0)
 		br.scale = Vector3.ONE * (len_m / 5.1)
 		v.add_child(br)
+		for mi in br.find_children("*", "GeometryInstance3D", true, false):
+			(mi as GeometryInstance3D).set_instance_shader_parameter(&"instance_tint", Color(0.55, 0.42, 0.32))   # wet dark bark
 	else:
 		# log_fallen lies along x, 3.5 m long at scale 1
 		var lg := AssetCatalog.instance(&"log_fallen", int(len_m * 10.0))

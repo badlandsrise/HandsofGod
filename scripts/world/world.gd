@@ -137,7 +137,7 @@ func build() -> void:
 	print("world: built in %d ms" % build_ms)
 
 func _keep_out_zones() -> Array:
-	var z: Array = [[Valley.FIRE, 8.0], [Valley.CAVE_MOUTH, 6.0], [Valley.EAST_GAP, 9.0], [Valley.WEST_GAP, 10.0]]
+	var z: Array = [[Valley.FIRE, 8.0], [Valley.CAVE_MOUTH, 6.0], [Valley.EAST_GAP, 13.0], [Valley.WEST_GAP, 13.0], [Valley.EAST_GAP - Vector2(9, 0), 9.0], [Valley.WEST_GAP + Vector2(9, 0), 9.0]]
 	for row in LayoutEra1.JOBS:
 		z.append([Vector2(row[1], row[2]), 3.0])
 	for id in LayoutEra1.PLOT_SPOTS:

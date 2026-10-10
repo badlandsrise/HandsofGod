@@ -24,6 +24,10 @@ func _ready() -> void:
 func _w():
 	return Game.world
 
+func _frames(n: int) -> void:
+	for i in n:
+		await get_tree().process_frame
+
 func _wait(s: float) -> void:
 	await get_tree().create_timer(s, true, false, true).timeout
 
@@ -32,14 +36,19 @@ func _run() -> void:
 	await _wait(1.5)
 	var t0 := Time.get_ticks_msec()
 	if "storm" in want:
-		w.camera_rig.snap_to(w.cave_position() + Vector3(0, 0, 9.0), 26.0)
-		await _wait(2.5)
+		w.camera_rig.snap_to(w.cave_position() + Vector3(0, 0, 10.0), 26.0)
+		w.hand.aim_override = w.branch.global_position + Vector3(2.0, 0, 3.0)
+		await _frames(6)
 		await _shot("01_storm_night.png")
 	await _to_day()
 	if "day" in want:
 		w.camera_rig.snap_to(Vector3(-2.0, w.ground_y(-2, -12), -12.0), 28.0)
-		await _wait(9.0)
+		w.hand.aim_override = Vector3(-14.0, w.ground_y(-14, -4), -4.0)
+		Engine.time_scale = 4.0
+		await _frames(25)
+		Engine.time_scale = 1.0
 		await _shot("02_day_clearing.png")
+		w.hand.aim_override = Vector3.INF
 	if "hand" in want:
 		await _hand_shot()
 	if "night" in want:
@@ -94,24 +103,23 @@ func _hand_shot() -> void:
 			if is_instance_valid(s) and s.job != null and s.job.id == &"haul_log":
 				site = s
 	var idle: Array = []
-	for p in Village.alive():
-		if p.pickable() and p.job_site == null:
-			idle.append(p)
-	for p in Village.alive():
-		if idle.size() >= 3:
-			break
-		if p.pickable() and not idle.has(p):
-			idle.append(p)
+	for i in 3:
+		idle.append(w.spawn_person(Vector3(36.0 + i * 1.5, 0, 6.0), ["Oru", "Pell", "Sami"][i]))
+	await _frames(3)
 	Faith.grant(&"grip_3")
 	var focus: Vector3 = site.global_position if site else Vector3(40, 4, 2)
-	w.camera_rig.snap_to(focus + Vector3(-6.0, 0, 4.0), 30.0)
+	w.camera_rig.target_yaw = -1.1
+	w.camera_rig.snap_to(focus + Vector3(-3.0, 0, 2.0), 30.0)
 	hand.aim_override = idle[0].global_position if not idle.is_empty() else focus
 	await _wait(0.3)
-	for p in idle.slice(0, 3):
-		hand.try_lift(p)
+	hand.lift_many(idle.slice(0, 3))
 	hand.aim_override = focus + Vector3(0.0, 0, 0.6)
-	await _wait(1.6)
+	await _frames(2)
+	hand.air_pos = hand.ground + Vector3(0, Hand.HOVER_H_HOLD - 1.2, 0)   # llvmpipe runs ~1 fps: skip the glide
+	await _frames(4)
+	print("SHOTS hand air %s ground %s site %s model %s held %d grip %d" % [hand.air_pos, hand.ground, focus, hand.get_node("Visual").model.global_position, hand.held.size(), hand.grip()])
 	await _shot("03_hand_group_job.png")
+	w.camera_rig.target_yaw = 0.0
 	hand.aim_override = Vector3.INF
 	if site:
 		hand.place_on_site(site)
@@ -129,7 +137,13 @@ func _night_shot() -> void:
 			s.add_fuel(Site.FIRE_MAX_FUEL)
 	w.look.update_now()
 	w.camera_rig.snap_to(w.fire_position() + Vector3(0, 0, 2.0), 24.0)
-	await _wait(5.0)
+	for p in Village.alive():
+		if p.pickable() and p.global_position.distance_to(w.fire_position()) > 6.0:
+			p.on_lifted()
+			var a := Game.rng.randf() * TAU
+			p.on_placed(w.fire_position() + Vector3(cos(a), 0, sin(a)) * 3.2, null)
+	w.hand.aim_override = w.fire_position() + Vector3(6.0, 0, -6.0)
+	await _frames(12)
 	await _shot("04_night_fire.png")
 	Clock.is_night = false
 	Clock.phase_t = 30.0

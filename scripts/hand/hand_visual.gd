@@ -16,11 +16,17 @@ const ERA_GLOW := {
 	4: Color(0.62, 0.82, 1.0),   # pale blue
 }
 ## [length, x offset, base z] for index, middle, ring, little
-const FINGERS := [[0.86, -0.34, -0.42], [0.96, -0.11, -0.47], [0.9, 0.12, -0.45], [0.7, 0.33, -0.38]]
+const FINGERS := [[0.84, -0.33, -0.42], [0.96, -0.11, -0.48], [0.9, 0.12, -0.46], [0.7, 0.34, -0.39]]
+## The local point (under the middle of the fingers) that sits over the aim point,
+## so the fingers, not the palm, are over what the player points at and the palm and
+## wrist trail toward the camera without hiding it.
+const AIM_LOCAL := Vector3(0.0, -0.15, -1.3)
 const SEG_SPLIT := [0.42, 0.33, 0.25]
 const MAX_GHOSTS := 20
 
-@export var hand_scale: float = 2.6
+## Wrist to fingertip is ~1.9 units: 8.5 makes it ~16 m, about ten people long
+## (DESIGN 12.1 asks for ~12; a little less keeps the high camera clear).
+@export var hand_scale: float = 8.5
 
 var model: Node3D
 var mat: ShaderMaterial
@@ -43,6 +49,7 @@ var _curl: Array = [0.0, 0.0, 0.0, 0.0, 0.0]
 var _strain: float = 0.0
 var _flash: float = 0.0
 var _glow: float = 1.0
+var _alpha: float = 0.62
 var _shadow_mat: ShaderMaterial
 var _ring_mat: ShaderMaterial
 var _scoop_mat: ShaderMaterial
@@ -71,6 +78,8 @@ func set_era(era: int) -> void:
 # ---------------------------------------------------------------- building
 
 func _build_model() -> void:
+	# An open right hand, palm down, fingers pointing away from the camera (local -Z),
+	# about 1.9 units from wrist to fingertip; hand_scale makes it ~12 people long.
 	model = Node3D.new()
 	model.name = "Model"
 	add_child(model)
@@ -79,22 +88,30 @@ func _build_model() -> void:
 	mat.shader = HAND_SHADER
 	arm_mat = ShaderMaterial.new()
 	arm_mat.shader = HAND_SHADER
-	arm_mat.set_shader_parameter(&"fade_from", -0.6)
-	arm_mat.set_shader_parameter(&"fade_to", 0.7)
-	var palm := _mesh(model, _sphere(0.5), Vector3.ZERO, mat)
-	palm.scale = Vector3(1.0, 0.36, 1.0)
+	arm_mat.set_shader_parameter(&"fade_from", -0.15)
+	arm_mat.set_shader_parameter(&"fade_to", 0.55)
+	# palm: a broad, flat pad, wider at the knuckles than at the heel
+	var palm := _mesh(model, _sphere(0.5), Vector3(0, 0, 0.02), mat)
+	palm.scale = Vector3(1.0, 0.34, 1.02)
 	palm.name = "Palm"
-	var knuckles := _mesh(model, _capsule(0.17, 0.82), Vector3(0, 0.0, -0.36), mat)
+	var heel := _mesh(model, _sphere(0.36), Vector3(0.06, -0.01, 0.36), mat)
+	heel.scale = Vector3(1.15, 0.36, 0.8)
+	var knuckles := _mesh(model, _capsule(0.15, 0.92), Vector3(0, 0.02, -0.36), mat)
 	knuckles.rotation = Vector3(0, 0, PI / 2)
-	knuckles.scale = Vector3(1.0, 1.0, 0.85)
-	var arm := _mesh(model, _capsule(0.34, 2.0), Vector3(0, 0.45, 1.0), arm_mat)
-	arm.rotation = Vector3(deg_to_rad(58), 0, 0)
-	arm.name = "Forearm"
+	knuckles.scale = Vector3(0.95, 1.0, 0.85)
+	# the thumb's fleshy base on the inner side
+	var mound := _mesh(model, _sphere(0.26), Vector3(-0.36, -0.03, 0.12), mat)
+	mound.scale = Vector3(0.9, 0.55, 1.3)
+	# wrist and forearm, fading out toward the camera
+	var wrist := _mesh(model, _capsule(0.3, 1.5), Vector3(0.04, 0.16, 0.95), arm_mat)
+	wrist.rotation = Vector3(deg_to_rad(70), 0, 0)
+	wrist.scale = Vector3(1.15, 1.0, 0.72)
+	wrist.name = "Forearm"
 	for f in FINGERS:
 		var joints: Array = []
 		var parent: Node3D = model
 		var base := Node3D.new()
-		base.position = Vector3(f[1], 0.02, f[2])
+		base.position = Vector3(f[1], 0.03, f[2])
 		parent.add_child(base)
 		parent = base
 		for k in 3:
@@ -103,25 +120,29 @@ func _build_model() -> void:
 			if k > 0:
 				j.position = Vector3(0, 0, -float(f[0]) * SEG_SPLIT[k - 1])
 				parent.add_child(j)
-			var r := 0.1 - 0.012 * float(k)
-			var seg := _mesh(j, _capsule(r, seg_len + r * 1.6), Vector3(0, 0, -seg_len * 0.5), mat)
+			var r := 0.094 - 0.01 * float(k)
+			var seg := _mesh(j, _capsule(r, seg_len + r * 1.7), Vector3(0, 0, -seg_len * 0.5), mat)
 			seg.rotation = Vector3(-PI / 2, 0, 0)
+			seg.scale = Vector3(1.0, 1.0, 0.85)   # fingers a little flatter than round
 			joints.append(j)
 			parent = j
 		finger_joints.append(joints)
-	# thumb: two segments from the inner side of the palm
+	# thumb: two segments angled out from the inner side of the palm, clearly apart
 	var tb := Node3D.new()
-	tb.position = Vector3(-0.42, -0.04, 0.08)
-	tb.rotation = Vector3(0, 0.75, 0)
+	tb.position = Vector3(-0.44, -0.04, 0.14)
+	tb.rotation = Vector3(0, 0.95, 0)
 	model.add_child(tb)
 	var t2 := Node3D.new()
-	t2.position = Vector3(0, 0, -0.36)
+	t2.position = Vector3(0, 0, -0.4)
 	tb.add_child(t2)
-	var s1 := _mesh(tb, _capsule(0.13, 0.5), Vector3(0, 0, -0.18), mat)
+	var s1 := _mesh(tb, _capsule(0.125, 0.52), Vector3(0, 0, -0.2), mat)
 	s1.rotation = Vector3(-PI / 2, 0, 0)
-	var s2 := _mesh(t2, _capsule(0.11, 0.42), Vector3(0, 0, -0.15), mat)
+	var s2 := _mesh(t2, _capsule(0.105, 0.44), Vector3(0, 0, -0.17), mat)
 	s2.rotation = Vector3(-PI / 2, 0, 0)
 	thumb_joints = [tb, t2]
+	# the hand is lit by its own glow; the soft ground shadow is drawn separately
+	for mi in model.find_children("*", "MeshInstance3D", true, false):
+		(mi as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 func _build_ground_fx() -> void:
 	_shadow_mat = _gmat(Color(0.05, 0.03, 0.02, 0.38), 0.0)
@@ -231,8 +252,13 @@ func sync(hand: Hand, dt: float) -> void:
 	fwd.y = 0.0
 	if fwd.length() < 0.01:
 		fwd = Vector3(0, 0, -1)
-	var basis := Basis.looking_at(fwd.normalized(), Vector3.UP)
-	basis = basis * Basis(Vector3.RIGHT, deg_to_rad(-22.0)) * Basis(Vector3.FORWARD, deg_to_rad(-8.0))
+	# The hand reaches in from the far side of the valley: fingers toward the camera,
+	# palm and wrist beyond the aim point, so it never sits between the camera and
+	# the people it is reaching for.
+	var basis := Basis.looking_at(-fwd.normalized(), Vector3.UP)
+	# fingers tip down toward the ground, more so while it reaches or sets down
+	var tip_down := -16.0 - 10.0 * clampf(float(hand.hover_person != null or hand.hover_thing != null) + hand.dip_t * 3.0, 0.0, 1.0)
+	basis = basis * Basis(Vector3.RIGHT, deg_to_rad(tip_down)) * Basis(Vector3.FORWARD, deg_to_rad(-6.0))
 	# strain wobble, and a tremble under heavy loads
 	var wob := 0.0
 	if _strain > 0.0:
@@ -242,7 +268,12 @@ func sync(hand: Hand, dt: float) -> void:
 		var ld := clampf(w / maxf(Faith.strength, 0.01), 0.0, 1.0)
 		wob += sin(hand.time * 31.0) * 0.025 * ld * ld
 	basis = basis * Basis(Vector3.FORWARD, wob)
-	model.global_transform = Transform3D(basis.scaled(Vector3.ONE * hand_scale), hand.air_pos + Vector3(0, 0.2 * hand_scale, 0))
+	var b := basis.scaled(Vector3.ONE * hand_scale)
+	model.global_transform = Transform3D(b, hand.air_pos - b * AIM_LOCAL)
+	# softer and more see-through when empty, solid when it carries someone
+	var a := 0.62 if not hand.is_holding() else 0.86
+	_alpha = lerpf(_alpha, a, minf(6.0 * dt, 1.0))
+	mat.set_shader_parameter(&"alpha", _alpha)
 	_pose_fingers(hand, dt)
 	_update_glow(hand, dt)
 	_update_ground(hand, dt)
@@ -296,10 +327,12 @@ func _update_ground(hand: Hand, _dt: float) -> void:
 	if not gp.is_finite():
 		gp = Vector3.ZERO
 	var height := maxf(hand.air_pos.y - gp.y, 0.5)
-	var s := clampf(1.0 + height * 0.12, 1.0, 2.2) * hand_scale * 0.95
-	shadow.global_position = Vector3(hand.air_pos.x, gp.y + 0.05, hand.air_pos.z)
-	shadow.scale = Vector3(s, 1, s * 1.15)
-	_shadow_mat.set_shader_parameter(&"color", Color(0.05, 0.03, 0.02, clampf(0.55 - height * 0.03, 0.2, 0.5)))
+	var s := clampf(1.0 + height * 0.04, 1.0, 1.6) * hand_scale * 1.1
+	var palm := model.global_position
+	shadow.global_position = Vector3(lerpf(hand.air_pos.x, palm.x, 0.6), gp.y + 0.05, lerpf(hand.air_pos.z, palm.z, 0.6))
+	shadow.scale = Vector3(s, 1, s * 1.3)
+	shadow.rotation.y = model.global_rotation.y
+	_shadow_mat.set_shader_parameter(&"color", Color(0.05, 0.03, 0.02, clampf(0.4 - height * 0.012, 0.14, 0.32)))
 	var rr := 0.9 + 0.25 * float(hand.held.size()) if hand.held.size() > 1 else 0.9
 	if is_instance_valid(hand.hover_site) and hand.is_holding():
 		rr = hand.hover_site.pick_radius()

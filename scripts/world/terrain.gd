@@ -224,7 +224,7 @@ func splat(x: float, z: float, y: float, nrm: Vector3) -> Color:
 	var rock := Valley.ss(0.18, 0.36, slope + n * 0.05)
 	rock = maxf(rock, Valley.ss(45.0, 70.0, y + n * 8.0) * 0.8)
 	var p := Vector2(x, z)
-	var dirt := 1.0 - Valley.ss(2.6, 5.5, p.distance_to(Valley.FIRE) + n * 1.5)
+	var dirt := 1.0 - Valley.ss(2.2, 4.4, p.distance_to(Valley.FIRE) + n * 1.5)
 	dirt = maxf(dirt, 1.0 - Valley.ss(2.0, 5.0, p.distance_to(Valley.CAVE_MOUTH) + n * 1.5))
 	# paths worn by use: a bare middle, trampled edges
 	var pd := path_dist(x, z) + n * 0.6

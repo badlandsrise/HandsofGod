@@ -408,7 +408,7 @@ func sim(dt: float) -> void:
 			bar.show_value(progress, Color(1.0, 0.85, 0.3))
 		elif state == State.BUILDING:
 			bar.show_value(build_progress(), Color(0.5, 0.9, 0.4))
-		elif state == State.PLOT:
+		elif state == State.PLOT and _materials_fraction() > 0.0:
 			bar.show_value(_materials_fraction(), Color(0.7, 0.55, 0.35))
 		else:
 			bar.hide_bar()

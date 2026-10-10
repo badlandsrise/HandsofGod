@@ -18,11 +18,14 @@ signal hover_changed(target: Node3D)
 signal hint_shown(text: String)
 
 const SFX := "res://assets/audio/sfx/%s.ogg"
-const HOVER_H := 4.4            # palm height above the ground, empty
-const HOVER_H_NEAR := 3.4       # leaning in over something liftable
-const HOVER_H_HOLD := 4.9       # carrying
-const HOLD_DEPTH := 2.1         # how far below the palm held people dangle
-const PLACE_DIP := 2.2          # how far the hand lowers when it sets down
+# Heights of the fingertips' aim point above the ground. The hand is about twelve
+# people long, so it floats high when empty (out of the way), leans in over what it
+# can lift, and lowers gently to set people down.
+const HOVER_H := 8.0            # empty
+const HOVER_H_NEAR := 5.0       # leaning in over something liftable
+const HOVER_H_HOLD := 5.0       # carrying: held people dangle just below
+const HOLD_DEPTH := 2.4         # how far below the fingers held people dangle
+const PLACE_DIP := 2.6          # how far the hand lowers when it sets down
 const PICK_PX := 46.0           # forgiving screen-space pick radius at the reference distance
 const PICK_REF_DIST := 30.0
 const SCOOP_DRAG_PX := 14.0
@@ -564,12 +567,12 @@ func _update_air(dt: float) -> void:
 	if dip_t > 0.0:
 		h -= PLACE_DIP * sin(dip_t / 0.35 * PI)
 	if is_instance_valid(hover_site) and not held.is_empty() and hover_site.can_accept(1):
-		h -= 0.5
+		h -= 1.2      # lower over a job it can fill, ready to set them down
 	var g := ground if ground.is_finite() else Vector3.ZERO
 	var target := g + Vector3(0, h + sin(time * 2.0) * 0.12, 0)
 	if not air_pos.is_finite():
 		air_pos = target
-	air_pos = air_pos.lerp(target, minf(14.0 * dt, 1.0))
+	air_pos = air_pos.lerp(target, minf((14.0 if absf(target.y - air_pos.y) < 1.0 else 7.0) * dt, 1.0))
 
 ## Below the palm, where held people dangle.
 func hold_point() -> Vector3:
