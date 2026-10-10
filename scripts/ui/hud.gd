@@ -493,6 +493,8 @@ var _stores_sig: String = "~"
 ## How many stores the bar shows besides food; the rest wait behind "+N more".
 const BAR_MAX := 6
 const LOW_AT := 5
+var _bar_cap: int = BAR_MAX     # fewer on a narrow screen (_fit_stores)
+var _bar_vw: float = 0.0
 
 ## The stores worth watching right now, most pressing first: what the current
 ## dream asks for, what open plots are still short of, anything full or nearly
@@ -546,7 +548,7 @@ func _refresh_stores() -> void:
 		c.queue_free()
 	var food := Village.food()
 	stores_box.add_child(_store_item(&"food", "Food", food))
-	var shown := watched.slice(0, BAR_MAX)
+	var shown := watched.slice(0, _bar_cap)
 	for k in shown:
 		stores_box.add_child(_store_item(k, String(k).capitalize(), Village.store(k)))
 	var rest: Array = []
@@ -581,10 +583,26 @@ func _fit_stores() -> void:
 		return
 	var vw := get_viewport().get_visible_rect().size.x
 	var side := (time_panel.get_combined_minimum_size().x if time_panel != null else 280.0) + 28.0
+	if not is_equal_approx(vw, _bar_vw):
+		_bar_vw = vw
+		if _bar_cap != BAR_MAX:
+			_bar_cap = BAR_MAX
+			_stores_sig = "~"
+			_refresh_stores()
+			return
+	var room := vw - 2.0 * side
 	stores_box.add_theme_constant_override(&"separation", 18)
-	if stores_box.get_combined_minimum_size().x > vw - 2.0 * side:
+	if stores_box.get_combined_minimum_size().x > room:
 		stores_box.add_theme_constant_override(&"separation", 10)
+	if stores_panel.get_combined_minimum_size().x > room and _bar_cap > 2:
+		_bar_cap -= 1
+		_stores_sig = "~"
+		_refresh_stores()
+		return
 	stores_panel.reset_size()
+	var w := stores_panel.get_combined_minimum_size().x
+	stores_panel.offset_left = -w * 0.5
+	stores_panel.offset_right = w * 0.5
 	if dreams_panel == null:
 		return
 	var top := 14.0
