@@ -9,8 +9,11 @@ class_name LayoutEra3 extends RefCounted
 
 ## BuildingDef id -> spots (x, z). The first free spot is used.
 const PLOT_SPOTS := {
-	&"mason": [Vector2(160.0, -20.0)],
-	&"forge": [Vector2(146.0, -22.0)],
+	# [era3] the mason's yard and the forge stand on the quarry floor, their
+	# crews working the ledges and the iron seams up the slope (workplaces)
+	&"mason": [Vector2(186.0, -94.0)],
+	&"forge": [Vector2(186.0, -122.0)],
+	&"woodcutter_camp": [Vector2(104.0, -58.0)],     # [era3] a second camp for the town's timber
 	&"school": [Vector2(80.0, 32.0)],
 	&"fire_station": [Vector2(70.0, 18.0)],
 	&"clinic": [Vector2(112.0, 36.0)],

@@ -225,6 +225,14 @@ func _job(id: StringName, seed_v: int) -> void:
 			# the farmhouse's handcart, loaded with sacks when there is grain to haul
 			_art(&"handcart", seed_v, Vector3.ZERO, 0.4)
 			_art(&"grain_sacks", 0, Vector3(1.6, 0, 0.4), 0.9, 0.7)
+		&"pave_road":
+			# [era3] a stretch of road staked for paving: dressed blocks stacked by the stakes
+			var blk := &"cargo_block" if AssetCatalog.has(&"cargo_block") else &"rock_small"
+			for i in 4:
+				_art(blk, i, Vector3(-1.6 + 0.55 * float(i % 2), 0.0 if i < 2 else 0.35, 1.4), 0.1 * float(i), 1.3)
+			if AssetCatalog.has(&"peg"):
+				_art(&"peg", 0, Vector3(1.8, 0, -1.8), 0.0, 1.4)
+				_art(&"peg", 1, Vector3(-1.8, 0, -1.8), 0.0, 1.4)
 		&"temple_raising", &"bridge_building", &"barn_raising", &"footbridge_raising":
 			# coils of rope and a ladder's worth of timber for the crew
 			_art(&"planks_pile", 0, Vector3(0, 0, 0), 0.4, 0.6)
