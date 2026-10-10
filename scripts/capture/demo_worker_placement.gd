@@ -357,7 +357,7 @@ func _camera(dt: float) -> void:
 	_cam_focus = _cam_focus.lerp(target, k)
 	_cam_dist = lerpf(_cam_dist, want_dist, 1.0 - exp(-0.9 * dt))
 	director.cam.drive({"focus": [_cam_focus.x, _cam_focus.z], "dist": _cam_dist, "yaw_deg": rad_to_deg(_yaw),
-		"pitch_deg": 44.0, "fov": 45.0, "tilt_shift": true})
+		"pitch_deg": 44.0, "fov": 45.0, "tilt_shift": false})
 
 func _target_of(p) -> Vector3:
 	return _ground(p.global_position) if p != null and is_instance_valid(p) else _aim

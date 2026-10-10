@@ -11,6 +11,7 @@ extends Node
 ##   --demo=worker_placement|village_life   run a scripted demonstration
 ##   --demo-length=S           its fixed length in seconds (default 30)
 ##   --quit-after[=S]          quit when the demo ends (or after S capture seconds)
+##   --weather=clear|rain|storm  weather (default clear)
 ##   --paused                  start paused                 --threats        allow threats (off by default)
 ##   --tod=0..1                time of day (0 dawn, 0.5 late afternoon)   --season=spring|summer|autumn|winter
 ##   --spoiler=goodbye         SPOILER: the goodbye (the `--goodbye` dev entry) with capture controls
@@ -224,6 +225,8 @@ func _apply_time_flags() -> void:
 			set_season(s)
 	if Game.flags.has("tod"):
 		set_day_fraction(float(Game.flags["tod"]))
+	var wx := str(Game.flags.get("weather", "clear")).to_lower()
+	world.look.set_weather({"clear": 0.0, "rain": 0.6, "storm": 1.0}.get(wx, 0.0), wx == "storm")
 
 ## Back to the start state: the same valley, seeds, clock and camera, and the
 ## demo from its first frame if one was running.

@@ -265,6 +265,7 @@ modal.
 | `--paused` | Start paused |
 | `--tod=0..1` | Time of day as a fraction of the whole day and night (0 dawn, about 0.35 midday, about 0.7 dusk, 0.85 night) |
 | `--season=spring\|summer\|autumn\|winter` | Season |
+| `--weather=clear\|rain\|storm` | Weather (default `clear`: the saved starts were in rain, which spoils clean footage) |
 | `--threats` | Let threats happen (wolves, fires, storms). Off by default for calm footage |
 | `--spoiler=goodbye` | **SPOILER:** the goodbye with capture controls |
 | `--manual` | Spoiler only: play the player's part yourself |
