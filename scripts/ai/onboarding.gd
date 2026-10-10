@@ -65,7 +65,10 @@ func _enter(b: int) -> void:
 	var two := first_two()
 	match b:
 		Beat.DAWN:
-			Events.name_requested.emit(two, &"first_two")
+			# The front end's FirstNight usually asks at the cave; only ask here
+			# if the first two still have no names (e.g. no storm opening).
+			if not BookData.has_first("names"):
+				Events.name_requested.emit(two, &"first_two")
 			for p in two:
 				p.adjust_trust(0.4)       # they look up at the hand
 			_set_beat.call_deferred(Beat.BERRIES)

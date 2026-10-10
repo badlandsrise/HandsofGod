@@ -7,7 +7,7 @@
 - All music (the hand motif, the Era 1 adaptive piece "First Fire", the Era 2
   adaptive piece "Long Furrows", the Era 3 adaptive piece "Market Bells", the
   Era 4 adaptive piece "Valley Lights", the stingers including the Era 2, Era 3
-  and Era 4 arrivals, the title theme, and the music of the goodbye: "The Last
+  and Era 4 arrivals, the title theme, the Badlandsrise studio sting, the intro underscore, and the music of the goodbye: "The Last
   Evening", "Countdown", "Liftoff", "The Wave", "Goodbye" and the credits piece
   "Among the Stars") was composed as MIDI by Claude (`tools/music/`) and
   rendered with FluidSynth.
@@ -18,6 +18,12 @@
 
 - **FluidR3_GM** General MIDI soundfont by Frank Wen, released under the
   MIT licence. Used to render the music.
+
+## Studio
+
+**Badlandsrise Game Studio.** The studio splash (emblem, wordmark and sting) was
+designed and built in-engine for Hands of God by Claude (`scripts/front/`,
+`tools/music/front.py`).
 
 ## Art
 
