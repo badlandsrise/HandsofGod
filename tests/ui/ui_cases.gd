@@ -59,6 +59,7 @@ func _run() -> void:
 	test_wants()
 	await test_guidance()
 	await test_hud_idle()
+	await test_stores_bar()
 	await test_save_page_fits()
 	print("UI tests: %d passed, %d failed" % [passes, fails])
 	finished = true
@@ -602,6 +603,35 @@ func test_hud_idle() -> void:
 	hud.free()
 	for bb in tree.get_nodes_in_group(&"beacon"):
 		bb.free()
+	_reset()
+
+# ---------------------------------------------------------------- the stores bar
+
+## Austin, Era 3: "a lot of resources to monitor all at once". The bar shows
+## food plus a handful of stores that matter now; the rest wait behind "+N more".
+func test_stores_bar() -> void:
+	_reset()
+	var hud: Hud = load("res://scenes/ui/hud.tscn").instantiate()
+	root.add_child(hud)
+	Village.load_state({"era": 3, "stats": {}})
+	for k in [&"wood", &"stone", &"blocks", &"iron", &"books", &"clay", &"ore", &"bronze", &"cloth", &"flour", &"grain", &"pots", &"wool", &"hide"]:
+		Village.add_store(k, 12)
+	Village.add_store(&"charcoal", Village.store_cap)
+	hud.refresh()
+	await _frames(2)
+	var items := 0
+	var more: Label = null
+	for c in hud.stores_box.get_children():
+		if c is HBoxContainer:
+			items += 1
+		elif c.name == "MoreStores":
+			more = c
+	check(items <= Hud.BAR_MAX + 1, "stores bar: food plus at most %d stores (%d shown)" % [Hud.BAR_MAX, items])
+	check(more != null and more.tooltip_text.contains("Clay"), "stores bar: the rest are listed behind \"+N more\"")
+	check(hud.watched_stores().has(&"charcoal"), "stores bar: a full store is watched")
+	check(hud.watched_stores().slice(0, Hud.BAR_MAX).has(&"charcoal"), "stores bar: a full store makes the bar")
+	hud.free()
+	Village.load_state({"stats": {}})
 	_reset()
 
 # ---------------------------------------------------------------- the Save page
