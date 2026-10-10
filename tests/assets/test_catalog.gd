@@ -9,6 +9,29 @@ const REQUIRED := ["tree_pine", "tree_broad", "tree_dead", "bush", "berry_bush",
 	"rock_large", "cliff", "grass_clump", "flowers", "log_fallen", "trunk_fallen", "stump",
 	"campfire", "firewood_pile", "flint_node", "hut", "hut_plot", "food_store", "cairn", "shrine",
 	"stone_circle", "cave_mouth", "deer", "wolf", "sheep", "horse", "villager"]
+## Era 2 (Village) kit: buildings come as done / _plot / _frame (see ERA2_STAGED).
+const REQUIRED_ERA2 := ["market_stall", "market_stall_frame", "charcoal_clamp", "jetty", "raft",
+	"raft_frame", "rowboat", "fishing_boat", "field", "field_tilled", "field_sprouts",
+	"field_growing", "field_ripe", "field_stubble", "field_blighted", "field_parched",
+	"garden_plot", "sheaves", "haystack", "scarecrow", "grain_sacks", "flour_sacks",
+	"bread_basket", "pots", "pots_unfired", "clay_pile", "planks_pile", "charcoal_pile",
+	"ore_pile", "bronze_ingots", "wool_bales", "cloth_bolts", "barrels", "water_trough",
+	"clay_pit", "copper_ore", "rockfall", "fence_wattle", "fence_wattle_gate", "handcart",
+	"hay_wagon", "tool_axe_bronze", "tool_hoe", "tool_hammer", "tool_shovel",
+	"tool_pickaxe_bronze", "tool_sickle", "tool_pitchfork", "cow", "pig", "crop_wheat",
+	"era2_cottage"]
+const ERA2_STAGED := ["cottage", "granary", "mill", "bakery", "kiln", "smelter", "smithy",
+	"weaver", "workshop", "barn", "temple", "bridge", "well", "watchtower", "sheep_pen"]
+## Era 3 (Town) kit: the same three stages for every building (ERA3_STAGED).
+const REQUIRED_ERA3 := ["aqueduct_end", "road_paved", "road_paved_cross", "road_paved_end", "plaza",
+	"street_lamp", "fountain", "town_flag", "banner_pole", "bench_iron", "planter", "pump",
+	"notice_board", "statue_hand", "cart", "caravan_wagon", "fire_cart", "ship_small",
+	"ship_merchant", "stone_blocks", "bricks_pile", "iron_ore_pile", "iron_bars", "books_pile",
+	"paper_stack", "crates", "glassware", "fire_buckets", "quarry", "iron_ore", "tool_axe_iron",
+	"tool_pickaxe_iron", "tool_mallet", "tool_chisel", "tool_saw", "tool_trowel"]
+const ERA3_STAGED := ["townhouse", "great_hall", "market_hall", "clocktower", "school",
+	"printing_house", "laboratory", "clinic", "fire_station", "forge", "mason", "windmill",
+	"watermill", "observatory", "harbour", "lighthouse", "aqueduct"]
 
 var _fails := 0
 var _checks := 0
@@ -18,8 +41,38 @@ func _init() -> void:
 	await process_frame
 	var ids := AssetCatalog.ids()
 	_check(ids.size() >= REQUIRED.size(), "catalog has %d ids" % ids.size())
-	for r in REQUIRED:
+	for r in REQUIRED + REQUIRED_ERA2 + REQUIRED_ERA3:
 		_check(AssetCatalog.has(StringName(r)), "required id '%s' present" % r)
+	for b in ERA2_STAGED:
+		for stage in ["", "_plot", "_frame"]:
+			var sid := StringName(b + stage)
+			_check(AssetCatalog.has(sid) and int(AssetCatalog.entry(sid).get("era", 1)) == 2,
+				"era 2 building stage '%s' present" % sid)
+	for b in ERA3_STAGED:
+		for stage in ["", "_plot", "_frame"]:
+			var sid := StringName(b + stage)
+			_check(AssetCatalog.has(sid) and int(AssetCatalog.entry(sid).get("era", 1)) == 3,
+				"era 3 building stage '%s' present" % sid)
+	for r in REQUIRED_ERA3:
+		_check(int(AssetCatalog.entry(StringName(r)).get("era", 1)) == 3, "era 3 id '%s' tagged era 3" % r)
+	_check(AssetCatalog.variant_count(&"townhouse") >= 3 and AssetCatalog.variant_count(&"cart") >= 2,
+		"era 3 townhouses and carts have variants")
+	_check(AssetCatalog.variant_count(&"cottage") >= 2 and AssetCatalog.variant_count(&"market_stall") >= 3,
+		"era 2 cottages and market stalls have variants")
+	# the moving parts the gameplay may drive
+	_check_part(&"mill", "Sails")
+	_check_part(&"kiln", "Wheel")
+	_check_part(&"well", "Windlass")
+	for pair in [[&"windmill", "Sails"], [&"watermill", "Wheel"], [&"mason", "Wheel"], [&"clocktower", "Hands"],
+			[&"observatory", "Dome"], [&"harbour", "Jib"], [&"lighthouse", "Beam"], [&"school", "Bell"],
+			[&"fire_station", "Bell"]]:
+		_check_part(pair[0], pair[1])
+	# lights the gameplay switches on at dusk ship switched off
+	for pair in [[&"street_lamp", "Light"], [&"lighthouse", "BeamLight"]]:
+		var n := AssetCatalog.instance(pair[0])
+		var l := n.find_child(pair[1], true, false) as Light3D
+		_check(l != null and not l.visible, "%s has a hidden '%s' light" % pair)
+		n.free()
 	for id in ids:
 		var e := AssetCatalog.entry(StringName(id))
 		var seasons: Dictionary = e.get("seasons", {})
@@ -36,6 +89,7 @@ func _init() -> void:
 	ph.free()
 	# era regrade does not break anything
 	AssetCatalog.set_era(2)
+	AssetCatalog.set_era(3)
 	AssetCatalog.set_era(1)
 	_check(ArtPalette.current_era() == 1, "era switch round-trips")
 	await _check_villager()
@@ -78,6 +132,36 @@ func _check_villager() -> void:
 		v.set_look(Color.BISQUE, Color.SADDLE_BROWN, Color("#7a5236"), o)
 	for st in 4:
 		v.set_age_scale(st)
+	# Era 2 tailoring: woven clothes, hats on some outfits, back to hides for era 1
+	v.set_era(2)
+	var hats := 0
+	for o in 8:
+		v.set_look(Color.BISQUE, Color.SADDLE_BROWN, Color("#6b7f3a"), o)
+		var model := v.get_node("Model")
+		if model.find_child("Hat", true, false) != null:
+			hats += 1
+		var style: Variant = null
+		for c in model.get_node("Armature/Skeleton3D").get_children():
+			if c is MeshInstance3D and not c.has_meta("hair_piece") and String(c.name) not in ["Eyes", "Eyebrows"]:
+				style = (c as MeshInstance3D).get_instance_shader_parameter(&"outfit_style")
+		_check(style is Vector4 and (style as Vector4).x > 0.5, "era 2 outfit %d is woven (style %s)" % [o, style])
+	_check(hats >= 3, "era 2 outfits include hats (%d of 8)" % hats)
+	# Era 3 tailoring: town clothes (coats, bodices, aprons) and more hats
+	v.set_era(3)
+	hats = 0
+	for o in 8:
+		v.set_look(Color.BISQUE, Color.SADDLE_BROWN, Color("#3e5a78"), o)
+		var model := v.get_node("Model")
+		if model.find_child("Hat", true, false) != null:
+			hats += 1
+		var style: Variant = null
+		for c in model.get_node("Armature/Skeleton3D").get_children():
+			if c is MeshInstance3D and not c.has_meta("hair_piece") and String(c.name) not in ["Eyes", "Eyebrows"]:
+				style = (c as MeshInstance3D).get_instance_shader_parameter(&"outfit_style")
+		_check(style is Vector4 and (style as Vector4).x > 1.5, "era 3 outfit %d is tailored (style %s)" % [o, style])
+	_check(hats >= 3, "era 3 outfits include hats (%d of 8)" % hats)
+	v.set_era(1)
+	_check(v.get_node("Model").find_child("Hat", true, false) == null, "era 1 villagers have no hats")
 	await process_frame
 	v.set_age_scale(1)
 	var child_h := _aabb(v, Transform3D.IDENTITY).size.y
@@ -85,6 +169,14 @@ func _check_villager() -> void:
 	var adult_h := _aabb(v, Transform3D.IDENTITY).size.y
 	_check(child_h < adult_h * 0.8, "child (%.2f) smaller than adult (%.2f)" % [child_h, adult_h])
 	v.free()
+
+
+func _check_part(id: StringName, part: String) -> void:
+	var n := AssetCatalog.instance(id)
+	var p := n.find_child(part, true, false) if n else null
+	_check(p != null and p.get("spinning") != null, "%s has a '%s' spinner" % [id, part])
+	if n:
+		n.free()
 
 
 func _check(ok: bool, what: String) -> void:

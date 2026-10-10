@@ -31,15 +31,14 @@
    }
   },
   {
-   "alphaMode": "BLEND",
    "doubleSided": true,
    "name": "MI_WindowGlass",
    "pbrMetallicRoughness": {
     "baseColorFactor": [
-     0.800000011920929,
-     0.800000011920929,
-     0.800000011920929,
-     0.09545451402664185
+     0.16,
+     0.21,
+     0.27,
+     1.0
     ],
     "metallicFactor": 0,
     "roughnessFactor": 1
