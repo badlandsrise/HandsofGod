@@ -26,3 +26,4 @@ enum Kind { GATHER, CRAFT, BUILD, GROUP, TEND, HAUL, LEAD, DEVOTION }
 @export var carry_to: StringName = &"store"       # GROUP hauls (node_amount 1): &"store" or &"fire"
 @export var faith_rate: float = 0.1              # DEVOTION: faith per second per worshipper at mood 1
 @export var once: bool = false                   # removed after one completion (festival, elk hunt)
+@export var anim: StringName = &""                # villager work clip; "" = TaskAnims picks one by job id or kind

@@ -245,6 +245,8 @@ func slot_position(i: int) -> Vector3:
 		var pb := end - along * float(i / 3) * 1.4 + side * (float(i % 3) - 1.0) * 1.3
 		pb.y = Site.ground(pb.x, pb.z)
 		return pb
+	if job != null and job.id == &"carry_log":
+		return LogCarry.slot(self, i)   # one at each end, the log over their right shoulders
 	var n := maxi(max_slots(), 1)
 	var r := pick_radius() + 0.35
 	var a := TAU * float(i) / float(n) + 0.5

@@ -1,8 +1,12 @@
 class_name PersonVisual extends Node3D
 ## The look of a Person: wraps the rigged VillagerVisual (scenes/people/villager_visual.tscn)
 ## and maps the Person's poses onto its animation states. Lives under the Person as the
-## child named "Visual". The Person calls apply_look() when its look or stage changes and
+## child named "Visual". The Person calls apply_look() when its look or stage changes,
+## set_task() when it takes or leaves a job, set_cargo() with what it carries and
 ## animate() every frame.
+## Working, a person plays their job's own clip with its tools in hand (TaskAnims: berry
+## picking, knapping, tending the fire, praying, ...); carrying, they hold a real armful of
+## the resource (PropKit); idle, they shift between a few idle stances.
 
 enum Pose { IDLE, WALK, WORK, HELD, WAVE, COWER, WATCH, POINT, REACH, PRAY, SLEEP, DEAD, CARRY, SIT, RUN, CHOP }
 
@@ -21,14 +25,17 @@ const JOB_COLOURS: Dictionary = {
 const STATE_FOR_POSE := {
 	Pose.IDLE: &"idle", Pose.WALK: &"walk", Pose.WORK: &"work", Pose.HELD: &"held",
 	Pose.WAVE: &"wave", Pose.COWER: &"cower", Pose.WATCH: &"idle", Pose.POINT: &"talk",
-	Pose.REACH: &"cheer", Pose.PRAY: &"sit", Pose.SLEEP: &"dead", Pose.DEAD: &"dead",
+	Pose.REACH: &"cheer", Pose.PRAY: &"pray", Pose.SLEEP: &"dead", Pose.DEAD: &"dead",
 	Pose.CARRY: &"carry", Pose.SIT: &"sit", Pose.RUN: &"run", Pose.CHOP: &"chop",
 }
+## Idle stances a standing adult drifts between (weights by repetition).
+const IDLE_VARIANTS: Array[StringName] = [&"idle", &"idle", &"idle", &"idle_fold", &"idle_hips"]
+## Seconds a person keeps the walking clip after a stop (stop-go steps read as one walk).
+const MOVE_HOLD := 0.3
 
 ## Kept for callers that scale the figure (height); the villager lives under it.
 var body: Node3D
 var villager: VillagerVisual
-var cargo: MeshInstance3D
 var bubble: Node3D
 var bubble_icon: MeshInstance3D
 var _skin := SKIN[0]
@@ -42,6 +49,12 @@ var _t: float = 0.0
 var _squash: float = 0.0
 var _hurt := 0.0
 var _built := false
+var _plan: Dictionary = {}            # TaskAnims.for_job() of the current job ({} = none)
+var _has_plan := false                # set_task() was called (else the skill decides)
+var _cargo_kind: StringName = &""
+var _move_hold := 0.0
+var _idle_pick: StringName = &"idle"
+var _idle_t := 0.0
 
 func _ready() -> void:
 	_build()
@@ -57,16 +70,6 @@ func _build() -> void:
 	villager.name = "Villager"
 	body.add_child(villager)
 	_push_look()
-	cargo = MeshInstance3D.new()
-	var bm := BoxMesh.new()
-	bm.size = Vector3(0.36, 0.26, 0.3)
-	cargo.mesh = bm
-	var cm := StandardMaterial3D.new()
-	cm.roughness = 0.9
-	cargo.material_override = cm
-	cargo.position = Vector3(0, 1.02, 0.34)
-	body.add_child(cargo)
-	cargo.visible = false
 	bubble = Node3D.new()
 	bubble.position = Vector3(0, 2.45, 0)
 	add_child(bubble)
@@ -128,14 +131,25 @@ func _push_look() -> void:
 	villager.set_look(_skin, hair, _cloth, _outfit)
 	villager.set_age_scale(_stage)
 
+## The job whose clip and tools this person works with (a JobDef, or null for none).
+func set_task(jd: Resource) -> void:
+	_has_plan = true
+	_plan = TaskAnims.for_job(jd)
+
+## What they carry: a resource kind (StringName, e.g. &"berries"), or null / &"" for
+## nothing. (A Color, from older callers, shows a plain crate.)
 func set_cargo(c: Variant) -> void:
-	if cargo == null:
-		return
-	if c == null:
-		cargo.visible = false
-	else:
-		cargo.visible = true
-		(cargo.material_override as StandardMaterial3D).albedo_color = c
+	var kind: StringName = &""
+	if c is StringName or c is String:
+		kind = StringName(c)
+	elif c is Color:
+		kind = &"crate"
+	_cargo_kind = kind
+	if villager:
+		villager.hold_cargo(kind)
+
+func cargo_kind() -> StringName:
+	return _cargo_kind
 
 func set_wish(c: Variant) -> void:
 	if bubble == null:
@@ -164,16 +178,19 @@ func animate(delta: float, pose: int, moving: bool, look_at_world: Vector3) -> v
 	if not _built or villager == null:
 		return
 	_t += delta
+	# stop-go stepping (catching up with a slot) reads as one steady walk
+	if moving:
+		_move_hold = MOVE_HOLD
+	else:
+		_move_hold = maxf(_move_hold - delta, 0.0)
+	var walking := moving or (_move_hold > 0.0 and pose in [Pose.IDLE, Pose.WATCH, Pose.WORK, Pose.CARRY, Pose.CHOP])
 	var p := pose
-	if moving and p in [Pose.IDLE, Pose.WATCH, Pose.WORK, Pose.WAVE, Pose.POINT, Pose.REACH, Pose.CHOP]:
+	if walking and p in [Pose.IDLE, Pose.WATCH, Pose.WORK, Pose.WAVE, Pose.POINT, Pose.REACH, Pose.CHOP]:
 		p = Pose.WALK
-	if p == Pose.WORK and _skill == &"woodcraft":
-		p = Pose.CHOP
-	var st: StringName = STATE_FOR_POSE.get(p, &"idle")
-	if p == Pose.CARRY and not moving:
-		st = &"carry"
-	if villager.current_state() != st:
-		villager.play(st, 0.25)
+	var st := _clip_for(p, walking, delta)
+	var hands: Array = TaskAnims.props(_task_plan(), st)
+	if villager.current_state() != st or villager.held_props() != hands:
+		villager.play_task(st, hands[0], hands[1], 0.25)
 		# Greeting the hand: a short hum (Audio rate-limits per person and overall).
 		if st == &"wave" or st == &"cheer":
 			Audio.voice(get_parent(), &"happy" if st == &"wave" else &"cheer")
@@ -188,3 +205,38 @@ func animate(delta: float, pose: int, moving: bool, look_at_world: Vector3) -> v
 	villager.scale = Vector3(1.0 + _squash * 0.2, 1.0 - _squash * 0.3, 1.0 + _squash * 0.2)
 	if bubble.visible:
 		bubble.position.y = 2.45 + sin(_t * 3.0) * 0.08
+
+## The animation plan in use: the job's (set_task), else one from the skill colour.
+func _task_plan() -> Dictionary:
+	return _plan if _has_plan else TaskAnims.for_skill(_skill)
+
+func _who() -> int:
+	var par := get_parent()
+	return int(par.get(&"uid")) if par != null and par.get(&"uid") != null else get_instance_id()
+
+## The villager clip for a pose (see the header).
+func _clip_for(p: int, walking: bool, delta: float) -> StringName:
+	var plan := _task_plan()
+	match p:
+		Pose.WORK, Pose.CHOP:
+			return TaskAnims.work_clip(plan, _who()) if not plan.is_empty() else &"work"
+		Pose.WALK:
+			var mv: StringName = plan.get("move", &"")
+			return mv if mv != &"" else &"walk"
+		Pose.CARRY:
+			if _cargo_kind == &"" and plan.has("carry"):
+				return plan["carry"] if walking else plan.get("carry_idle", plan["carry"])
+			return &"carry_walk" if walking else &"carry"
+		Pose.SIT:
+			return &"baby_sit" if _stage == 0 else &"sit"
+		Pose.IDLE:
+			if _stage != 2:
+				return &"idle"
+			# drift between stances every so often, each person on their own clock
+			_idle_t -= delta
+			if _idle_t <= 0.0:
+				var k := absi(hash(_who() * 7919 + int(_t / 9.0)))
+				_idle_pick = IDLE_VARIANTS[k % IDLE_VARIANTS.size()]
+				_idle_t = 9.0 + float(k % 7)
+			return _idle_pick
+	return STATE_FOR_POSE.get(p, &"idle")

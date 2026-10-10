@@ -242,6 +242,7 @@ func _refresh_look() -> void:
 	visual.apply_look(int(look.get("skin", 0)), int(look.get("hair", 0)), float(look.get("height", 1.0)), stage == Stage.ELDER, stage, outfit)
 	var wj := _job_def()
 	visual.set_job_colour(wj.skill if wj != null else &"")
+	visual.set_task(wj)   # the job's work clip and tools (TaskAnims)
 
 # --- contract API -------------------------------------------------------------------
 
@@ -436,6 +437,7 @@ func join(s: Site, by_hand: bool = true) -> bool:
 	_go(s.slot_position(s.slot_of(self)), WALK_SPEED)
 	var jd := s.work_job()
 	if visual: visual.set_job_colour(jd.skill if jd else &"")
+	if visual: visual.set_task(jd)   # the job's work clip and tools (TaskAnims)
 	if by_hand:
 		if wish != &"" and jd != null and jd.id == wish:
 			_grant_wish()
@@ -1204,6 +1206,7 @@ func _leave_job() -> void:
 	_timer = 0.0
 	_set_cargo_visual()
 	if visual: visual.set_job_colour(&"")
+	if visual: visual.set_task(null)
 	if state == S.WORK or state == S.WAIT_GROUP:
 		state = S.IDLE
 
@@ -1213,7 +1216,7 @@ func _set_cargo_visual() -> void:
 	if _cargo.is_empty():
 		visual.set_cargo(null)
 	else:
-		visual.set_cargo(CARGO_COLOURS.get(_cargo.keys()[0], Color.WHITE))
+		visual.set_cargo(StringName(_cargo.keys()[0]))   # a real armful of that kind (PropKit)
 
 func _store_slot() -> Vector3:
 	var c := Site.store_point(global_position)
@@ -1531,12 +1534,13 @@ func _pose() -> int:
 		return PersonVisual.Pose.CARRY
 	if _moving and _carrying_baby():
 		return PersonVisual.Pose.CARRY
+	# a moving group job (the log carry): carrying it, walking or stood still
+	if state == S.WORK and job_site != null and is_instance_valid(job_site) and job_site.moves_to_store() and job_site.group_running:
+		return PersonVisual.Pose.CARRY
 	if state == S.WORK and not _moving:
 		var jd := _job_def()
 		if jd != null and jd.kind == JobDef.Kind.DEVOTION:
 			return PersonVisual.Pose.PRAY
-		if job_site != null and job_site.moves_to_store() and job_site.group_running:
-			return PersonVisual.Pose.CARRY
 		if _phase == "work" or _phase == "build":
 			return PersonVisual.Pose.WORK
 	if state == S.IDLE or state == S.WAIT_GROUP or state == S.EAT:

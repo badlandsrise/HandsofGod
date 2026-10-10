@@ -80,6 +80,8 @@ var _hud_rects: Array = []
 var _hud_t: float = 0.0
 var _last_air := Vector3.INF
 var _vel := Vector3.ZERO
+var _scoop_w := 0.0                    # 0 = the usual pose .. 1 = the dustpan scoop
+var _scoop_dir := Vector3.ZERO         # the sweep's direction (flat, smoothed)
 var _shadow_mat: ShaderMaterial
 var _ring_mat: ShaderMaterial
 var _scoop_mat: ShaderMaterial
@@ -316,12 +318,10 @@ func _pose(hand: Hand, dt: float) -> void:
 		t_hold = 1.0
 		t_tip = 18.0
 	elif hand.scooping:
-		c = [0.2, 0.15, 0.15, 0.15, 0.2]
-		t_cup = 1.0
-		t_spread = -0.4
+		c = HandScoop.CURL.duplicate()             # cupped, fingers together: a dustpan
+		t_cup = HandScoop.CUP
+		t_spread = HandScoop.SPREAD
 		t_hold = 0.7
-		t_tip = 40.0
-		t_roll = 48.0                          # palm turned in to sweep
 	elif reaching:
 		c = [0.3, 0.3, 0.32, 0.35, 0.4]
 		t_cup = 0.4
@@ -399,6 +399,21 @@ func _place(hand: Hand, dt: float) -> void:
 	if _push > 0.0:
 		lift.y = sin((1.0 - _push / 0.9) * PI) * hand_len * 0.15
 	var xf := Transform3D(bs, anchor + lift - bs * model.anchor_local(hold_blend))
+	# the scoop: turn the hand onto its edge, palm into the sweep, the edge on the ground
+	_scoop_w = move_toward(_scoop_w, 1.0 if hand.scooping else 0.0, dt * 5.0)
+	if _scoop_w > 0.0:
+		var flat := Vector3(_vel.x, 0.0, _vel.z)
+		if flat.length() > 1.0:
+			_scoop_dir = _scoop_dir.lerp(flat.normalized(), minf(6.0 * dt, 1.0)) if _scoop_dir != Vector3.ZERO else flat.normalized()
+		if _scoop_dir.length() < 0.1:
+			_scoop_dir = fwd.cross(Vector3.UP).normalized()   # at rest: as if sweeping right to left
+		var sb := HandScoop.basis(_scoop_dir.normalized(), fwd)
+		var e := smoothstep(0.0, 1.0, _scoop_w)
+		var nb := b.orthonormalized().slerp(sb, e).scaled(scale_v)
+		var origin := anchor - nb * model.anchor_local(hold_blend)
+		var ground_y: float = hand.ground.y if hand.ground.is_finite() else anchor.y - 2.2
+		origin.y += lerpf(0.0, HandScoop.lift(nb, origin, ground_y + HandScoop.CLEAR * hand_len), e)
+		xf = Transform3D(nb, origin)
 	if waving > 0.0:
 		# wave back: swing the hand side to side about the wrist
 		var u := 1.0 - waving / WAVE_TIME

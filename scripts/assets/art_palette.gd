@@ -15,6 +15,8 @@ extends RefCounted
 
 const SHADER := preload("res://assets/models/materials/hog_flat.gdshader")
 const SHADER_2S := preload("res://assets/models/materials/hog_flat_2s.gdshader")
+## hog_flat with vertex colours multiplied in (the wild animals' shading; WildAnimalVisual)
+const SHADER_VC := preload("res://assets/models/materials/hog_flat_vc.gdshader")
 const VILLAGER_SHADER := preload("res://assets/models/materials/villager.gdshader")
 ## World scatter (MultiMesh trees, rocks, plants): the same grade plus wind, snow and the
 ## dimming of locked regions. See scatter_material().
@@ -329,7 +331,7 @@ static func _new_material(two_sided: bool) -> ShaderMaterial:
 static func register(m: ShaderMaterial) -> void:
 	if _registered.has(m.get_instance_id()):
 		return
-	if m.shader != SHADER and m.shader != SHADER_2S and m.shader != VILLAGER_SHADER and m.shader != SCATTER_SHADER:
+	if m.shader != SHADER and m.shader != SHADER_2S and m.shader != SHADER_VC and m.shader != VILLAGER_SHADER and m.shader != SCATTER_SHADER:
 		return
 	_registered[m.get_instance_id()] = true
 	_apply_era_to(m)

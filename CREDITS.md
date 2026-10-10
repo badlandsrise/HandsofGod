@@ -38,7 +38,8 @@ Made with the **Godot Engine** (MIT licence, https://godotengine.org/license).
 ## Art
 
 All third-party art is CC0 (public domain dedication); credit is given anyway. Hand-built props,
-shaders and the placeholder animals are made for this project.
+shaders, the hand-held props, carried armfuls and gifts (`scripts/assets/prop_kit.gd`), and the
+animals' procedural gaits are made for this project.
 
 | Pack | Author | Licence | Source |
 | --- | --- | --- | --- |
@@ -46,6 +47,10 @@ shaders and the placeholder animals are made for this project.
 | Medieval Village MegaKit (Standard) | Quaternius | CC0 | https://quaternius.itch.io/medieval-village-megakit |
 | Universal Base Characters (Standard) | Quaternius | CC0 | https://quaternius.itch.io/universal-base-characters |
 | Universal Animation Library (Standard) | Quaternius | CC0 | https://quaternius.itch.io/universal-animation-library |
+| Universal Animation Library 2 (Standard) | Quaternius | CC0 | https://quaternius.itch.io/universal-animation-library-2 |
+| Animated Animals Low Poly (the wolf) | Quaternius | CC0 | https://opengameart.org/content/animated-animales-low-poly |
+| Deer Low Poly Rigged | OpenGameArt contributor (see source page) | CC0 | https://opengameart.org/content/deer-low-poly-rigged |
+| White Bear Low Poly | OpenGameArt contributor (see source page) | CC0 | https://opengameart.org/content/white-bear-low-poly |
 | Farm Animals (Animated) | Quaternius | CC0 | https://quaternius.itch.io/lowpoly-animated-animals (quaternius.com/packs/farmanimal.html) |
 | Survival Kit | Kenney (www.kenney.nl) | CC0 | https://kenney.nl/assets/survival-kit |
 | Pirate Kit (row boats, ships, crates) | Kenney (www.kenney.nl) | CC0 | https://kenney.nl/assets/pirate-kit |
