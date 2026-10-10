@@ -200,14 +200,57 @@ func _check(text: String, on: bool, cb: Callable) -> Control:
 	c.toggled.connect(cb)
 	return c
 
+## A small Markdown to BBCode pass for CREDITS.md: headings, bold, code, lists and
+## tables (rows become "a · b · c" lines); HTML comments are dropped.
+static func md_to_bbcode(md: String) -> String:
+	var out := PackedStringArray()
+	var in_comment := false
+	var bold := RegEx.create_from_string("\\*\\*(.+?)\\*\\*")
+	var code := RegEx.create_from_string("`([^`]+)`")
+	var ital := RegEx.create_from_string("(?<![\\w*])_(.+?)_(?![\\w*])")
+	for raw in md.split("\n"):
+		var line: String = raw
+		if in_comment:
+			if line.contains("-->"):
+				in_comment = false
+			continue
+		if line.strip_edges().begins_with("<!--"):
+			in_comment = not line.contains("-->")
+			continue
+		line = line.replace("[", "[lb]")
+		line = bold.sub(line, "[b]$1[/b]", true)
+		line = code.sub(line, "[code]$1[/code]", true)
+		line = ital.sub(line, "[i]$1[/i]", true)
+		var t := line.strip_edges()
+		if t.begins_with("|"):
+			if t.replace("|", "").replace("-", "").replace(" ", "") == "":
+				continue
+			var cells := PackedStringArray()
+			for c in t.trim_prefix("|").trim_suffix("|").split("|"):
+				cells.append(c.strip_edges())
+			out.append("  " + " · ".join(cells))
+		elif t.begins_with("### "):
+			out.append("[b]%s[/b]" % t.substr(4))
+		elif t.begins_with("## "):
+			out.append("\n[font_size=20][b]%s[/b][/font_size]" % t.substr(3))
+		elif t.begins_with("# "):
+			out.append("[font_size=26][b]%s[/b][/font_size]" % t.substr(2))
+		elif t.begins_with("- "):
+			out.append("  • " + t.substr(2))
+		else:
+			out.append(line)
+	return "\n".join(out)
+
 func _show_credits() -> void:
 	_clear_sub("Credits")
 	var text := "Hands of God\n\nCredits are being written. Art and music will be CC0 packs (Quaternius, Kenney and others), credited here."
 	if FileAccess.file_exists("res://CREDITS.md"):
 		text = FileAccess.get_file_as_string("res://CREDITS.md")
 	var rt := RichTextLabel.new()
-	rt.text = text
-	rt.custom_minimum_size = Vector2(500, 360)
+	rt.bbcode_enabled = true
+	rt.text = md_to_bbcode(text)
+	rt.custom_minimum_size = Vector2(640, 420)
+	rt.scroll_active = true
 	rt.add_theme_color_override("default_color", INK)
 	rt.add_theme_font_size_override("normal_font_size", 16)
 	_sub_box.add_child(rt)

@@ -6,7 +6,7 @@ class_name GroundLook extends RefCounted
 ## Pick with the project setting "hands_of_god/ground_look", or "--ground=<look>" on the
 ## command line; DEFAULT otherwise.
 
-const DEFAULT := &"procedural"
+const DEFAULT := &"photo"   # picked from tests/shots/ground_{A,B,C}_*.png; see CREDITS.md
 const LOOKS := [&"procedural", &"stylised", &"photo"]
 const LAYERS := ["grass", "dirt", "rock", "mud", "forest"]
 const DIR := "res://assets/textures/ground/%s/%s_%s.%s"

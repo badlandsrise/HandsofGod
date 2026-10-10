@@ -29,6 +29,25 @@ shaders and the placeholder animals are made for this project.
 | Farm Animals (Animated) | Quaternius | CC0 | https://quaternius.itch.io/lowpoly-animated-animals (quaternius.com/packs/farmanimal.html) |
 | Survival Kit | Kenney (www.kenney.nl) | CC0 | https://kenney.nl/assets/survival-kit |
 
+## Ground textures
+
+The ground ships three looks (`scripts/world/ground_look.gd`); the default is the
+photo set, posterised, softened and tinted toward the palette in the terrain shader.
+All are CC0 1.0; credit is given anyway.
+
+| Layer | Look | Texture | Author / site | Source |
+| --- | --- | --- | --- | --- |
+| Grass | photo | Grass004 | ambientCG | https://ambientcg.com/view?id=Grass004 |
+| Rock | photo | Rock058 | ambientCG | https://ambientcg.com/view?id=Rock058 |
+| Dirt | photo | dirt_floor | Poly Haven | https://polyhaven.com/a/dirt_floor |
+| Mud | photo | brown_mud_03 | Poly Haven | https://polyhaven.com/a/brown_mud_03 |
+| Forest floor | photo | leaves_forest_ground | Poly Haven | https://polyhaven.com/a/leaves_forest_ground |
+| Grass | stylised | Handpainted grass texture pack (grass_01b) | OpenGameArt contributor | https://opengameart.org/content/handpainted-grass-texture-pack |
+| Rock | stylised | Handpainted rock textures (hptex pack 4, rock_03) | OpenGameArt contributor | https://opengameart.org/content/handpainted-rock-textures |
+| Dirt, mud, forest floor | stylised | Tileable dirt textures (Dirt_01, 02, 04) | OpenGameArt contributor | https://opengameart.org/content/tileable-dirt-textures |
+
+The OpenGameArt pages did not name their authors in what was fetched; see each page.
+
 ## Curated music (hybrid plan, section 13.2)
 
 <!-- Kevin MacLeod tracks need: "Track Title" Kevin MacLeod (incompetech.com)
