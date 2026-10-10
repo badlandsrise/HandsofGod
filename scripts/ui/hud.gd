@@ -4,6 +4,9 @@ class_name Hud extends CanvasLayer
 ## bottom-centre; Tab shows all labels, F1 opens the Village Book. The hand's
 ## own tooltip is drawn by the hand (scripts/hand/hand_visual.gd).
 ## Everything is built in code with UiTheme; set_ui_scale() scales it all (0.8..1.5).
+## M2: alerts are parchment cards with the portrait of the person they are about;
+## the HUD also owns the Chronicle (the Book's journal), Portraits, Notices (dream
+## and region banners), the naming card and the era card.
 
 const FOOD_PER_PERSON_PER_DAY := 1.0
 ## Materials that matter in each era even at zero (food is always shown).
@@ -37,17 +40,31 @@ var alerts_box: VBoxContainer
 var toast_box: VBoxContainer
 var labels: LabelsOverlay
 var book: VillageBook
+var portraits: Portraits
+var chronicle: Chronicle
+var notices: Notices
+var naming: NamingCard
+var era_card: EraCard
 
 var _dreams: Array = []        # {id, node, pips, done_t}
 var _alerts: Array = []        # {node, t}
 var _toasts: Array = []        # {node, t}
 var _power_buttons: Dictionary = {}   # id -> Button
 var _refresh_t: float = 0.0
+var _chrome: Array = []        # panels hidden while the book is open
+var _modal_was := false
+var _hand_paused := false
 
 func _ready() -> void:
 	add_to_group(&"hud")
 	layer = 10
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	if not Options.loaded:
+		Options.load_options()
+	portraits = Portraits.new()
+	add_child(portraits)
+	chronicle = Chronicle.new()
+	add_child(chronicle)
 	root = Control.new()
 	root.name = "Root"
 	root.theme = UiTheme.get_theme()
@@ -61,8 +78,14 @@ func _ready() -> void:
 	_build_faith()
 	_build_alerts()
 	_build_toasts()
+	notices = Notices.new()
+	root.add_child(notices)
 	book = VillageBook.new(self)
 	root.add_child(book)
+	era_card = EraCard.new()
+	root.add_child(era_card)
+	naming = NamingCard.new()
+	root.add_child(naming)
 	book.person_clicked.connect(func(p: Person):
 		pan_to(p.global_position)
 		book.close_book())
@@ -119,12 +142,14 @@ func _build_dreams() -> void:
 func _build_stores() -> void:
 	stores_panel = _panel(Control.PRESET_CENTER_TOP)
 	stores_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_chrome.append(stores_panel)
 	stores_box = HBoxContainer.new()
 	stores_box.add_theme_constant_override(&"separation", 18)
 	stores_panel.add_child(stores_box)
 
 func _build_time() -> void:
 	var p := _panel(Control.PRESET_TOP_RIGHT)
+	_chrome.append(p)
 	p.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override(&"separation", 10)
@@ -153,6 +178,7 @@ func _build_time() -> void:
 
 func _build_faith() -> void:
 	var p := _panel(Control.PRESET_BOTTOM_LEFT)
+	_chrome.append(p)
 	p.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override(&"separation", 12)
@@ -173,7 +199,7 @@ func _build_alerts() -> void:
 	root.add_child(alerts_box)
 	alerts_box.anchor_left = 1.0
 	alerts_box.anchor_right = 1.0
-	alerts_box.offset_left = -290
+	alerts_box.offset_left = -330
 	alerts_box.offset_right = -14
 	alerts_box.offset_top = 130
 	alerts_box.add_theme_constant_override(&"separation", 6)
@@ -280,18 +306,12 @@ func _pan_to_dream(id: StringName) -> void:
 # ---------------------------------------------------------------- alerts and toasts
 
 func add_alert(text: String, at: Vector3 = Vector3.INF) -> void:
-	var b := Button.new()
-	b.focus_mode = Control.FOCUS_NONE
-	b.text = text
-	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	b.custom_minimum_size = Vector2(270, 40)
-	b.add_theme_stylebox_override(&"normal", UiTheme.box(Color(0.24, 0.12, 0.08, 0.9), UiTheme.WARN, 10, 12.0, 2))
-	b.add_theme_stylebox_override(&"hover", UiTheme.box(Color(0.34, 0.17, 0.1, 0.95), UiTheme.WARN.lightened(0.3), 10, 12.0, 2))
-	b.tooltip_text = "Click to look" if at.is_finite() else ""
-	if at.is_finite():
-		b.pressed.connect(pan_to.bind(at))
+	var b := Notices.alert_card(text, at, pan_to.bind(at) if at.is_finite() else Callable())
 	alerts_box.add_child(b)
+	b.modulate.a = 0.0
+	b.position.x += 40.0
+	var tw := create_tween().set_ignore_time_scale(true)
+	tw.tween_property(b, "modulate:a", 1.0, 0.25)
 	_alerts.append({"node": b, "t": ALERT_SECONDS})
 	while _alerts.size() > MAX_ALERTS:
 		var old: Dictionary = _alerts.pop_front()
@@ -482,9 +502,56 @@ func _process(_d: float) -> void:
 			if d["done_t"] <= 0.0:
 				_dreams.erase(d)
 				(d["node"] as Node).queue_free()
-	dreams_panel.visible = not _dreams.is_empty()
+	_update_modal_state()
+	dreams_panel.visible = not _dreams.is_empty() and not book.is_open()
+
+## Esc: closes the topmost card or the book. Returns true if it closed something
+## (the menu asks first, so Esc never opens the pause menu over the book).
+func close_top_modal() -> bool:
+	if not visible:
+		return false
+	if naming != null and naming.is_open():
+		return true          # the names must be given; Esc does nothing here
+	if era_card != null and era_card.is_open():
+		era_card.keep_playing()
+		return true
+	if book != null and book.is_open():
+		book.close_book()
+		return true
+	return false
+
+## While the book or a card is open: the HUD panels step back (book only), and
+## the hand rests so its hover card and clicks stay out of the way.
+func _update_modal_state() -> void:
+	var book_open := book != null and book.is_open()
+	var m := book_open or modal_open()
+	for c in _chrome:
+		(c as Control).visible = not book_open
+	alerts_box.visible = not book_open
+	toast_box.visible = not book_open
+	if m == _modal_was:
+		return
+	_modal_was = m
+	var hand := get_tree().get_first_node_in_group(&"hand")
+	if hand == null:
+		return
+	if m and hand.process_mode != Node.PROCESS_MODE_DISABLED:
+		hand.process_mode = Node.PROCESS_MODE_DISABLED
+		_hand_paused = true
+		var hv := hand.get_node_or_null("Visual")
+		if hv != null and hv.get(&"tip_panel") is Control:
+			(hv.get(&"tip_panel") as Control).visible = false
+	elif not m and _hand_paused:
+		_hand_paused = false
+		if visible:
+			hand.process_mode = Node.PROCESS_MODE_INHERIT
+
+func modal_open() -> bool:
+	return (naming != null and naming.is_open()) or (era_card != null and era_card.is_open())
 
 func _unhandled_input(e: InputEvent) -> void:
+	if modal_open():
+		return
 	if e.is_action_pressed(&"labels"):
 		labels.shown = not labels.shown
 		get_viewport().set_input_as_handled()

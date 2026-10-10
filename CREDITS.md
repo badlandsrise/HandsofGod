@@ -55,3 +55,13 @@ The OpenGameArt pages did not name their authors in what was fetched; see each p
      http://creativecommons.org/licenses/by/4.0/ -->
 
 - _(none yet)_
+
+## Fonts
+
+All SIL Open Font License 1.1 (licence texts in `assets/fonts/`), from Google Fonts.
+
+| Font | Use | Author |
+| --- | --- | --- |
+| Alegreya | Body text | Huerta Tipográfica (Juan Pablo del Peral) |
+| IM Fell English | Titles and the Village Book | Igino Marini |
+| Caveat | Handwritten names | Impallari Type |
