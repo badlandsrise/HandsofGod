@@ -16,7 +16,7 @@ class_name Onboarding extends Node
 enum Beat { STORM, DAWN, BERRIES, FIRE_LOG, FIRE_LIT, GIFT, DREAM, DONE }
 const NAMES: Array[String] = ["storm", "dawn", "berries", "fire_log", "fire_lit", "gift", "dream", "done"]
 
-const BERRIES_NEEDED := 5          # berries carried to the store before the fire log appears
+const BERRIES_NEEDED := 2          # armfuls of berries carried to the store before the fire log appears
 const BERRY_TIMEOUT := 240.0       # a patient player still gets the next beat
 const GIFT_DELAY := 8.0            # seconds after the fire is lit
 const GIFT_TIMEOUT := 240.0        # the dream comes even if the stone is left lying

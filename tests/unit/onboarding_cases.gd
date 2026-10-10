@@ -34,6 +34,7 @@ func run() -> void:
 	w = load("res://scenes/world/world.tscn").instantiate()
 	get_tree().root.add_child(w)
 	await get_tree().process_frame
+	Game.flags["test"] = true      # after the world's _ready (no bot): the naming card auto-accepts instead of pausing
 	w.new_game()
 	w.start_play()
 	Engine.time_scale = 10.0
@@ -53,7 +54,7 @@ func _onboarding() -> void:
 	check(_beat() == Onboarding.Beat.STORM and w.storm.active(), "a new game opens on the storm beat")
 	check(Village.population() == 2, "two people at the start")
 	var two: Array = Village.alive()
-	check(two.all(func(p): return p.first_two) and two[0].sex != two[1].sex, "the first two are a pair")
+	check(two.all(func(p): return p.first_two) and two[0].sex != two[1].sex and two.all(func(p): return p.given_name == LayoutEra1.NAMES_BY_SEX[p.sex]), "the first two are a pair, named to match")
 	check(Village.sites.all(func(s): return s.job == null or s.job.id != &"carry_log"), "no fire log before the berries")
 	await get_tree().create_timer(0.5).timeout
 	check(_beat() == Onboarding.Beat.STORM, "the storm holds until the branch is lifted")
@@ -166,6 +167,25 @@ func _rules() -> void:
 	var cold: Person = hunters[0]
 	cold.needs[&"warmth"] = 0.1
 	check(HandPowers.warm_at(cold.global_position) >= 1 and cold.needs[&"warmth"] > 0.3, "the Warmth gesture warms people")
+	# Homes: a bonded pair takes a hut's places before single adults
+	for s2 in Village.sites:
+		if is_instance_valid(s2) and s2.is_shelter():
+			s2.queue_free()
+	await get_tree().process_frame
+	var hut: Site = w.spawn_plot(&"hut", Vector3(10, 0, -3.5))
+	hut.start_finished = true
+	hut._finish(false)
+	for p in Village.alive():
+		p.home = null
+		p.partner = 0
+	var fa: Person = hunters[0]
+	var fb: Person = hunters[1]
+	fa.sex = "f"; fb.sex = "m"
+	for i in range(2, 5):
+		hunters[i].home = hut
+	fa.partner = fb.uid; fb.partner = fa.uid
+	Births.assign_homes()
+	check(fa.home == hut and fb.home == hut and Births.home_residents(hut) <= hut.building.shelter, "a bonded pair gets the hut before single adults")
 	# Baby prayer: the first baby after the shrine prays for a name
 	var shrine: Site = w.spawn_plot(&"shrine", Vector3(6.5, 0, -22.5))
 	shrine.start_finished = true
@@ -189,4 +209,17 @@ func _rules() -> void:
 	var summ: Dictionary = (Village.stats.get("era_summary", {}) as Dictionary).get("1", {})
 	check(summ.has("population") and summ.has("faith_earned") and summ.has("minutes"), "the Era 1 card has its numbers")
 	check(Dreams.active_dream() == null, "no dreams in the placeholder Era 2")
+	var changes: Array = []
+	Events.era_changed.connect(func(e): changes.append(e))
+	w.begin_era(2)
+	check(Village.era == 2 and changes.is_empty(), "the era card's Continue after the transition does not advance twice")
+	# Difficulty scales cold, wolves and food
+	Game.options["difficulty"] = "harsh"
+	var harsh := [Flags.diff_k(&"cold"), Flags.diff_k(&"wolves"), Flags.diff_k(&"food")]
+	Game.options["difficulty"] = "gentle"
+	var gentle := [Flags.diff_k(&"cold"), Flags.diff_k(&"wolves"), Flags.diff_k(&"food")]
+	Game.options["difficulty"] = "normal"
+	check(harsh.all(func(k): return k > 1.0) and gentle.all(func(k): return k < 1.0) and Flags.diff_k(&"cold") == 1.0, "difficulty scales cold, wolves and hunger")
+	var ln := LayoutEra1.NAMES_BY_SEX
+	check(ln["f"] != ln["m"] and Names.LISTS[1]["f"].has(ln["f"]), "the first two's default names match their sex")
 	Clock.running = false

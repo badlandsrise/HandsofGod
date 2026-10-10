@@ -453,6 +453,13 @@ func site_near(p: Vector3, r: float, filter: Callable = Callable()) -> Site:
 		best_d = d
 	return best
 
+## [ui] The era card's Continue. The transition has normally moved the
+## village on already; this only finishes it if it has not.
+func begin_era(n: int) -> void:
+	if village_ai != null and village_ai.era_transition != null and village_ai.era_transition.running:
+		return
+	EraTransition.enter_era(n)
+
 func spawn_person(at: Vector3, name_hint: String = "", extra: Dictionary = {}) -> Person:
 	var at_g := Vector3(at.x, ground_y(at.x, at.z), at.z)
 	if ResourceLoader.exists(PERSON_SCENE):

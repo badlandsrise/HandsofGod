@@ -13,6 +13,6 @@ dreams = Array[StringName]([&"shelter_of_our_own", &"shrine_to_the_hand", &"ston
 music = &"tribe"
 day_seconds = 75.0
 night_seconds = 30.0
-season_seconds = 240.0
+season_seconds = 300.0
 playable = true
 gate_min_minutes = 35.0

@@ -11,10 +11,12 @@ func check(ok: bool, what: String) -> void:
 		fails += 1
 
 func _wait_bake(w) -> void:
-	var t := 0
-	while (w.nav.baking_now() or not w.nav.ready_for_paths()) and t < 600:
+	# wall-clock bound: under a loaded CPU the bake thread is slower than frames
+	var t0 := Time.get_ticks_msec()
+	while (w.nav.baking_now() or not w.nav.ready_for_paths()) and Time.get_ticks_msec() - t0 < 30000:
 		await get_tree().process_frame
-		t += 1
+	await get_tree().physics_frame
+	await get_tree().physics_frame      # the map syncs on the next physics step
 
 func _path(w, a: Vector3, b: Vector3) -> PackedVector3Array:
 	var map: RID = w.get_world_3d().navigation_map

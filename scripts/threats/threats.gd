@@ -47,7 +47,7 @@ func _process(delta: float) -> void:
 	var warn_s := wd.warning_seconds if wd else 15.0
 	if not Clock.is_night and not wolves.warned and Clock.phase_t >= Clock.day_seconds - warn_s and Village.era <= 2:
 		var min_pop := wd.min_population if wd else 3
-		var chance := wd.chance_per_day if wd else 0.55
+		var chance := (wd.chance_per_day if wd else 0.55) * Flags.diff_k(&"wolves")
 		if Village.population() >= min_pop and not cold_active and not cold_warned and not quiet():
 			# the hunt for the dusk roll happens once per day
 			if not has_meta("rolled_day") or int(get_meta("rolled_day")) != Clock.day:
@@ -95,7 +95,7 @@ func _maybe_cold_snap() -> void:
 		return
 	if Village.population() < (cd.min_population if cd else 3):
 		return
-	if Game.rng.randf() < (cd.chance_per_day if cd else 0.3) or Game.flags.has("cold"):
+	if Game.rng.randf() < (cd.chance_per_day if cd else 0.3) * Flags.diff_k(&"wolves") or Game.flags.has("cold"):
 		start_cold_warning()
 
 func start_cold_warning() -> void:

@@ -2,7 +2,7 @@ extends Node
 ## Staging for tests/bot/m2_shots.gd.
 
 const ALL := ["plots", "held", "winter", "festival", "era"]
-const OUT := "res://tests/bot/shots"
+const OUT := "res://tests/shots"
 
 var w: Node3D
 var want: Array = ALL

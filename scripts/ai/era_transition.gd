@@ -95,13 +95,18 @@ func _process(_delta: float) -> void:
 
 func _finish() -> void:
 	running = false
-	var next := from_era + 1
-	Village.era = next
-	Village.stats["era_started_t"] = Clock.total_t
-	Village.stats["free_mode"] = Defs.era(next) == null or not Defs.era(next).playable
-	var e := Defs.era(next)
-	if e != null:
-		Clock.apply_era(e)
-	Events.era_changed.emit(next)
+	enter_era(from_era + 1)
 	Events.era_complete_shown.emit(from_era)
 	finished.emit(from_era)
+
+## Moves the village into era `next`. Idempotent: the era card's Continue
+## (World.begin_era) after the transition already moved it is a no-op.
+static func enter_era(next: int) -> bool:
+	if Village.era >= next or Defs.era(next) == null:
+		return false
+	Village.era = next
+	Village.stats["era_started_t"] = Clock.total_t
+	Village.stats["free_mode"] = not Defs.era(next).playable
+	Clock.apply_era(Defs.era(next))
+	Events.era_changed.emit(next)
+	return true

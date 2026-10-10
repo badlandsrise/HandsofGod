@@ -19,6 +19,11 @@ const SKILLS: Array[StringName] = [&"gathering", &"woodcraft", &"building", &"fa
 const TRAITS: Array[StringName] = [&"strong", &"quick", &"curious", &"devout", &"timid", &"brave", &"sociable", &"stubborn"]
 const NEED_KEYS: Array[StringName] = [&"food", &"water", &"warmth", &"joy"]
 ## Per-second need decay. A day+night is ~105 s and people eat twice in it.
+## A meal or a drink only when the need has dropped this far: about one of
+## each a day, so a family's gatherers keep up and the rest can build.
+const MEAL_BELOW := 0.65
+## Gatherers carry this many cycles' worth to the store in one trip.
+const ARMFUL := 3
 const DECAY: Dictionary = {&"food": 0.0045, &"water": 0.006, &"joy": 0.002}
 const WALK_SPEED := 3.0
 const RUN_SPEED := 5.0
@@ -28,7 +33,8 @@ const ARRIVE := 0.35
 const SKILL_PER_CYCLE := 0.04
 const LIGHT_JOBS: Array[StringName] = [&"gather_berries", &"fetch_water"]   # children, from Era 2
 const WISH_LIFETIME := 90.0
-const WISH_GAP := Vector2(240.0, 480.0)    # game seconds between a granted wish and the next
+const WISH_GAP := Vector2(600.0, 1100.0)    # game seconds between a granted wish and the next
+const WISH_GIFT_CHANCE := 0.12         # a granted wish sometimes leaves a gift as well
 const WISH_FAITH := Vector2(4.0, 6.0)     # faith for a granted wish (doc 6: +4 to +10)
 const CARGO_COLOURS: Dictionary = {&"berries": Color(0.8, 0.15, 0.3), &"wood": Color(0.5, 0.33, 0.18),
 	&"water": Color(0.3, 0.55, 0.95), &"stone": Color(0.6, 0.6, 0.62), &"meat": Color(0.7, 0.3, 0.25),
@@ -101,6 +107,7 @@ var _hand_ref: WeakRef = null
 var _hand_search_t: float = 0.0
 var _started_working := false
 var _waiting_for: StringName = &""
+var _armful: int = 0
 var _stuck_ref := Vector3.INF
 var _stuck_t: float = 0.0
 var _no_nav_t: float = 0.0
@@ -260,12 +267,23 @@ func on_placed(at: Vector3, site: Site) -> void:
 	placed_by_hand = true
 
 ## [hand] while held, the hand moves the person with this each frame.
-## Held people hang from the fingertips by the scruff: lift the feet so the
-## head sits just under the fingers instead of a body-length below them.
-const HELD_LIFT := 0.75
+## +0.2 faith for "a job completed by someone you placed" (doc 6): once per
+## placement, and at most once a minute and a half per person, so shuffling
+## people about is not a faith farm.
+const PLACE_FAITH := 0.2
+const PLACE_FAITH_GAP := 90.0
+var _place_faith_t: float = -INF
 
-func held_follow(world_pos: Vector3) -> void:
-	global_position = world_pos + Vector3(0, HELD_LIFT, 0)
+func _placement_faith() -> void:
+	if not placed_by_hand:
+		return
+	placed_by_hand = false
+	if Clock.total_t - _place_faith_t < PLACE_FAITH_GAP:
+		return
+	_place_faith_t = Clock.total_t
+	Faith.add(PLACE_FAITH, global_position)
+
+func held_follow(world_pos: Vector3) -> void: global_position = world_pos
 
 ## [ui] one line under the name, e.g. "Gathering berries · hungry · wants: tend the fire".
 func status_text() -> String:
@@ -437,9 +455,7 @@ func back_to_waiting() -> void:
 func on_group_done(s: Site) -> void:
 	_gain_skill(s.job.skill, SKILL_PER_CYCLE * 2.0)
 	needs[&"joy"] = minf(needs[&"joy"] + 0.1, 1.0)
-	if placed_by_hand:
-		placed_by_hand = false     # +0.2 once per placement: "a job completed by someone you placed"
-		Faith.add(0.2, global_position)
+	_placement_faith()
 
 ## Sends the person to eat at the store (dawn and dusk).
 func go_eat() -> void:
@@ -447,8 +463,8 @@ func go_eat() -> void:
 		return
 	if state == S.SHELTER or state == S.SLEEP:
 		_leave_shelter()
-	var wants_food: bool = needs[&"food"] < 0.95 and Village.food() > 0
-	var wants_water: bool = needs[&"water"] < 0.95 and Village.store(&"water") > 0
+	var wants_food: bool = needs[&"food"] < MEAL_BELOW and Village.food() > 0
+	var wants_water: bool = needs[&"water"] < MEAL_BELOW and Village.store(&"water") > 0
 	if not wants_food and not wants_water:
 		if (state == S.WORK or state == S.WAIT_GROUP) and job_site != null and is_instance_valid(job_site) and not Clock.is_night:
 			return            # nothing to eat: keep working
@@ -583,7 +599,7 @@ func _is_cold() -> bool:
 	return Clock.is_night or Clock.season == Clock.Season.WINTER
 
 func _sim_needs(dt: float) -> void:
-	needs[&"food"] -= DECAY[&"food"] * dt
+	needs[&"food"] -= DECAY[&"food"] * Flags.diff_k(&"food") * dt
 	needs[&"water"] -= DECAY[&"water"] * dt
 	var sheltered := state == S.SHELTER and _phase == "inside"
 	var warm_src := sheltered or warmed_t > 0.0 or Site.warmth_at(global_position) != null
@@ -596,7 +612,7 @@ func _sim_needs(dt: float) -> void:
 			loss *= 1.8        # a cold snap
 		if Flags.has(&"hide_clothes"):
 			loss *= 0.6        # hide clothes from the hunt
-		w -= loss * dt
+		w -= loss * Flags.diff_k(&"cold") * dt
 	else:
 		w += 0.01 * dt
 	needs[&"warmth"] = w
@@ -680,7 +696,7 @@ func _grant_wish() -> void:
 	adjust_trust(1.0)
 	needs[&"joy"] = minf(needs[&"joy"] + 0.3, 1.0)
 	Faith.add(Game.rng.randf_range(WISH_FAITH.x, WISH_FAITH.y) if Flags.onboarding_done() else 2.0, global_position)
-	if Game.rng.randf() < 0.35 and Flags.onboarding_done():
+	if Game.rng.randf() < WISH_GIFT_CHANCE and Flags.onboarding_done():
 		Gifts.spawn_gift(self)
 	_show_wish()
 
@@ -845,10 +861,15 @@ func _work_gather(dt: float, s: Site) -> void:
 			if _timer >= s.job.work_time:
 				_timer = 0.0
 				if s.take_one():
-					_cargo = s.job.outputs.duplicate()
+					for k in s.job.outputs:
+						_cargo[k] = int(_cargo.get(k, 0)) + int(s.job.outputs[k])
 					_set_cargo_visual()
-					_phase = "carry"
-					_go(_store_slot(), WALK_SPEED)
+					# an armful before the walk to the store (one trip per ARMFUL cycles)
+					_armful += 1
+					if _armful >= ARMFUL or not s.can_work_now():
+						_armful = 0
+						_phase = "carry"
+						_go(_store_slot(), WALK_SPEED)
 		"carry":
 			if _arrived():
 				for k in _cargo:
@@ -856,9 +877,7 @@ func _work_gather(dt: float, s: Site) -> void:
 				_cargo.clear()
 				_set_cargo_visual()
 				_gain_skill(s.job.skill, SKILL_PER_CYCLE)
-				if placed_by_hand:
-					placed_by_hand = false
-					Faith.add(0.2, global_position)
+				_placement_faith()
 				Events.job_completed.emit(s)
 				_phase = "go"
 
@@ -888,9 +907,7 @@ func _work_craft(dt: float, s: Site) -> void:
 		for k in s.job.outputs:
 			Village.add_store(k, int(s.job.outputs[k]))
 		_gain_skill(s.job.skill, SKILL_PER_CYCLE)
-		if placed_by_hand:
-			placed_by_hand = false
-			Faith.add(0.2, global_position)
+		_placement_faith()
 		s.on_cycle_done(self)
 
 func _work_pray(dt: float, s: Site) -> void:
@@ -904,9 +921,9 @@ func _work_pray(dt: float, s: Site) -> void:
 	needs[&"joy"] = minf(needs[&"joy"] + 0.003 * dt, 1.0)
 	_gain_skill(&"scholarship", 0.002 * dt)
 	_pray_t += dt
-	if _pray_t >= 30.0:
+	if _pray_t >= 60.0:
 		_pray_t = 0.0
-		if Game.rng.randf() < 0.06 + 0.04 * float(trust):
+		if Game.rng.randf() < minf(0.04 + 0.02 * float(trust), 0.15):
 			Gifts.spawn_gift(self)
 
 func _work_build(dt: float, s: Site) -> void:
@@ -944,6 +961,15 @@ func _work_build(dt: float, s: Site) -> void:
 					if n == 2:
 						s.unreserve(_reserved, 1)
 					_waiting_for = _reserved
+					# none in the store: drop the claim and fetch something the store has
+					s.unreserve(_reserved, 1)
+					var alt := s.next_material()
+					if alt != _reserved and Village.store(alt) > 0:
+						_reserved = alt
+						s.reserve(alt, 1)
+						_waiting_for = &""
+					else:
+						s.reserve(_reserved, 1)
 		"deliver":
 			_target = s.slot_position(s.slot_of(self))
 			if _arrived():
@@ -976,10 +1002,10 @@ func _sim_wait(dt: float) -> void:
 func _sim_eat() -> void:
 	if not _arrived():
 		return
-	if needs[&"food"] < 0.95 and Village.eat_one():
+	if needs[&"food"] < MEAL_BELOW and Village.eat_one():
 		needs[&"food"] = minf(needs[&"food"] + 0.6, 1.0)
 		needs[&"joy"] = minf(needs[&"joy"] + 0.03, 1.0)
-	if needs[&"water"] < 0.95 and Village.take_store(&"water", 1):
+	if needs[&"water"] < MEAL_BELOW and Village.take_store(&"water", 1):
 		needs[&"water"] = minf(needs[&"water"] + 0.7, 1.0)
 	# Feed any baby they are carrying.
 	for p in Village.people:
@@ -1054,6 +1080,7 @@ func _leave_job() -> void:
 	for k in _cargo:
 		Village.add_store(k, int(_cargo[k]))
 	_cargo.clear()
+	_armful = 0
 	_reserved = &""
 	_waiting_for = &""
 	job_site = null

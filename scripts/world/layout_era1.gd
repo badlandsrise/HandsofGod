@@ -14,6 +14,7 @@ const JOBS := [
 	[&"collect_sticks", -21.0, 5.0, ""],
 	[&"collect_sticks", -27.0, -9.0, ""],
 	[&"tend_fire", 0.0, -13.0, ""],
+	[&"knap_flint", -17.0, -25.0, ""],      # flint in the scree by the cave mouth
 	[&"fish_by_hand", 17.2, 22.0, ""],
 	[&"haul_log", 44.0, 2.0, "trunk"],
 	# Valley Floor
@@ -44,8 +45,9 @@ const PLOT_SPOTS := {
 
 ## The two people of the storm night, huddled outside the cave mouth.
 const HUDDLE := [Vector2(-1.3, -24.6), Vector2(1.1, -24.0)]
-const NAMES := ["Ona", "Tuk"]
 const SEXES := ["f", "m"]
+## Default names by sex, so a man is never "Ona" (the hand may rename them at dawn).
+const NAMES_BY_SEX := {"f": "Ona", "m": "Tuk"}
 ## The first two live long: their deaths fall early in Era 2, the first
 ## generation passing (doc 3 life cycle, tuned so Era 1 keeps its founders).
 const FIRST_TWO_EXTRA_LIFE := 900.0
@@ -71,7 +73,7 @@ static func spawn(world) -> Array:
 		if tag != "":
 			s.set_meta("layout_tag", tag)
 	for i in HUDDLE.size():
-		var p = world.spawn_person(Vector3(HUDDLE[i].x, 0, HUDDLE[i].y), NAMES[i], {
+		var p = world.spawn_person(Vector3(HUDDLE[i].x, 0, HUDDLE[i].y), NAMES_BY_SEX[SEXES[i]], {
 			"sex": SEXES[i], "first_two": true, "trust_f": 1.2,
 			"age": Person.STAGE_START[Person.Stage.ADULT] + 90.0 + i * 60.0,
 			"death_age": Person.DEATH_AGE + FIRST_TWO_EXTRA_LIFE})

@@ -357,10 +357,15 @@ func joy_radius() -> float:
 func next_material() -> StringName:
 	if state != State.PLOT:
 		return &""
+	# what the store has first, so a builder never waits on stone with wood to hand
+	var first: StringName = &""
 	for k in building.cost:
 		if int(delivered.get(k, 0)) + int(incoming.get(k, 0)) < int(building.cost[k]):
-			return k
-	return &""
+			if Village.store(k) > 0:
+				return k
+			if first == &"":
+				first = k
+	return first
 
 func remaining(k: StringName) -> int:
 	return int(building.cost.get(k, 0)) - int(delivered.get(k, 0)) - int(incoming.get(k, 0))

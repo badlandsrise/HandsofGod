@@ -108,7 +108,7 @@ func test_data() -> void:
 		st.append(D.power(id).strength)
 	check(st == [4.0, 10.0, 40.0, 100.0], "strength 4, 10, 40, 100")
 	check(D.power(&"reach").opens_region == &"east_bank" and D.power(&"strength_1").opens_region == &"", "power regions match section 10 (Era 1 regions open by world blockers)")
-	check(D.eras.size() == 4 and D.era(1).day_seconds == 75.0 and D.era(1).night_seconds == 30.0 and D.era(1).season_seconds == 240.0, "4 eras, Era 1 timing")
+	check(D.eras.size() == 4 and D.era(1).day_seconds == 75.0 and D.era(1).night_seconds == 30.0 and D.era(1).season_seconds == 300.0, "4 eras, Era 1 timing")
 	var e1: EraDef = D.era(1)
 	check(e1.dreams.size() == 3 and D.dream(e1.dreams[-1]).gate, "Era 1: three milestone dreams, the last is the gate")
 	var era1_jobs := [&"gather_berries", &"fetch_water", &"collect_sticks", &"fell_tree", &"knap_flint", &"tend_fire", &"carry_log", &"haul_log", &"hunt", &"fish_by_hand", &"great_elk_hunt", &"festival", &"build", &"pray"]
@@ -206,6 +206,15 @@ func test_eating() -> void:
 	place(p, bush)
 	step(25.0)
 	check(V.store(&"berries") > 3 and bush.amount < 8, "gatherer brings berries to the store")
+	check((V.store(&"berries") - 3) % Person.ARMFUL == 0, "berries arrive by the armful (%d)" % (V.store(&"berries") - 3))
+	# Placement faith: once per placement, at most once per PLACE_FAITH_GAP per person
+	var f0 := Faith.total
+	p._place_faith_t = -INF
+	p.placed_by_hand = true
+	p._placement_faith()
+	p.placed_by_hand = true
+	p._placement_faith()
+	check(is_equal_approx(Faith.total - f0, Person.PLACE_FAITH), "placement faith is not farmed by shuffling (%.2f)" % (Faith.total - f0))
 	check(p.status_text() != "", "status_text: " + p.status_text())
 
 func test_build() -> void:

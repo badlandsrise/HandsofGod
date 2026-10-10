@@ -3,7 +3,7 @@ extends SceneTree
 ## winter in the village, the first festival, and the Era 1 complete pull-back.
 ## Needs a renderer:
 ##   xvfb-run -a -s "-screen 0 1600x900x24" godot --rendering-driver vulkan --path . -s tests/bot/m2_shots.gd -- --no-title [--only=plots,held]
-## Writes tests/bot/shots/m2_*.png. The staging lives in m2_shot_cases.gd,
+## Writes tests/shots/m2_*.png (excluded from export). The staging lives in m2_shot_cases.gd,
 ## loaded after the first frames so the autoloads exist when it compiles.
 
 var _frame := 0

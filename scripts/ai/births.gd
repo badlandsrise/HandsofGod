@@ -1,6 +1,6 @@
 class_name Births extends Node
 ## Bonds and births (doc section 3). Adults who work side by side bond; a
-## bonded pair with a home that has room, two days running of food surplus
+## bonded pair with a home that has room, a dawn of food surplus
 ## and a content mood has a baby. Also assigns homes in huts.
 ## Village.stats["surplus_days"] counts the dawns in a row with surplus food.
 
@@ -9,8 +9,9 @@ const BOND_PER_CHECK := 6.0        # working together for ~75 s bonds a pair
 const BOND_NEEDED := 90.0
 const BIRTH_COOLDOWN := 300.0      # game seconds between a pair's children
 const BIRTH_CHANCE := 0.25         # per check, once every condition holds
-const SURPLUS_PER_PERSON := 2      # food units per person at dawn for a "surplus" day
+const SURPLUS_PER_PERSON := 1      # food units per person at dawn for a "surplus" day (tuned: 2 never happened before the gate)
 const MIN_MOOD := 0.5
+const SURPLUS_DAYS := 1             # dawns in a row with surplus before a pair will have a child
 const PRAYER_CHANCE := 0.4         # a new baby's parents pray at the shrine for the hand to name it
 const PRAYER_WAIT := 30.0          # the name box comes once they kneel, or after this long
 
@@ -83,6 +84,13 @@ static func cap() -> int:
 	var e := Defs.era(Village.era)
 	return int(e.population_band.y * 1.25) if e else 30
 
+## A bonded pair lives here.
+static func _has_family(hut: Site) -> bool:
+	for p in Village.alive():
+		if p.home == hut and p.partner != 0:
+			return true
+	return false
+
 static func home_residents(hut: Site) -> int:
 	var n := 0
 	for p in Village.alive():
@@ -101,7 +109,7 @@ static func can_have_child(a: Person, b: Person) -> bool:
 		return false
 	if Births.home_residents(home) >= home.building.shelter:
 		return false
-	if int(Village.stats.get("surplus_days", 0)) < 2:
+	if int(Village.stats.get("surplus_days", 0)) < SURPLUS_DAYS:
 		return false
 	if (a.mood() + b.mood()) * 0.5 < MIN_MOOD:
 		return false
@@ -188,23 +196,47 @@ static func assign_homes() -> void:
 	var huts: Array = Village.sites.filter(func(s): return is_instance_valid(s) and s.is_shelter())
 	if huts.is_empty():
 		return
-	for p in Village.alive():
+	# Families first: single adults give up their places, a bonded pair moves
+	# in together (a hut with room for both), children follow their parents,
+	# and singles take what is left without filling a family's last place.
+	var all: Array = Village.alive()
+	for p in all:
+		if p.partner == 0 and p.stage != Person.Stage.BABY and p.stage != Person.Stage.CHILD:
+			p.home = null
+	for a in all:
+		if a.partner == 0 or a.sex != "f":
+			continue
+		var b := Births.find(a.partner)
+		if b == null or not b.alive():
+			continue
+		if a.home != null and is_instance_valid(a.home) and a.home == b.home:
+			continue
+		a.home = null
+		b.home = null
+		for h in huts:
+			if Births.home_residents(h) + 2 <= h.building.shelter:
+				a.home = h
+				b.home = h
+				break
+	for p in all:
 		if p.home != null and is_instance_valid(p.home):
 			continue
 		var want: Site = null
 		if p.stage == Person.Stage.BABY or p.stage == Person.Stage.CHILD:
 			for u in p.parents:
 				var par := Births.find(u)
-				if par != null and par.home != null and is_instance_valid(par.home):
+				if par != null and par.home != null and is_instance_valid(par.home) and Births.home_residents(par.home) < par.home.building.shelter:
 					want = par.home
 					break
-		if want == null and p.partner != 0:
-			var pt := Births.find(p.partner)
-			if pt != null and pt.home != null and is_instance_valid(pt.home) and Births.home_residents(pt.home) < pt.home.building.shelter:
-				want = pt.home
 		if want == null:
-			for h in huts:
+			var single: bool = p.partner == 0 and p.stage != Person.Stage.BABY and p.stage != Person.Stage.CHILD
+			var ranked: Array = huts.duplicate()
+			if single:
+				ranked.sort_custom(func(x, y): return int(Births._has_family(x)) < int(Births._has_family(y)))
+			for h in ranked:
 				if Births.home_residents(h) < h.building.shelter:
+					if single and Births._has_family(h) and Births.home_residents(h) + 1 >= h.building.shelter:
+						continue
 					want = h
 					break
 		if want != null:

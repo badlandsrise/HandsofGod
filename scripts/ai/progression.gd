@@ -4,7 +4,7 @@ class_name Progression extends Node
 ##    felling trees), hide clothes after the first hunts (less cold in winter);
 ##  - family wishes that lay out plots: another hut when homes are full, a food
 ##    store before the first winter, a drying rack after the first hunt;
-##  - what Blessing opens: the first festival at the fire circle (+20 faith)
+##  - what Blessing opens: the first festival at the fire circle (+15 faith)
 ##    and the great elk hunt in the Valley Floor (only the blessed can win it);
 ##  - faith for a night or season survived with no losses (+5);
 ##  - names the hand gives (Events.names_given).
@@ -13,7 +13,7 @@ const CHECK := 2.0
 const STONE_FOR_TOOLS := 4
 const HIDES_FOR_CLOTHES := 3
 const MAX_HUTS := 6
-const FESTIVAL_FAITH := 20.0
+const FESTIVAL_FAITH := 15.0
 const SURVIVED_FAITH := 5.0
 const FESTIVAL_SPOT_OFFSET := Vector3(0, 0, 4.5)
 const ELK_SPOT := Vector2(78.0, -6.0)
@@ -95,6 +95,10 @@ func _on_job_completed(site) -> void:
 func _family_plots() -> void:
 	if Dreams.is_done(&"shelter_of_our_own") or str(Village.stats.get("dream_active", "")) != "":
 		_maybe_hut()
+	# Stores and racks are family wishes for after the first shelter: they must
+	# not take the wood the first dream needs.
+	if not Dreams.is_done(&"shelter_of_our_own"):
+		return
 	if not Village.stats.get("wish_food_store", false) and _dreaming_started():
 		var autumn := Clock.season == Clock.Season.AUTUMN or Clock.year > 1
 		if autumn or Village.food() >= Village.store_cap - 4:
@@ -124,7 +128,14 @@ func _maybe_hut() -> void:
 		room += s.building.shelter
 	if finished == 0 or finished >= MAX_HUTS:
 		return
-	if Village.population() + 1 <= room:
+	# a bonded pair with no room of its own wants a home too
+	var cramped := false
+	for p in Village.alive():
+		if p.partner != 0 and p.sex == "f":
+			var h = p.home
+			if h == null or not is_instance_valid(h) or Births.home_residents(h) >= h.building.shelter:
+				cramped = true
+	if Village.population() + 1 <= room and not cramped:
 		return
 	var s2 := _add_plot(&"hut")
 	if s2 != null:
@@ -212,6 +223,9 @@ func apply_names(entries: Array) -> void:
 		var before: String = p.get_meta("generated_name", p.given_name)
 		if n.strip_edges() == "" or n.strip_edges() == before:
 			p.given_name = before       # keep the generated name
+			if p.stage == Person.Stage.BABY and p.get_meta(&"named_by_hand", false):
+				p.named_by_hand = true  # a prayed-for name is the hand's, even if kept
+				Flags.remember("We prayed and the hand named our baby %s." % p.given_name)
 			continue
 		p.set_name_from_hand(n)
 		if p.first_two:

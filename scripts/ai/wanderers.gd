@@ -62,7 +62,7 @@ func arrive(n: int, region: StringName) -> Array:
 	for i in n:
 		var off := Vector3(Game.rng.randf_range(-1.5, 1.5), 0, Game.rng.randf_range(-1.5, 1.5))
 		var p := Person.spawn(_parent_node(), at + off, {
-			"age": Game.rng.randf_range(Person.STAGE_START[Person.Stage.ADULT] + 30.0, Person.STAGE_START[Person.Stage.ADULT] + 420.0),
+			"age": Game.rng.randf_range(Person.STAGE_START[Person.Stage.ADULT] + 10.0, Person.STAGE_START[Person.Stage.ADULT] + 240.0),
 			"trust_f": Game.rng.randf_range(0.5, 1.6), "wanderer": true,
 			"sex": "f" if (i % 2 == 0) == first_f else "m"})
 		var a := Game.rng.randf() * TAU

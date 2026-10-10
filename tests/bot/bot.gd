@@ -241,7 +241,7 @@ func _movable() -> Array:
 			continue
 		if p.stage != Person.Stage.ADULT and p.stage != Person.Stage.ELDER:
 			continue
-		if p.state in [Person.S.SHELTER, Person.S.SLEEP, Person.S.EAT, Person.S.FLEE]:
+		if p.state in [Person.S.SHELTER, Person.S.SLEEP, Person.S.EAT, Person.S.FLEE, Person.S.FALL, Person.S.HELD]:
 			continue
 		var js = p.job_site
 		if js != null and is_instance_valid(js) and (js.is_group() or (js.is_plot() and js.state == Site.State.BUILDING)):
@@ -260,6 +260,12 @@ func _job_value(p: Person) -> float:
 		return 0.0
 	if _wasted(js, p):
 		return 0.1
+	# gathering what an open plot is waiting for is as good as building it
+	var j: JobDef = js.job
+	if j != null and not js.is_plot() and j.kind == JobDef.Kind.GATHER:
+		for k in j.outputs:
+			if (k == &"stone" or k == &"wood") and Village.store(k) < _need(k):
+				return _score(js, 0) + 1.0
 	return _score(js, 0) * 0.8
 
 ## How much of `k` the open plots still need, plus a working buffer.
@@ -278,7 +284,9 @@ func _food_target() -> int:
 ## A person on this job would do more good elsewhere.
 func _wasted(s, p = null) -> bool:
 	var j: JobDef = s.get("job")
-	if s.is_plot() or j == null:
+	if s.is_plot():
+		return s.state == Site.State.PLOT and not _plot_can_progress(s)
+	if j == null:
 		return false
 	if j.kind == JobDef.Kind.GROUP:
 		return false
@@ -297,6 +305,21 @@ func _wasted(s, p = null) -> bool:
 			_:
 				return Village.food() >= _food_target() + 10 or Village.store(k) >= Village.store_cap - 1
 	return false
+
+## A plot still waiting for materials has something it needs in the store.
+func _plot_can_progress(s) -> bool:
+	if s.state != Site.State.PLOT:
+		return true
+	# enough in the store to make a real dent (not one stick at a time)
+	var have := 0
+	var left := 0
+	for k in s.building.cost:
+		var r: int = maxi(s.remaining(k), 0)
+		left += r
+		have += mini(r, Village.store(k))
+	if left == 0:
+		return true           # everything is on its way: the builders are busy
+	return have > 0 and have >= mini(left, 3)
 
 func _prayers_wanted() -> int:
 	return 1 if Village.population() < 10 else 2
@@ -318,16 +341,13 @@ func _score(s, idle_n: int) -> float:
 	var pop := maxi(Village.population(), 1)
 	if s.is_plot():
 		var b: BuildingDef = s.building
-		var ready: bool = s.state == Site.State.BUILDING
-		if not ready:
-			for k in b.cost:
-				if s.remaining(k) > 0 and Village.store(k) > 0:
-					ready = true
+		var ready: bool = _plot_can_progress(s)
 		var dream := false
 		var d := Dreams.active_dream()
 		if d != null and d.needs_buildings.has(b.id):
 			dream = true
-		return (8.0 if dream else 5.5) if ready else 0.5
+		var home := b.id == &"hut" and b.shelter > 0
+		return (8.0 if dream else (7.2 if home else 5.5)) if ready else 0.5
 	if j == null:
 		return 0.0
 	var food_low := Village.food() < _food_target()
@@ -335,21 +355,25 @@ func _score(s, idle_n: int) -> float:
 	match j.id:
 		&"gather_berries", &"rich_berries", &"fish_by_hand":
 			sc = 6.0 if food_low else 1.2
-			if Clock.season == Clock.Season.WINTER and Village.food() < pop * 2:
-				sc = 8.0
+			if Village.food() < pop or (Clock.season == Clock.Season.WINTER and Village.food() < pop * 2):
+				sc = 8.6          # nearly out of food: before any building
 		&"tend_fire":
 			var cold := Clock.is_night or Clock.phase_t > Clock.day_seconds * 0.6 or Clock.season == Clock.Season.WINTER
 			sc = (6.5 if cold else 2.0) if s.fire_wants_fuel() and Village.store(&"wood") > 0 else 0.3
 		&"collect_sticks", &"fell_tree":
 			sc = 4.5 if Village.store(&"wood") < _need(&"wood") + 6 else 0.6
+			if Village.store(&"wood") < _need(&"wood"):
+				sc = 6.5          # a plot is waiting on wood
 			if j.id == &"fell_tree":
 				sc += 0.3
 		&"knap_flint":
 			sc = 4.8 if Village.store(&"stone") < _need(&"stone") + 4 else 0.4
+			if Village.store(&"stone") < _need(&"stone"):
+				sc = 6.4          # a plot is waiting on stone
 			if not Flags.has(&"stone_tools"):
 				sc = maxf(sc, 4.0)
 		&"fetch_water":
-			sc = 3.0 if Village.store(&"water") < pop * 3 else 0.5
+			sc = 8.6 if Village.store(&"water") < pop else (3.0 if Village.store(&"water") < pop * 3 else 0.5)
 		&"pray":
 			sc = 3.0 if s.workers.size() < _prayers_wanted() else 0.0
 	if j.kind == JobDef.Kind.GROUP:
@@ -363,7 +387,11 @@ func _score(s, idle_n: int) -> float:
 		match j.id:
 			&"haul_log", &"carry_log": sc = 9.5
 			&"festival", &"great_elk_hunt": sc = 9.0
-			&"hunt": sc = 7.5 if food_low or Village.store(&"hide") < 3 else 3.5
+			&"hunt":
+				# four hunters out of five leave nobody for the village
+				if pop < 6:
+					return 0.0
+				sc = 7.5 if Village.food() < pop * 3 else (4.0 if food_low or Village.store(&"hide") < 3 else 2.5)
 			_: sc = 7.0
 		if waiting > 0:
 			sc += 1.0                     # finish filling a group already waiting
@@ -379,7 +407,7 @@ func _staff() -> void:
 			continue
 		# a group job can pull people off lesser work, so count everyone movable
 		var sc := _score(s, movable.size() if s.is_group() else idle.size())
-		if not s.is_group() and idle.is_empty():
+		if not s.is_group() and idle.is_empty() and sc < 6.0:
 			continue
 		if sc > best_sc:
 			best_sc = sc
@@ -391,6 +419,10 @@ func _staff() -> void:
 	if truly_idle.is_empty() and best_sc < 3.0:
 		return
 	var pool: Array = truly_idle if not truly_idle.is_empty() else idle
+	if pool.is_empty() and not best.is_group():
+		# pull someone off clearly less valuable work (a dream plot over a sticks run)
+		pool = movable.filter(func(p): return p.job_site != best and _job_value(p) < best_sc - 2.0)
+		pool.sort_custom(func(a, b): return _job_value(a) < _job_value(b))
 	if best.is_group():
 		# the idle first, then whoever is doing the least valuable work
 		var rest := movable.filter(func(p): return not idle.has(p) and p.job_site != best and _job_value(p) < best_sc)
@@ -426,6 +458,8 @@ func _staff() -> void:
 			break
 	if h.held.is_empty():
 		return
+	if Game.flags.has("verbose"):
+		print("BOT   place %s -> %s (%.1f) at %s" % [", ".join(h.held.map(func(p): return p.given_name)), _site_name(best), best_sc, _mmss(Clock.total_t)])
 	var n: int = h.place_on_site(best)
 	_placed += n
 	if best.is_group() and n > 1:
@@ -479,6 +513,11 @@ func _scoop_for(h: Node, pool: Array, want: int) -> int:
 			p.on_placed(p.global_position, back if back != null and is_instance_valid(back) else null)
 	return n
 
+func _site_name(s) -> String:
+	if s.job != null:
+		return str(s.job.id)
+	return "plot " + str(s.building.id) if s.building != null else "?"
+
 func _place_direct(batch: Array, best: Site) -> void:
 	for p in batch:
 		p.on_lifted()
@@ -512,9 +551,24 @@ func _report() -> void:
 			var js = p.job_site
 			print("BOT   %s: %s at %s -> %s job %s | %s" % [p.given_name, Person.STATE_NAMES[p.state], str(p.global_position.snapped(Vector3.ONE * 0.1)), str(p._target), 
 				js.job.id if js != null and is_instance_valid(js) and js.job else ("plot" if js != null and is_instance_valid(js) else "-"), p.status_text()])
+		var pairs := 0
+		var homed := 0
+		var moods: Array = []
+		var blocked := {}
+		for p in Village.alive():
+			if p.home != null and is_instance_valid(p.home):
+				homed += 1
+			moods.append(snappedf(p.mood(), 0.01))
+			if p.partner != 0 and p.sex == "f":
+				pairs += 1
+				var b = Births.find(p.partner)
+				if b != null:
+					var why := "ok" if Births.can_have_child(p, b) else "no"
+					blocked[p.given_name] = why
+		print("BOT   births: pairs %d %s | homed %d | surplus_days %d | moods %s | food %d" % [pairs, str(blocked), homed, int(Village.stats.get("surplus_days", 0)), str(moods), Village.food()])
 		for s in Village.sites:
 			if is_instance_valid(s) and s.building != null and s.state != Site.State.FINISHED:
-				print("BOT   plot %s %s at %s | workers %d | ok %s score %.1f" % [s.building.id, Site.State.keys()[s.state], str(s.global_position.snapped(Vector3.ONE)), s.workers.size(), str(_site_ok(s)), _score(s, 1)])
+				print("BOT   plot %s %s at %s | workers %d | ok %s score %.1f | delivered %s incoming %s progress %.2f" % [s.building.id, Site.State.keys()[s.state], str(s.global_position.snapped(Vector3.ONE)), s.workers.size(), str(_site_ok(s)), _score(s, 1), str(s.delivered), str(s.incoming), s.progress])
 
 func _shot(path: String) -> void:
 	if DisplayServer.get_name() == "headless":
