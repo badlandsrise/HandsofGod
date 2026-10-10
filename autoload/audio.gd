@@ -12,10 +12,26 @@ extends Node
 ## Stingers play over the top on region_opened, dream_done, power_unlocked and era change
 ## (era<N>_begin when that era has one, else era_complete).
 ## The title theme (title.ogg) plays on the title screen instead of the stems.
+##
+## The ending (DESIGN.md section 9) is not adaptive: play_cue() plays named cues from
+## res://assets/audio/music/ending/ in place of the stems, in beat-sheet order:
+##   last_evening  loop      beats 1-4: the last evening, crew, gifts, the capsule
+##   countdown     loop      beat 5: while Part the Clouds is held; on let-go call
+##                           cue_level(0.35) (it pauses gently), cue_level(1.0) on hold
+##   liftoff       one-shot  beat 6: on release; drops to the lone flute at its end
+##   wave          loop      beats 7-8: the wave and the light
+##   goodbye       one-shot  beats 8-10: the light, the lineage, the hand lowers
+##   credits       one-shot  3:42, the credits over the city at night
+## e.g. play_cue(&"liftoff", &"wave"); play_cue(&"goodbye", &"credits"). A new cue
+## cross-fades over the old one; when a one-shot ends its `then` cue starts, or with no
+## `then` the stems come back (free play at dawn). stop_cue() returns to the stems.
 
 const STEMS: Array[StringName] = [&"base", &"rhythm", &"melody", &"colour", &"tense"]
 const FADE := 1.5
 const STINGERS := "res://assets/audio/music/stingers/%s.ogg"
+const CUES := "res://assets/audio/music/ending/%s.ogg"
+const LOOP_CUES: Array[StringName] = [&"last_evening", &"countdown", &"wave"]
+const CUE_FADE := 2.0
 const VOICE_DIR := "res://assets/audio/sfx/voice/"
 const VOICE_GAP := 0.7            # seconds between any two voice lines
 const VOICE_PERSON_GAP := 6.0     # seconds before the same person speaks again
@@ -41,6 +57,15 @@ var _now: float = 0.0
 var layer_log: Dictionary = {}    # stem -> last target (tests read this)
 var layer_seen: Dictionary = {}   # stem -> true once it has been on (the bot reports it)
 var stinger_log: Array[StringName] = []
+var cue_log: Array[StringName] = []
+var _cue_players: Array[AudioStreamPlayer] = []
+var _cue_gain: Dictionary = {}    # player -> current 0..1
+var _cue_target: Dictionary = {}  # player -> target 0..1
+var _cue_rate: Dictionary = {}    # player -> fade speed (per second)
+var _cue: AudioStreamPlayer       # the player of the current cue (null when none)
+var _cue_id: StringName = &""
+var _cue_then: StringName = &""
+var _cue_level: float = 1.0
 var voice_count: int = 0
 
 func _ready() -> void:
@@ -54,6 +79,14 @@ func _ready() -> void:
 		_target[s] = 0.0
 	_title = _player()
 	_stinger = _player()
+	for i in 2:
+		var cp := _player()
+		cp.volume_db = -80.0
+		cp.finished.connect(_on_cue_finished.bind(cp))
+		_cue_players.append(cp)
+		_cue_gain[cp] = 0.0
+		_cue_target[cp] = 0.0
+		_cue_rate[cp] = 1.0
 	_rain = _player()
 	_wind = _player()
 	Events.threat_warned.connect(func(id, _at): _threats[id] = true)
@@ -135,6 +168,62 @@ func stinger(id: StringName) -> void:
 	_stinger.play()
 	_duck = minf(_stinger.stream.get_length(), 4.0) if _stinger.stream else 2.0
 
+# ---------------------------------------------------------------- ending cues
+
+## Plays an ending cue (see the header) in place of the stems, cross-fading over any
+## cue already playing. When a one-shot cue ends, `then` starts (or the stems return).
+func play_cue(id: StringName, then: StringName = &"", fade: float = CUE_FADE) -> void:
+	var path := CUES % id
+	if not ResourceLoader.exists(path):
+		return
+	var st = load(path)
+	if st is AudioStreamOggVorbis:
+		st.loop = LOOP_CUES.has(id)
+	var next: AudioStreamPlayer = _cue_players[1] if _cue == _cue_players[0] else _cue_players[0]
+	for p in _cue_players:
+		if p != next:
+			_fade_cue(p, 0.0, fade)
+	next.stream = st
+	next.play()
+	_cue_gain[next] = 0.0 if fade > 0.0 else 1.0
+	_fade_cue(next, 1.0, fade)
+	_cue = next
+	_cue_id = id
+	_cue_then = then
+	_cue_level = 1.0
+	cue_log.append(id)
+
+## Fades the current cue out and brings the era stems back.
+func stop_cue(fade: float = CUE_FADE) -> void:
+	for p in _cue_players:
+		_fade_cue(p, 0.0, fade)
+	_cue = null
+	_cue_id = &""
+	_cue_then = &""
+
+## The current cue's level, 0..1: the countdown pauses gently at 0.35 while the
+## player lets go of Part the Clouds, and comes back at 1.0.
+func cue_level(level: float, fade: float = 1.0) -> void:
+	_cue_level = clampf(level, 0.0, 1.0)
+	if _cue:
+		_fade_cue(_cue, _cue_level, fade)
+
+## The cue playing now (&"" when the stems are playing).
+func cue_playing() -> StringName:
+	return _cue_id
+
+func _fade_cue(p: AudioStreamPlayer, target: float, fade: float) -> void:
+	_cue_target[p] = target
+	_cue_rate[p] = 1.0 / maxf(fade, 0.01)
+
+func _on_cue_finished(p: AudioStreamPlayer) -> void:
+	if p != _cue:
+		return
+	if _cue_then != &"":
+		play_cue(_cue_then, &"", 0.3)
+	else:
+		stop_cue(0.0)
+
 func _process(_d: float) -> void:
 	var dt := Clock.real_delta
 	_now += dt
@@ -143,7 +232,14 @@ func _process(_d: float) -> void:
 	if _direct_t <= 0.0:
 		_direct_t = 0.5
 		_direct()
-	var duck := 0.45 if _duck > 0.0 else 1.0
+	for p in _cue_players:
+		var g: float = move_toward(_cue_gain[p], _cue_target[p], dt * _cue_rate[p])
+		_cue_gain[p] = g
+		p.volume_db = linear_to_db(maxf(g, 0.0001)) + music_db
+		if g <= 0.0 and _cue_target[p] <= 0.0 and p.playing:
+			p.stop()
+	# The stems fall silent under an ending cue, and dip under a stinger.
+	var duck := 0.0 if _cue != null else (0.45 if _duck > 0.0 else 1.0)
 	for s in STEMS:
 		var p: AudioStreamPlayer = _players[s]
 		var cur := db_to_linear(p.volume_db - music_db) if p.volume_db > -79.0 else 0.0

@@ -6,8 +6,11 @@
 
 - All music (the hand motif, the Era 1 adaptive piece "First Fire", the Era 2
   adaptive piece "Long Furrows", the Era 3 adaptive piece "Market Bells", the
-  stingers including the Era 2 and Era 3 arrivals, and the title theme) was
-  composed as MIDI by Claude (`tools/music/`) and rendered with FluidSynth.
+  Era 4 adaptive piece "Valley Lights", the stingers including the Era 2, Era 3
+  and Era 4 arrivals, the title theme, and the music of the goodbye: "The Last
+  Evening", "Countdown", "Liftoff", "The Wave", "Goodbye" and the credits piece
+  "Among the Stars") was composed as MIDI by Claude (`tools/music/`) and
+  rendered with FluidSynth.
 - All sound effects and the villager voices were synthesised procedurally
   with numpy by Claude (`tools/music/sfx.py`, `tools/music/voices.py`).
 

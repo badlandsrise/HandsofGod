@@ -12,12 +12,19 @@
                             fanfare in F, the motif grown on trumpet over horns,
                             six church bells ringing the plain hunt, tuba,
                             harpsichord, strings and a light march
+  era4_begin.ogg     ~11 s the arrival in Era 4 (on era_changed to 4): the valley
+                            lights up. The motif grown on piano in G lydian and on
+                            up to the lydian C#, then its answer home; warm pads,
+                            strings, a synth-bass pulse switching on, crystal
+                            arpeggios, a bell toll and Era 1's kalimba echo
 
 All in D, mostly D major (brighter than Era 1's dorian so they read as reward),
 except the era arrivals, which are in the new era's key and tempo: era2_begin
 is in G at Era 2's 90 bpm 4/4 and follows the harmony of Era 2's first four
 bars (G G C G), so it lands in step with the stems starting under it; likewise
-era3_begin is in F at Era 3's 108 bpm 4/4 over its first bars (F F Bb F).
+era3_begin is in F at Era 3's 108 bpm 4/4 over its first bars (F F Bb F), and
+era4_begin in G lydian at Era 4's 96 bpm 4/4 over its first bars (Gmaj7 Gmaj7
+A/G A/G).
 Run:  python3 tools/music/stingers.py [name ...]
 """
 import os
@@ -266,6 +273,87 @@ def era3_begin():
     return s, 10.8
 
 
+def era4_begin():
+    s = Song(96, 4)
+    G = 67
+    s.program(0, GM["piano"], vol=100, pan=60, reverb=70)
+    s.program(1, GM["horn"], vol=84, pan=42, reverb=72)
+    s.program(2, GM["strings"], vol=86, reverb=85, chorus=10)
+    s.program(3, 89, vol=76, reverb=85, chorus=40)      # warm pad
+    s.program(4, 90, vol=54, pan=72, reverb=85, chorus=60)  # polysynth pad
+    s.program(5, 39, vol=70, reverb=30)                 # soft synth bass
+    s.program(6, GM["piano"], vol=66, pan=36, reverb=60)
+    s.program(7, 98, vol=54, pan=84, reverb=82, chorus=40)  # crystal
+    s.program(8, GM["timpani"], vol=84, reverb=70)
+    s.program(10, 14, vol=66, pan=60, reverb=92)        # tubular bell
+    s.program(11, GM["kalimba"], vol=74, pan=88, reverb=80)
+    s.program(12, GM["cello"], vol=80, pan=72, reverb=60)
+    s.program(9, 0, vol=80, reverb=40)
+
+    def gp(deg, octave=0):
+        return M.pitch(deg, G, "lydian") + 12 * octave
+
+    # The valley lights up: the motif grown to the octave on piano, on up to
+    # the lydian C#, then its answer home through it -- over Era 4's first bars
+    # (Gmaj7 Gmaj7 A/G A/G). D G A B D G | F# G A | C# . B A | D C# B A G.
+    tune = [(-3, 1), (0, 1), (1, .5), (2, .5), (4, 1), (7, 2),
+            (6, .5), (7, .5), (8, 1),
+            (10, 2), (9, 1), (8, 1),
+            (11, 1), (10, .5), (9, .5), (8, 1), (7, 3)]
+    t = 0.0
+    for d, b in tune:
+        s.note(0, gp(d, 1), t, b * 1.05, 82 + (6 if b >= 2 else 0))
+        s.note(6, gp(d), t, b * 1.05, 52)
+        if t >= 8:   # the horn joins under the lydian lift
+            s.note(1, gp(d), t, b * 0.94, 62)
+        t += b
+    s.cc(0, 64, 127, 0.05)
+    s.cc(0, 64, 0, 7.95)
+    s.cc(0, 64, 127, 8.05)
+    s.cc(0, 64, 0, 11.95)
+    s.cc(0, 64, 127, 12.05)
+    # Harmony: Gmaj7 (2 bars), A/G (2 bars); pads swell, strings, cello on G.
+    for b0, d, ch_ in ((0, 8, [55, 59, 62, 66, 71]), (8, 8, [57, 61, 64, 69, 73])):
+        s.chord(2, ch_, b0, d, 72)
+        s.chord(3, [43] + ch_[:3], b0, d, 64)
+        s.chord(4, [x + 12 for x in ch_[1:4]], b0, d, 48)
+        s.note(12, 43, b0, d, 78)
+    s.ramp(2, 11, 60, 127, 0.0, 5.0)
+    s.ramp(4, 11, 30, 120, 0.0, 6.0)
+    # The pulse switches on: synth bass quarters, then eighths; a piano ostinato.
+    for k in range(32):
+        tb = k * 0.5
+        if tb < 4 and k % 2:
+            continue
+        s.note(5, 31, tb, 0.4, 58 if k % 2 == 0 else 46)
+    # Crystal arpeggios once the A/G arrives: the lights coming on up the valley.
+    arp = [69, 73, 76, 81, 76, 73]
+    for k in range(28):
+        s.note(7, arp[k % 6] + 12, 8.0 + k * 0.25, 0.3, 34 + (k % 6 == 0) * 6)
+    # Arrival: timpani, a bell toll (Era 3's), a soft cymbal swell into the lift.
+    s.note(8, 43, 0.0, 2.0, 96)
+    s.note(10, 55, 0.0, 4.0, 60)
+    s.note(10, 57, 8.0, 4.0, 52)
+    for k in range(12):
+        s.note(8, 45, 5.0 + k * 0.25, 0.25, 26 + k * 5)
+    s.note(8, 45, 8.0, 2.0, 84)
+    s.note(9, 49, 0.0, 2.0, 50)
+    for bar in range(4):
+        b = bar * 4
+        s.note(9, 36, b, 0.3, 58 if bar == 0 else 48)
+        if bar >= 1:
+            s.note(9, 37, b + 1, 0.2, 28)
+            s.note(9, 37, b + 3, 0.2, 32)
+            for k in range(8):
+                s.note(9, 42, b + k * 0.5, 0.1, 26 if k % 2 == 0 else 18)
+    # Era 1's kalimba echoes the motif's head as the answer lands.
+    t = 13.0
+    for pt, d in M.realise(M.HEAD, G + 12, "lydian"):
+        s.note(11, pt, t, 1.2, 52)
+        t += d
+    return s, 11.4
+
+
 STINGERS = {
     "region_opened": region_opened,
     "dream_done": dream_done,
@@ -273,6 +361,7 @@ STINGERS = {
     "era_complete": era_complete,
     "era2_begin": era2_begin,
     "era3_begin": era3_begin,
+    "era4_begin": era4_begin,
 }
 
 

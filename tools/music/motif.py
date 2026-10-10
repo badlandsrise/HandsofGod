@@ -42,7 +42,12 @@ ERAS = {
             note="small civic orchestra (horn, trumpet, woodwinds, harpsichord, piano, strings, tuba) "
                  "and church bells; F major, 4/4 march at 108; the motif worked as a learned tune: "
                  "fanfare, diminution, inversion, fugato subject with answers in C, sequence"),
-    4: dict(key=67, scale="lydian", lead="piano", note="piano and soft synth pads"),
+    4: dict(key=67, scale="lydian", lead="piano",
+            note="piano and soft synth pads over a string orchestra, a pulse of piano ostinato and "
+                 "synth bass; G lydian, 4/4 at 96; the motif at its most complete: grown past the "
+                 "octave to the lydian C#, its answer falling home through it, and every earlier "
+                 "treatment remembered (Era 1's pan flute and kalimba, Era 2's recorder, Era 3's "
+                 "horn calls, inversion, diminution and bells)"),
 }
 
 
