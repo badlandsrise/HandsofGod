@@ -28,6 +28,11 @@ shaders and the placeholder animals are made for this project.
 | Universal Animation Library (Standard) | Quaternius | CC0 | https://quaternius.itch.io/universal-animation-library |
 | Farm Animals (Animated) | Quaternius | CC0 | https://quaternius.itch.io/lowpoly-animated-animals (quaternius.com/packs/farmanimal.html) |
 | Survival Kit | Kenney (www.kenney.nl) | CC0 | https://kenney.nl/assets/survival-kit |
+| Hand models and hand poses (godot-xr-tools) | Miodrag Sejic (DigitalN8m4r3), GodotVR/godot-xr-tools | CC0 | https://github.com/GodotVR/godot-xr-tools |
+
+The hand is a white cartoon glove modelled for Hands of God on the CC0 godot-xr-tools
+base hand (Hand_low_R) by Miodrag Sejic, keeping its OpenXR skeleton and poses
+(`assets/models/hand/`).
 
 ## Ground textures
 
@@ -55,3 +60,13 @@ The OpenGameArt pages did not name their authors in what was fetched; see each p
      http://creativecommons.org/licenses/by/4.0/ -->
 
 - _(none yet)_
+
+## Fonts
+
+All SIL Open Font License 1.1 (licence texts in `assets/fonts/`), from Google Fonts.
+
+| Font | Use | Author |
+| --- | --- | --- |
+| Alegreya | Body text | Huerta Tipográfica (Juan Pablo del Peral) |
+| IM Fell English | Titles and the Village Book | Igino Marini |
+| Caveat | Handwritten names | Impallari Type |
