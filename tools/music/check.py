@@ -8,9 +8,14 @@
   - loudness (EBU R128) of each era's mixes, which must sit within 1.5 LU of
     Era 1's, so the music doesn't jump in level when the era changes
   - tools/music/preview_era<N>.mp3: 60 s of the stems layered as the game would
-    (Eras 2 and 3 open with their arrival stingers, as on the era change)
+    (Eras 2 to 4 open with their arrival stingers, as on the era change)
     (night: base; day: + rhythm; hand holding: + melody, colour; a threat
     warning swaps rhythm for tense and drops melody; then back to calm)
+  - the ending cues (music/ending/, tools/music/ending.py): loudness against each
+    cue's target (within 1 LU), peaks, loop seams for the looping cues, a silent
+    tail for the one-shots, the credits 3 to 4 minutes long
+  - tools/music/preview_ending.mp3: the whole goodbye as the game plays it with
+    Audio.play_cue (cross-fades, the countdown paused once by letting go)
 
 Run:  python3 tools/music/check.py
 """
@@ -26,7 +31,7 @@ from common import SR, dbfs, lufs, out_path, peak, read_audio, write_mp3  # noqa
 
 MUSIC = out_path("assets", "audio", "music")
 SFX = out_path("assets", "audio", "sfx")
-ERAS = ["era1", "era2", "era3"]
+ERAS = ["era1", "era2", "era3", "era4"]
 STEMS = ["base", "rhythm", "melody", "colour", "tense"]
 MIXES = {  # what the director plays together (colour is at 0.6 by the fire)
     "night": {"base": 1},
@@ -106,6 +111,7 @@ def main():
     good &= seam(read_audio(os.path.join(MUSIC, "title.ogg")), "title")
     for f in sorted(glob.glob(os.path.join(SFX, "*_loop.ogg"))):
         good &= seam(read_audio(f), os.path.basename(f))
+    good &= check_ending()
     print("ALL GOOD" if good else "PROBLEMS FOUND")
     return 0 if good else 1
 
@@ -152,6 +158,72 @@ def preview(stems, era):
     mix = np.clip(mix, -1, 1)
     write_mp3(out_path("tools", "music", f"preview_{era}.mp3"), mix)
     print(f"  preview written: tools/music/preview_{era}.mp3 (peak {dbfs(peak(mix)):.2f} dBFS)")
+
+
+def check_ending():
+    """The ending cues; see the module docstring. Returns True if all is well."""
+    import ending
+    d = os.path.join(MUSIC, "ending")
+    if not os.path.exists(os.path.join(d, "credits.ogg")):
+        print("ending: not rendered")
+        return True
+    good = True
+    print("Ending cues:")
+    cues = {}
+    for name, (_, loop, target) in ending.CUES.items():
+        a = read_audio(os.path.join(d, name + ".ogg"))
+        cues[name] = a
+        lv, pk = lufs(a), dbfs(peak(a))
+        tail = rms(a[-int(0.05 * SR):])
+        ok = abs(lv - target) <= 1.0 and pk < -0.9 and (loop or tail < -50)
+        if name == "credits":
+            ok &= 180 <= len(a) / SR <= 240
+        good &= ok
+        print(f"  {'OK ' if ok else 'BAD'} {name:13s} {'loop' if loop else 'one-shot':8s} {len(a) / SR:7.2f} s  "
+              f"{lv:6.1f} LUFS (target {target})  peak {pk:6.2f} dBFS" + ("" if loop else f"  tail {tail:6.1f} dB"))
+        if loop:
+            good &= seam(a, "ending/" + name)
+    preview_ending(cues)
+    return good
+
+
+def preview_ending(cues):
+    """The goodbye as the game plays it: Audio.play_cue cross-fades (2 s) from one
+    cue to the next; loops run until the next cue; when a one-shot ends, the next
+    cue (play_cue's `then`) starts at once. The countdown is paused once
+    (Audio.cue_level(0.35) for 6 s)."""
+    fade = int(2.0 * SR)
+    plan = [("last_evening", 45.0), ("countdown", 32.0), ("liftoff", None), ("wave", 30.0),
+            ("goodbye", None), ("credits", None)]
+    total = sum(int((secs or len(cues[n]) / SR) * SR) for n, secs in plan) + fade
+    mix = np.zeros((total, 2))
+    t = 0
+    for i, (name, secs) in enumerate(plan):
+        src = cues[name]
+        n = int(secs * SR) if secs else len(src)
+        if secs:   # a loop: tile it for as long as the player takes
+            src = np.concatenate([src] * (n // len(src) + 2))
+        seg = src[:n + fade].copy()
+        env = np.ones(len(seg))
+        if i:   # fade in over the outgoing loop (quickly after a one-shot has ended)
+            k = fade if plan[i - 1][1] else int(0.3 * SR)
+            env[:k] = np.linspace(0, 1, k)
+        if secs and i + 1 < len(plan):   # a loop fades out under the next cue
+            env[n:] = np.linspace(1, 0, len(seg) - n)
+        if name == "countdown":   # let go at 12 s, hold again at 18 s
+            k0, k1, r = int(12 * SR), int(18 * SR), int(1.0 * SR)
+            env[k0:k0 + r] *= np.linspace(1, 0.35, r)
+            env[k0 + r:k1] *= 0.35
+            env[k1:k1 + r] *= np.linspace(0.35, 1, r)
+        seg *= env[:, None]
+        mix[t:t + len(seg)] += seg[:total - t]
+        t += n
+    mix = mix[:t]
+    if peak(mix) > 10 ** (-1 / 20):
+        mix *= 10 ** (-1 / 20) / peak(mix)
+    write_mp3(out_path("tools", "music", "preview_ending.mp3"), mix, q=6)
+    print(f"  preview written: tools/music/preview_ending.mp3 ({len(mix) / SR / 60:.1f} min, "
+          f"peak {dbfs(peak(mix)):.2f} dBFS)")
 
 
 if __name__ == "__main__":

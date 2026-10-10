@@ -178,10 +178,10 @@ def write_ogg(path, audio, q=5, mono=False):
                     path], input=np.ascontiguousarray(a).tobytes(), check=True)
 
 
-def write_mp3(path, audio):
+def write_mp3(path, audio, q=4):
     a = np.ascontiguousarray(np.asarray(audio, dtype=np.float32))
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "f32le", "-ar", str(SR),
-                    "-ac", "2", "-i", "-", "-c:a", "libmp3lame", "-q:a", "4", path],
+                    "-ac", "2", "-i", "-", "-c:a", "libmp3lame", "-q:a", str(q), path],
                    input=a.tobytes(), check=True)
 
 
