@@ -1,21 +1,32 @@
 class_name SiteVisual extends Node3D
-## Placeholder low-poly visuals for sites, built from primitives. The Site
-## puts the result under its child named "Visual"; real art replaces it.
-## (Slot pips and hover rings are drawn by the hand.)
+## The look of a Site, from the art catalog (scripts/assets/asset_catalog.gd).
+## The Site puts the result under its child named "Visual". Huts go through their
+## build stages (hut_plot, hut_frame, hut); other buildings rise out of their plot.
+## Slot pips and hover rings are drawn by the hand.
 
-var _fill_nodes: Array[Node3D] = []   # berries, sticks: shown in proportion to amount
+## BuildingDef id -> catalog id, when the names differ.
+const BUILDING_ART := {&"granary": &"food_store", &"cottage": &"era2_cottage", &"temple": &"shrine"}
+
+var site: Site = null
+var _fill_nodes: Array[Node3D] = []   # berries, sticks, deer: shown in proportion to amount
+var _flame: Node3D = null             # the campfire's Fire node (flicker.gd)
+var _rising: Node3D = null            # building model that grows with build progress
+var _rising_h := 1.0
 
 static func make(s: Site) -> SiteVisual:
 	var v := SiteVisual.new()
+	v.site = s
+	var seed_v := absi(hash(Vector2i(roundi(s.position.x * 10.0), roundi(s.position.z * 10.0))))
 	if s.building != null and s.building.scene != null and s.state == Site.State.FINISHED:
 		v.add_child(s.building.scene.instantiate())
 		return v
 	if s.is_plot():
-		v._plot(s)
+		v._plot(s, seed_v)
 	elif s.building != null:
-		v._building(s.building.id, s.building.footprint)
+		v._building(s.building.id, s.building.footprint, seed_v)
 	elif s.job != null:
-		v._job(s.job.id)
+		v._job(s.job.id, seed_v)
+	v.rotation.y = 0.0
 	return v
 
 func set_fill(f: float) -> void:
@@ -24,129 +35,154 @@ func set_fill(f: float) -> void:
 		if is_instance_valid(_fill_nodes[i]):
 			_fill_nodes[i].visible = float(i) < f * float(n) - 0.01
 
-func _m(c: Color) -> StandardMaterial3D:
-	var m := StandardMaterial3D.new()
-	m.albedo_color = c
-	m.roughness = 0.95
-	return m
+func _process(_dt: float) -> void:
+	if site == null or not is_instance_valid(site):
+		return
+	if _flame != null:
+		var on := site.lit()
+		if _flame.visible != on:
+			_flame.set("burning", on)
+	if _rising != null and site.state == Site.State.BUILDING:
+		var p := site.build_progress()
+		_rising.scale = Vector3(1.0, lerpf(0.15, 1.0, p), 1.0)
 
-func _mesh(mesh: Mesh, c: Color, pos: Vector3, rot := Vector3.ZERO) -> MeshInstance3D:
+# ---------------------------------------------------------------- helpers
+
+func _art(id: StringName, variant: int = 0, pos := Vector3.ZERO, yaw := 0.0, s := 1.0) -> Node3D:
+	var n := AssetCatalog.instance(id, variant)
+	n.position = pos
+	n.rotation.y = yaw
+	n.scale = Vector3.ONE * s
+	add_child(n)
+	return n
+
+func _ball(r: float, mat: Material, pos: Vector3, segs := 6) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
-	mi.mesh = mesh
-	mi.material_override = _m(c)
+	var sm := SphereMesh.new(); sm.radius = r; sm.height = r * 2.0; sm.radial_segments = segs; sm.rings = maxi(segs / 2, 3)
+	mi.mesh = sm
+	mi.material_override = mat
 	mi.position = pos
-	mi.rotation = rot
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mi)
 	return mi
 
-func _box(size: Vector3, c: Color, pos: Vector3, rot := Vector3.ZERO) -> MeshInstance3D:
-	var b := BoxMesh.new(); b.size = size
-	return _mesh(b, c, pos, rot)
+func _stick(mat: Material, pos: Vector3, yaw: float, len_m: float = 0.9) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	var cy := CylinderMesh.new(); cy.top_radius = 0.035; cy.bottom_radius = 0.045; cy.height = len_m; cy.radial_segments = 5; cy.rings = 1
+	mi.mesh = cy
+	mi.material_override = mat
+	mi.position = pos
+	mi.rotation = Vector3(0, yaw, PI * 0.5)
+	add_child(mi)
+	return mi
 
-func _ball(r: float, c: Color, pos: Vector3, segs := 8) -> MeshInstance3D:
-	var s := SphereMesh.new(); s.radius = r; s.height = r * 2.0; s.radial_segments = segs; s.rings = maxi(segs / 2, 3)
-	return _mesh(s, c, pos)
+# ---------------------------------------------------------------- jobs
 
-func _cyl(r_top: float, r_bot: float, h: float, c: Color, pos: Vector3, segs := 8, rot := Vector3.ZERO) -> MeshInstance3D:
-	var cy := CylinderMesh.new(); cy.top_radius = r_top; cy.bottom_radius = r_bot; cy.height = h; cy.radial_segments = segs; cy.rings = 1
-	return _mesh(cy, c, pos, rot)
-
-func _job(id: StringName) -> void:
+func _job(id: StringName, seed_v: int) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_v
 	match id:
 		&"gather_berries":
-			_ball(0.7, Color(0.2, 0.45, 0.2), Vector3(0, 0.55, 0), 7)
-			_ball(0.5, Color(0.25, 0.5, 0.22), Vector3(0.45, 0.4, 0.2), 6)
-			for i in 8:
-				var a := TAU * i / 8.0
-				_fill_nodes.append(_ball(0.1, Color(0.8, 0.12, 0.25), Vector3(cos(a) * 0.62, 0.5 + 0.25 * sin(i * 1.7), sin(a) * 0.62), 5))
+			_art(&"berry_bush", seed_v, Vector3.ZERO, rng.randf() * TAU, 1.15)
+			var berry := ArtPalette.material("berry")
+			for i in 9:
+				var a := TAU * i / 9.0 + rng.randf_range(-0.2, 0.2)
+				var h := rng.randf_range(0.55, 1.25)
+				var r := 0.82 * sqrt(maxf(0.0, 1.0 - pow((h - 0.7) / 0.8, 2.0)))
+				_fill_nodes.append(_ball(0.09, berry, Vector3(cos(a) * r, h, sin(a) * r), 5))
 		&"fetch_water", &"fish_by_hand":
-			_cyl(1.9, 1.9, 0.06, Color(0.25, 0.5, 0.85), Vector3(0, 0.03, 0), 12)
+			for i in 3:
+				var a := rng.randf() * TAU
+				_art(&"rock_small", i + seed_v, Vector3(cos(a), 0, sin(a)) * rng.randf_range(1.3, 1.9), rng.randf() * TAU, rng.randf_range(0.7, 1.2))
 			if id == &"fish_by_hand":
-				_box(Vector3(0.3, 0.08, 0.12), Color(0.75, 0.75, 0.8), Vector3(0.6, 0.1, 0.3))
+				_art(&"fish", seed_v, Vector3(0.8, 0.05, 0.6), rng.randf() * TAU)
 		&"collect_sticks":
+			_art(&"stump", seed_v, Vector3(0.2, 0, -0.3), rng.randf() * TAU)
+			_art(&"fern", seed_v, Vector3(-0.9, 0, 0.4), rng.randf() * TAU)
+			var wood := ArtPalette.material("wood")
 			for i in 10:
-				var a := TAU * i / 10.0
-				_fill_nodes.append(_cyl(0.04, 0.04, 0.9, Color(0.45, 0.3, 0.15), Vector3(cos(a) * 0.5, 0.06, sin(a) * 0.5), 4, Vector3(0, a, PI * 0.5)))
-			_ball(0.5, Color(0.3, 0.42, 0.2), Vector3(0, 0.3, 0), 6)
+				var a := TAU * i / 10.0 + rng.randf_range(-0.2, 0.2)
+				_fill_nodes.append(_stick(wood, Vector3(cos(a), 0, sin(a)) * rng.randf_range(0.6, 1.3) + Vector3(0, 0.05, 0), rng.randf() * TAU, rng.randf_range(0.6, 1.0)))
 		&"fell_tree":
-			_cyl(0.18, 0.25, 2.0, Color(0.4, 0.27, 0.15), Vector3(0, 1.0, 0), 6)
-			_cyl(0.0, 1.1, 2.4, Color(0.18, 0.4, 0.2), Vector3(0, 2.8, 0), 7)
+			_art(&"tree_pine" if seed_v % 2 == 0 else &"tree_broad", seed_v, Vector3.ZERO, rng.randf() * TAU, rng.randf_range(1.5, 1.8))
+			_art(&"tool_axe", 0, Vector3(1.2, 0.0, 0.6), 0.6)
 		&"knap_flint":
-			_box(Vector3(1.2, 0.7, 1.0), Color(0.5, 0.5, 0.55), Vector3(0, 0.35, 0), Vector3(0.1, 0.4, 0.05))
-			_box(Vector3(0.6, 0.45, 0.6), Color(0.35, 0.35, 0.42), Vector3(0.6, 0.22, 0.3), Vector3(0, 0.9, 0.1))
+			_art(&"flint_node", seed_v, Vector3.ZERO, rng.randf() * TAU)
 		&"tend_fire":
-			_fire(1.0)
-		&"carry_log", &"haul_log":
-			var len := 2.6 if id == &"carry_log" else 3.6
-			var r := 0.28 if id == &"carry_log" else 0.4
-			_cyl(r, r, len, Color(0.42, 0.28, 0.14), Vector3(0, r, 0), 8, Vector3(0, 0, PI * 0.5))
-			_cyl(r * 0.8, r * 0.8, 0.02, Color(0.75, 0.6, 0.4), Vector3(len * 0.5 + 0.01, r, 0), 8, Vector3(0, 0, PI * 0.5))
+			var fire := _art(&"campfire", 0, Vector3.ZERO, 0.0, 1.25)
+			# The world's FirePit owns the firelight; keep only the flames here.
+			for l in fire.find_children("*", "OmniLight3D", true, false):
+				l.queue_free()
+			_flame = fire.find_child("Fire", true, false) as Node3D
+			for i in 3:
+				var a := TAU * i / 3.0 + 0.5
+				_art(&"log_fallen", i, Vector3(cos(a), 0, sin(a)) * 2.6, -a, 0.55)
+		&"carry_log":
+			_art(&"log_fallen", seed_v, Vector3.ZERO, 0.0, 0.85)
+		&"haul_log":
+			pass    # the world's fallen trunk (a Blocker) is the visual and rolls with the haulers
 		&"hunt":
 			for i in 3:
-				var a := TAU * i / 3.0
-				var p := Vector3(cos(a), 0, sin(a)) * 0.9
-				_fill_nodes.append(_box(Vector3(0.35, 0.45, 0.9), Color(0.55, 0.38, 0.22), p + Vector3(0, 0.7, 0), Vector3(0, a, 0)))
+				var a := TAU * i / 3.0 + rng.randf_range(-0.3, 0.3)
+				_fill_nodes.append(_art(&"deer", i, Vector3(cos(a), 0, sin(a)) * 2.2, rng.randf() * TAU))
 		&"pray":
-			_box(Vector3(0.8, 0.5, 0.8), Color(0.55, 0.55, 0.58), Vector3(0, 0.25, 0))
+			_art(&"cairn", 0)
 		_:
-			_cyl(0.5, 0.6, 0.4, Color(0.6, 0.5, 0.35), Vector3(0, 0.2, 0), 6)
+			_art(&"rock_small", seed_v)
 
-func _fire(scale_f: float) -> void:
-	for i in 7:
-		var a := TAU * i / 7.0
-		_ball(0.18 * scale_f, Color(0.45, 0.45, 0.48), Vector3(cos(a), 0.1, sin(a)) * 0.7 * scale_f, 5)
-	var flame := _cyl(0.0, 0.35 * scale_f, 0.8 * scale_f, Color(1.0, 0.55, 0.15), Vector3(0, 0.4 * scale_f, 0), 6)
-	(flame.material_override as StandardMaterial3D).emission_enabled = true
-	(flame.material_override as StandardMaterial3D).emission = Color(1.0, 0.5, 0.1)
-	_fill_nodes.clear()
+# ---------------------------------------------------------------- buildings
 
-func _plot(s: Site) -> void:
+func _art_id(bid: StringName) -> StringName:
+	var id: StringName = BUILDING_ART.get(bid, bid)
+	return id if AssetCatalog.has(id) else &""
+
+func _plot(s: Site, seed_v: int) -> void:
 	var fp := s.building.footprint
-	_box(Vector3(fp.x, 0.05, fp.y), Color(0.45, 0.33, 0.2), Vector3(0, 0.025, 0))
-	for c in [Vector2(-1, -1), Vector2(1, -1), Vector2(-1, 1), Vector2(1, 1)]:
-		_box(Vector3(0.1, 0.7, 0.1), Color(0.6, 0.45, 0.25), Vector3(c.x * fp.x * 0.45, 0.35, c.y * fp.y * 0.45))
+	var span := maxf(fp.x, fp.y)
+	if s.state == Site.State.BUILDING and s.building.id == &"hut":
+		_art(&"hut_frame", 0)
+	else:
+		var k := maxf(span / 4.0, 0.75)
+		_art(&"hut_plot", 0, Vector3.ZERO, 0.0, k)
+		if s.state == Site.State.BUILDING:
+			var id := _art_id(s.building.id)
+			if id != &"":
+				_rising = _art(id, seed_v, Vector3.ZERO, 0.0, _fit(id, fp))
+				_rising.scale.y = lerpf(0.15, 1.0, s.build_progress())
 	# Material piles grow as builders deliver.
 	var i := 0
 	for k in s.building.cost:
 		var got := int(s.delivered.get(k, 0))
-		var col := Color(0.5, 0.33, 0.18) if k == &"wood" else Color(0.6, 0.6, 0.62)
-		for j in got:
-			_box(Vector3(0.25, 0.18, 0.25), col, Vector3(-fp.x * 0.3 + i * 0.6, 0.12 + (j / 3) * 0.18, -fp.y * 0.25 + (j % 3) * 0.27))
+		var need := maxi(int(s.building.cost[k]), 1)
+		if got > 0:
+			var f := clampf(float(got) / float(need), 0.15, 1.0)
+			var at := Vector3(span * 0.5 + 0.8, 0, -span * 0.25 + i * 1.6)
+			if k == &"wood":
+				_art(&"firewood_pile", 0, at, 0.3, lerpf(0.45, 0.9, f))
+			else:
+				_art(&"rock_small", i, at, 0.0, lerpf(0.8, 1.6, f))
 		i += 1
-	if s.state == Site.State.BUILDING:
-		var h := 0.3 + 1.5 * s.build_progress()
-		_box(Vector3(fp.x * 0.6, h, fp.y * 0.6), Color(0.6, 0.5, 0.35, 1.0), Vector3(0, h * 0.5, 0))
 
-func _building(id: StringName, fp: Vector2) -> void:
-	match id:
-		&"hut", &"cottage":
-			_cyl(1.3, 1.4, 1.3, Color(0.5, 0.38, 0.25), Vector3(0, 0.65, 0), 8)
-			_cyl(0.0, 1.8, 1.4, Color(0.75, 0.62, 0.3), Vector3(0, 2.0, 0), 8)
-			_box(Vector3(0.6, 0.9, 0.1), Color(0.15, 0.1, 0.06), Vector3(0, 0.45, 1.33))
+## Scale that fits a catalog model into a building's footprint (never above 1.15).
+func _fit(id: StringName, fp: Vector2) -> float:
+	var cf := AssetCatalog.footprint(id)
+	var k := minf(fp.x / maxf(cf.x, 0.1), fp.y / maxf(cf.y, 0.1))
+	return clampf(k, 0.6, 1.15) if k < 1.0 else 1.0
+
+func _building(bid: StringName, fp: Vector2, seed_v: int) -> void:
+	match bid:
 		&"fire_circle":
-			_fire(1.3)
+			var fire := _art(&"campfire", 0, Vector3.ZERO, 0.0, 1.4)
+			_flame = fire.find_child("Fire", true, false) as Node3D
 			for i in 4:
 				var a := TAU * i / 4.0 + 0.4
-				_box(Vector3(1.0, 0.3, 0.3), Color(0.4, 0.27, 0.14), Vector3(cos(a), 0.15, sin(a)) * 1.6, Vector3(0, -a, 0))
-		&"food_store", &"granary":
-			_box(Vector3(fp.x, 1.3, fp.y), Color(0.55, 0.4, 0.22), Vector3(0, 0.75, 0))
-			_box(Vector3(fp.x + 0.3, 0.2, fp.y + 0.3), Color(0.75, 0.62, 0.3), Vector3(0, 1.5, 0))
-		&"drying_rack":
-			_box(Vector3(0.1, 1.2, 0.1), Color(0.45, 0.3, 0.15), Vector3(-0.8, 0.6, 0))
-			_box(Vector3(0.1, 1.2, 0.1), Color(0.45, 0.3, 0.15), Vector3(0.8, 0.6, 0))
-			_box(Vector3(1.8, 0.08, 0.08), Color(0.45, 0.3, 0.15), Vector3(0, 1.15, 0))
-		&"cairn":
-			for i in 4:
-				_box(Vector3(0.9 - i * 0.18, 0.35, 0.9 - i * 0.18), Color(0.55, 0.55, 0.58), Vector3(0, 0.18 + i * 0.35, 0), Vector3(0, i * 0.5, 0))
-			_box(Vector3(0.3, 0.3, 0.05), Color(0.75, 0.35, 0.15), Vector3(0, 0.75, 0.38))
-		&"shrine", &"temple":
-			_box(Vector3(fp.x, 0.4, fp.y), Color(0.55, 0.55, 0.58), Vector3(0, 0.2, 0))
-			_box(Vector3(1.0, 2.0, 0.5), Color(0.6, 0.6, 0.62), Vector3(0, 1.4, 0))
-			_box(Vector3(0.5, 0.5, 0.06), Color(0.8, 0.4, 0.15), Vector3(0, 1.8, 0.28))
-		&"stone_circle":
-			for i in 10:
-				var a := TAU * i / 10.0
-				_box(Vector3(0.6, 2.4, 0.4), Color(0.55, 0.55, 0.6), Vector3(cos(a), 0, sin(a)) * fp.x * 0.42 + Vector3(0, 1.2, 0), Vector3(0, -a, 0))
-			_box(Vector3(1.0, 0.5, 1.0), Color(0.5, 0.5, 0.55), Vector3(0, 0.25, 0))
-		_:
-			_box(Vector3(fp.x, 1.6, fp.y), Color(0.6, 0.55, 0.5), Vector3(0, 0.8, 0))
+				_art(&"log_fallen", i, Vector3(cos(a), 0, sin(a)) * 2.4, -a, 0.6)
+			return
+		&"hut":
+			_art(&"hut", seed_v, Vector3.ZERO, 0.0)
+			return
+	var id := _art_id(bid)
+	if id != &"":
+		_art(id, seed_v, Vector3.ZERO, 0.0, _fit(id, fp))
+	else:
+		_art(&"hut_plot", 0, Vector3.ZERO, 0.0, maxf(fp.x, fp.y) / 4.0)
