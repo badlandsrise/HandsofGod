@@ -19,11 +19,14 @@ func _ready() -> void:
 	super._ready()
 	add_to_group("timbers")
 	if get_node_or_null("Visual") == null:
-		build_log_visual(6.0, 0.28, false)
+		build_log_visual(6.0, 0.28, false)      # length and the pick body
 		var v := get_node_or_null("Visual")
 		if v != null:
-			for mi in v.find_children("*", "GeometryInstance3D", true, false):
-				(mi as GeometryInstance3D).set_instance_shader_parameter(&"instance_tint", Color(0.95, 0.8, 0.6))   # fresh-hewn
+			# the squared, adzed beam (build_workplaces.gd) in place of a round log
+			for c in v.get_children():
+				v.remove_child(c)
+				c.queue_free()
+			v.add_child(AssetCatalog.instance(&"bridge_timber", key))
 
 func hover_text() -> String:
 	if Faith.strength < weight:

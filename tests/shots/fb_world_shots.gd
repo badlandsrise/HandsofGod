@@ -2,7 +2,9 @@ extends "res://tests/shots/shot_director.gd"
 ## World review shots (locked regions, drops, layout, the Pass Road, desire paths).
 ## Attached by the world when Game.flags has "world-shots". Needs a renderer:
 ##   xvfb-run -a -s "-screen 0 1600x900x24" godot --rendering-driver vulkan --path . -- \
-##     --world-shots[=fog,drop,village1,village2,pass,paths] [--paths-save=path.json]
+##     --world-shots[=fog,drop,village1,village2,pass,paths,buildings] [--paths-save=path.json]
+## (buildings: the hunting lodge, woodcutters' camp, footbridge and bridge timber art,
+## finished and in their stages, as fb_polish_buildings*.png; not in the default set)
 ## Writes tests/shots/fb_world_*.png, then quits. --paths-save is a save written by
 ## the bot (tests/bot/bot.gd --save-day=12:path.json) after ~20 game minutes.
 
@@ -46,6 +48,8 @@ func _run() -> void:
 		await _era2_village()
 	if "pass" in want:
 		await _pass_shots()
+	if "buildings" in want:
+		await _buildings_shots()
 	if "paths" in want:
 		await _paths_shot()      # last: it loads the bot's save over this world
 	print("SHOTS done in %.1f s" % ((Time.get_ticks_msec() - t0) / 1000.0))
@@ -218,3 +222,60 @@ func _paths_shot() -> void:
 	w.camera_rig.snap_to(Vector3(-8.0, 0, -6.0), 40.0)
 	await _settle(14)
 	await _shot("fb_world_paths_close.png")
+
+## [polish] The workplaces' and the footbridge's own art: the finished footbridge
+## over the shallows with a lodge and a camp on the north bank, then the stages
+## (lodge and camp plots and frames, a footbridge plot with one timber set and a
+## loose timber) along the river a little east.
+func _buildings_shots() -> void:
+	var w = _w()
+	if Village.era < 2:
+		EraTransition.enter_era(2)
+		await _frames(4)
+	for r in Valley.REGIONS:     # no fog over the review
+		if not w.is_region_open(r):
+			w.open_region(r)
+	if w.regions.has_method(&"sync_instant"):
+		w.regions.sync_instant()
+	var fb: Site = w.spawn_plot(&"footbridge", Vector3(LayoutEra2.FOOTBRIDGE.x, 0, LayoutEra2.FOOTBRIDGE.y))
+	fb.position.y = w.era2.bank_height(LayoutEra2.FOOTBRIDGE)
+	fb._finish(true)
+	fb.rebuild_visual()
+	w.add_crossing(&"east_footbridge", LayoutEra2.FOOTBRIDGE)
+	_finish_plot(&"hunting_lodge", Vector2(157.0, 112.0))
+	_finish_plot(&"woodcutter_camp", Vector2(171.0, 112.0))
+	for i in 3:
+		w.spawn_person(Vector3(164.0 + (i - 1) * 0.6, 0, 124.0 + i * 3.0), "")
+	w.camera_rig.target_yaw = 0.45
+	w.camera_rig.snap_to(Vector3(164.0, 0, 119.0), 26.0)
+	w.hand.aim_override = Vector3(140.0, w.ground_y(140, 100), 100.0)
+	await _settle(14)
+	await _shot("fb_polish_buildings.png")
+	# the stages, east along the north bank
+	var x0 := 196.0
+	var zr := Valley.river_z(x0)
+	var spots := [[&"hunting_lodge", Vector2(x0 - 18.0, zr - 15.0), 0], [&"hunting_lodge", Vector2(x0 - 12.0, zr - 15.0), 1],
+		[&"hunting_lodge", Vector2(x0 - 5.5, zr - 15.0), 2], [&"woodcutter_camp", Vector2(x0 + 5.5, zr - 15.0), 2],
+		[&"woodcutter_camp", Vector2(x0 + 12.0, zr - 15.0), 1], [&"woodcutter_camp", Vector2(x0 + 18.0, zr - 15.0), 0]]
+	for sp in spots:
+		var s: Site = w.spawn_plot(sp[0], Vector3(sp[1].x, 0, sp[1].y))
+		if int(sp[2]) == 2:
+			s._finish(true)
+			s.rebuild_visual()
+		elif int(sp[2]) == 1:
+			s.state = Site.State.BUILDING
+			s.build_done = s.building.build_work * 0.2
+			s.rebuild_visual()
+	var p: Site = w.spawn_plot(&"footbridge", Vector3(x0, 0, zr))
+	p.position.y = w.era2.bank_height(Vector2(x0, zr))
+	p.timbers_in = 1
+	p.rebuild_visual()
+	var t := Timber.new()
+	w.dynamic.add_child(t)
+	t.global_position = Vector3(x0 - 1.0, w.ground_y(x0 - 1.0, zr - 21.0), zr - 21.0)
+	t.rotation.y = 0.3
+	w.camera_rig.target_yaw = PI
+	w.camera_rig.snap_to(Vector3(x0, 0, zr - 12.0), 27.0)
+	w.hand.aim_override = Vector3(x0 - 30.0, w.ground_y(x0 - 30.0, zr - 40.0), zr - 40.0)
+	await _settle(14)
+	await _shot("fb_polish_buildings_stages.png")
