@@ -45,5 +45,8 @@ signal threat_started(id: StringName, at: Vector3)
 signal threat_ended(id: StringName)
 
 # ui
+signal name_requested(people: Array, reason: StringName)   # UI shows a naming box; reason: &"first_two" or &"baby_prayer"
+signal names_given(people: Array)
+signal era_complete_shown(era: int)
 signal toast(text: String)
 signal alert(text: String, at: Vector3)
