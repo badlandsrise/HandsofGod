@@ -6,4 +6,11 @@
 script = ExtResource("1_def")
 id = &"aqueduct"
 title = "Aqueduct"
+footprint = Vector2(5.0, 7.0)
+cost = {&"blocks": 30, &"stone": 16, &"wood": 16, &"iron": 6}
+build_work = 1.0
+build_slots = 6
+raise_job = &"aqueduct_crew"
+yaw = 3.1415927
+weight = 9999.0
 era = 3

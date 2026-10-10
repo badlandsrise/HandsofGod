@@ -41,6 +41,7 @@ const GESTURE_TARGETS := {
 	&"person": [&"warmth", &"blessing"],
 	&"fire": [&"warmth", &"blessing"],
 	&"field": [&"rain"],
+	&"burning": [&"rain"],
 	&"sea": [&"calm_waters"],
 	&"sky": [&"guiding_light", &"part_the_clouds"],
 }
@@ -395,7 +396,7 @@ func gesture_target() -> Dictionary:
 		return {"kind": &"person", "at": hover_person.global_position}
 	if not mouse_on_ground:
 		return {"kind": &"sky", "at": air_pos}
-	for kind in [&"fire", &"field", &"sea"]:
+	for kind in [&"burning", &"fire", &"field", &"sea"]:
 		var n := _group_near(kind, ground)
 		if n != null:
 			return {"kind": kind, "at": n.global_position}
@@ -456,13 +457,19 @@ func gesture_level() -> float:
 
 # ---------------------------------------------------------------- frame
 
+var _hover_t: float = 0.0
+
 func step(dt: float) -> void:
 	time += dt
 	hint_t = maxf(hint_t - dt, 0.0)
 	strain_t = maxf(strain_t - dt, 0.0)
 	dip_t = maxf(dip_t - dt, 0.0)
 	_update_aim()
-	_update_hover()
+	# what is under the hand, 30 times a second (a town is a lot to look through)
+	_hover_t -= dt
+	if _hover_t <= 0.0:
+		_hover_t = 1.0 / 30.0
+		_update_hover()
 	if input_enabled:
 		gesture_held = Input.is_action_pressed(&"hand_gesture") and not _ui_has_focus()
 	update_gesture(gesture_held, dt)

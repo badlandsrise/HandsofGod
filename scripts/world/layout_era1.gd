@@ -48,9 +48,10 @@ const HUDDLE := [Vector2(-1.3, -24.6), Vector2(1.1, -24.0)]
 const SEXES := ["f", "m"]
 ## Default names by sex, so a man is never "Ona" (the hand may rename them at dawn).
 const NAMES_BY_SEX := {"f": "Ona", "m": "Tuk"}
-## The first two live long: their deaths fall early in Era 2, the first
-## generation passing (doc 3 life cycle, tuned so Era 1 keeps its founders).
-const FIRST_TWO_EXTRA_LIFE := 900.0
+## The first two live long and gently: they see the village through Era 1 and
+## live on well into Era 2 (about half an hour in) before the first
+## generation passes (doc 3 life cycle). Older saves are lengthened on load.
+const FIRST_TWO_EXTRA_LIFE := 1500.0
 
 static var warned: Dictionary = {}
 

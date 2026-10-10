@@ -27,6 +27,12 @@ extends Node
 ## the bear, flood evacuation and the blight. With --until-era=3 the bot plays
 ## through the Era 2 gate; each era FAILS if it completes under its
 ## gate_min_minutes, and deaths are reported by cause (old age vs anything else).
+##
+## Era 3 play (tests/bot/bot_era3.gd): the stone, iron, brass and book chains,
+## crews of ten, the ship lifted onto the sea, Calm Waters for the voyages,
+## the Guiding Light at night, rain and buckets on a fire, the sick carried to
+## the clinic, people shielded in a storm. Start it from tests/bot/era3_start.json
+## with --until-era=4; Era 3 FAILS under its gate_min_minutes too.
 
 const THINK := 1.5               # game seconds between hand actions (a human pace)
 const WOLF_REACT := 0.6          # chance per think to shoo a stalking wolf
@@ -53,12 +59,15 @@ var _gifts: int = 0
 var _fps_sum: float = 0.0
 var _fps_n: int = 0
 var _fps_min: float = INF
+var _day_fps: Array = [0.0, 0, 0.0, 0.0]   # today's fps sum, frames, process ms sum, physics ms sum
+var _fps_by_era: Dictionary = {}          # era -> [fps sum, frames]
 var _start_ms: int = 0
 var _quitting: bool = false
 var _era_done_t: float = -1.0
 var _pop_log: Array = []         # [t, pop] each dawn
 var _faith_at_gate: float = -1.0
 var era2 = null                  # tests/bot/bot_era2.gd
+var era3 = null                  # tests/bot/bot_era3.gd
 var _era_start: Dictionary = {1: 0.0}   # era -> game time it began
 var _era_done: Dictionary = {}   # era -> game time its gate completed
 var _death_causes: Dictionary = {}
@@ -92,6 +101,7 @@ func _ready() -> void:
 		speed = float(f["speed"])
 	Engine.time_scale = speed
 	era2 = load("res://tests/bot/bot_era2.gd").new(self)
+	era3 = load("res://tests/bot/bot_era3.gd").new(self)
 	Events.era_changed.connect(_on_era_changed)
 	if f.has("load"):
 		_load_save.call_deferred(str(f["load"]))
@@ -128,7 +138,8 @@ func _on_era_complete(era: int) -> void:
 func _on_era_changed(e: int) -> void:
 	_era_start[e] = Clock.total_t
 	print("BOT era %d begins at %s" % [e, _mmss(Clock.total_t)])
-	if e == 2 and Game.flags.has("save-gate"):
+	# the save is of the era the run is heading for (until-era), or the first new era
+	if Game.flags.has("save-gate") and e >= 2 and (until_era <= 0 or e == until_era):
 		_save_gate.call_deferred(str(Game.flags["save-gate"]))
 
 func _abs(path: String) -> String:
@@ -141,7 +152,7 @@ func _save_gate(path: String) -> void:
 		return
 	f.store_string(JSON.stringify(Save.snapshot(), " "))
 	f.close()
-	print("BOT saved the start of Era 2 to %s" % path)
+	print("BOT saved the start of Era %d to %s" % [Village.era, path])
 
 func _load_save(path: String) -> void:
 	var txt := FileAccess.get_file_as_string(_abs(path))
@@ -173,6 +184,15 @@ func _process(_delta: float) -> void:
 	_fps_n += 1
 	if _fps_n > 60 and fps > 0.0:
 		_fps_min = minf(_fps_min, fps)
+	_day_fps[0] += fps
+	_day_fps[1] += 1
+	_day_fps[2] += Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0
+	_day_fps[3] += Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0
+	if _fps_n > 60:
+		var fe: Array = _fps_by_era.get(Village.era, [0.0, 0])
+		fe[0] += fps
+		fe[1] += 1
+		_fps_by_era[Village.era] = fe
 	if not Clock.running:
 		return
 	var t := Clock.total_t
@@ -220,6 +240,8 @@ func _think() -> void:
 	_wolves()
 	_warm()
 	_bless()
+	if era3.think():
+		return
 	if era2.think():
 		return
 	# 5. the meadow logs, once the hand is strong enough
@@ -345,11 +367,15 @@ func _need(k: StringName) -> int:
 func _food_target() -> int:
 	var pop := maxi(Village.population(), 1)
 	var k := 7 if Clock.season == Clock.Season.AUTUMN else 5
-	return mini(pop * k, int(Village.store_cap * 1.5))
+	# a town eats from full stores: past one full store of food, build instead
+	return mini(pop * k, int(Village.store_cap * (1.0 if Village.era >= 3 else 1.5)))
 
 ## A person on this job would do more good elsewhere.
 func _wasted(s, p = null) -> bool:
 	var j: JobDef = s.get("job")
+	var e3: int = era3.wasted(s, p)
+	if e3 >= 0:
+		return e3 == 1
 	var e2: int = era2.wasted(s, p)
 	if e2 >= 0:
 		return e2 == 1
@@ -404,7 +430,7 @@ func _site_ok(s) -> bool:
 		return false
 	if s.job != null and not s.is_plot() and not s.is_group() and s.job.kind == JobDef.Kind.GATHER and not s.can_work_now():
 		return false
-	if era2.site_blocked(s):
+	if era2.site_blocked(s) or era3.site_blocked(s):
 		return false
 	return true
 
@@ -418,6 +444,9 @@ func _score(s, idle_n: int) -> float:
 		var d := Dreams.active_dream()
 		if d != null and d.needs_buildings.has(b.id):
 			dream = true
+		var key: float = era3.plot_score(b)
+		if key > 0.0 and ready:
+			return key            # the workshop a waiting chain needs (the forge for iron, ...)
 		var home := (b.id == &"hut" or b.id == &"cottage") and b.shelter > 0
 		# in Era 2 the village feeds itself from the fields: building outranks foraging
 		var other := 5.5
@@ -426,6 +455,9 @@ func _score(s, idle_n: int) -> float:
 		return (8.0 if dream else (7.2 if home else other)) if ready else 0.5
 	if j == null:
 		return 0.0
+	var e3: float = era3.score(s, idle_n)
+	if e3 >= 0.0:
+		return e3
 	var e2: float = era2.score(s, idle_n)
 	if e2 >= 0.0:
 		return e2
@@ -622,20 +654,41 @@ func _report() -> void:
 		return
 	_last_day = Clock.day
 	var fps := _fps_sum / maxf(_fps_n, 1)
-	print("BOT day %d %s %s y%d | pop %d | stores %s | faith %.0f (avail %.0f) | dream %s | deaths %d | fps %.0f | actions %d" % [
+	var dn: float = maxf(float(_day_fps[1]), 1.0)
+	print("BOT day %d %s %s y%d | pop %d | stores %s | faith %.0f (avail %.0f) | dream %s | deaths %d | fps %.0f (today %.0f, process %.1f ms, physics %.1f ms) | actions %d" % [
 		Clock.day, _mmss(Clock.total_t), ["spring", "summer", "autumn", "winter"][Clock.season], Clock.year, Village.population(), _stores_text(),
-		Faith.total, Faith.available(), str(Village.stats.get("dream_active", "")), _deaths, fps, _actions])
+		Faith.total, Faith.available(), str(Village.stats.get("dream_active", "")), _deaths, fps, _day_fps[0] / dn, _day_fps[2] / dn, _day_fps[3] / dn, _actions])
+	_day_fps = [0.0, 0, 0.0, 0.0]
+	var nv = Game.world.nav if Game.world != null else null
+	if nv != null and nv.navigation_mesh != null:
+		print("BOT   nav: %d bakes, last %d ms, %d polygons" % [nv.bake_count, nv.last_bake_ms, nv.navigation_mesh.get_polygon_count()])
 	if Village.era >= 2:
 		var plots: Array = []
 		for s in Village.sites:
 			if is_instance_valid(s) and s.building != null and s.state != Site.State.FINISHED:
 				plots.append("%s:%s%s w%d" % [s.building.id, "raise" if s.awaiting_raise() else Site.State.keys()[s.state].to_lower(), "" if s.awaiting_raise() else " %d%%" % int(100.0 * (s._materials_fraction() if s.state == Site.State.PLOT else s.build_progress())), s.workers.size()])
 		var built: Array = []
-		for id in [&"cottage", &"field", &"granary", &"mill", &"bakery", &"kiln", &"smelter", &"smithy", &"weaver", &"market", &"barn", &"bridge", &"temple", &"camp"]:
+		for id in [&"cottage", &"townhouse", &"field", &"granary", &"mill", &"bakery", &"kiln", &"smelter", &"smithy", &"weaver", &"market", &"barn", &"bridge", &"temple", &"camp",
+				&"mason", &"forge", &"school", &"printing_house", &"watermill", &"windmill", &"fire_station", &"clinic", &"market_hall", &"great_hall", &"harbour", &"lighthouse", &"clocktower", &"laboratory", &"aqueduct", &"observatory"]:
 			var n := Village.count_buildings(id)
 			if n > 0:
 				built.append("%s %d" % [id, n])
 		print("BOT   built: %s | plots: %s" % [", ".join(built), ", ".join(plots)])
+		# --save-day=DAY:path saves a mid-run snapshot (for profiling or a quick look)
+		var sd := str(Game.flags.get("save-day", ""))
+		if sd.contains(":") and Clock.day == int(sd.get_slice(":", 0)):
+			_save_gate(sd.substr(sd.find(":") + 1))
+		var jobs := {}
+		for p in Village.alive():
+			var js = p.job_site
+			var k: String = "-"
+			if js != null and is_instance_valid(js):
+				k = str(js.job.id) if js.job != null else "build:" + str(js.building.id if js.building else "")
+			jobs[k] = int(jobs.get(k, 0)) + 1
+		var jl: Array = []
+		for k in jobs:
+			jl.append("%s %d" % [k, jobs[k]])
+		print("BOT   jobs: %s" % ", ".join(jl))
 	if Game.flags.has("verbose"):
 		for p in Village.alive():
 			var js = p.job_site
@@ -728,7 +781,19 @@ func _finish() -> void:
 	var s2: Dictionary = (Village.stats.get("era_summary", {}) as Dictionary).get("2", {})
 	if not s2.is_empty():
 		print("BOT era 2 card: %s" % str(s2))
-	print("BOT deaths by cause: %s | era 2 play: %s" % [str(_death_causes), era2.summary()])
+	print("BOT deaths by cause: %s | era 2 play: %s | era 3 play: %s" % [str(_death_causes), era2.summary(), era3.summary()])
+	var s3: Dictionary = (Village.stats.get("era_summary", {}) as Dictionary).get("3", {})
+	if not s3.is_empty():
+		print("BOT era 3 card: %s" % str(s3))
+	print("BOT era 3 stats: fires %d (out %d, burned out %d, douses %d) | sick %d well %d | storm hurt %d | damaged %d | foreman joins %d | school joins %d | buildings moved %d | calm pulses %d | guide pulses %d | flags %s" % [
+		int(Village.stats.get("threat_town_fire", 0)), int(Village.stats.get("fires_out", 0)), int(Village.stats.get("burned_out", 0)), int(Village.stats.get("fire_douses", 0)),
+		int(Village.stats.get("fell_sick", 0)), int(Village.stats.get("got_well", 0)), int(Village.stats.get("storm_hurt", 0)), int(Village.stats.get("buildings_damaged", 0)),
+		int(Village.stats.get("foreman_joins", 0)), int(Village.stats.get("school_joins", 0)), int(Village.stats.get("buildings_moved", 0)),
+		int(Village.stats.get("calm_pulses", 0)), int(Village.stats.get("guide_pulses", 0)), str(Village.stats.get("flags", []))])
+	var fe: Array = []
+	for e in _fps_by_era:
+		fe.append("era %d %.0f" % [e, _fps_by_era[e][0] / maxf(float(_fps_by_era[e][1]), 1.0)])
+	print("BOT fps by era: %s" % ", ".join(fe))
 	print("BOT era 2 stats: harvests %d grain %d crops lost %d | offerings %d | bear swipes %d raided %d | flood hurt %d | blights cured %d | trust avg %.2f (%s) | flags %s" % [
 		int(Village.stats.get("harvests", 0)), int(Village.stats.get("grain_harvested", 0)), int(Village.stats.get("crops_lost", 0)),
 		int(Village.stats.get("offerings", 0)), int(Village.stats.get("bear_swipes", 0)), int(Village.stats.get("bear_raided", 0)),
@@ -752,6 +817,12 @@ func _finish() -> void:
 		if m2 < (e2d.gate_min_minutes if e2d else 45.0):
 			ok = false
 			why = "pacing regression: Era 2 finished in %.1f min (< %.0f)" % [m2, e2d.gate_min_minutes if e2d else 45.0]
+	if _era_done.has(3) and float(_era_done[3]) > 0.0:
+		var e3d := Defs.era(3)
+		var m3: float = (float(_era_done[3]) - float(_era_start.get(3, 0.0))) / 60.0
+		if m3 < (e3d.gate_min_minutes if e3d else 55.0):
+			ok = false
+			why = "pacing regression: Era 3 finished in %.1f min (< %.0f)" % [m3, e3d.gate_min_minutes if e3d else 55.0]
 	if int(_death_causes.get("other", 0)) > 0:
 		ok = false
 		why = "%d deaths not of old age" % int(_death_causes["other"])

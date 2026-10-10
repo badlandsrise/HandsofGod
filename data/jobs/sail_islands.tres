@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="JobDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/defs/job_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"sail_islands"
+title = "Sail to the islands"
+era = 3
+kind = 3
+skill = &"engineering"
+min_people = 5
+max_people = 5
+outputs = {&"tin": 6}
+work_time = 40.0
+wait_before_wander = 30.0
+needs_discovery = &"ship"

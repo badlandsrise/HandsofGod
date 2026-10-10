@@ -62,6 +62,12 @@ var _field_rest: float = 0.0
 var _field_water_acc: float = 0.0
 var _tended: float = 0.0                # seconds of tending left (people present recently)
 var _raise_check: float = 0.0
+# Era 3: fire, damage, the hand lifting a building
+var burn: float = 0.0                   # > 0 while burning (how fierce, 0..1)
+var damage: float = 0.0                 # > 0: gutted by fire or a roof torn off; a repair crew mends it
+var lift_held: bool = false             # the hand is carrying this building (Lift Buildings)
+var _lift_from: Vector3 = Vector3.INF
+var _fire_fx: Node3D = null
 var _vis_key: String = ""
 
 var visual: Node3D
@@ -70,6 +76,7 @@ var _loaded := false
 var _defs_ready := false
 
 func _ready() -> void:
+	Site.env_changed()
 	add_to_group("persist"); add_to_group("sites")
 	Village.register_site(self)
 	if uid == 0:
@@ -87,6 +94,7 @@ func _ready() -> void:
 		Events.sim_tick.connect(sim)
 
 func _exit_tree() -> void:
+	Site.env_changed()
 	Village.unregister_site(self)
 
 func _init_from_defs() -> void:
@@ -118,7 +126,7 @@ func is_group() -> bool:
 	return not is_plot() and job != null and job.kind == JobDef.Kind.GROUP
 
 func is_shelter() -> bool:
-	return state == State.FINISHED and building != null and building.shelter > 0
+	return state == State.FINISHED and building != null and building.shelter > 0 and burn <= 0.0 and damage <= 0.0 and not lift_held
 
 func is_fire() -> bool:
 	return job != null and job.id == &"tend_fire"
@@ -201,6 +209,8 @@ func can_accept(n: int = 1) -> bool:
 			return false
 		if not discovered():
 			return false
+		if building != null and (burn > 0.0 or damage > 0.0 or lift_held):
+			return false       # on fire, gutted, roofless or in the hand: nobody works here now
 		if amount == 0 and job.regrow_time <= 0.0 and not (evergreen and Site.food_crisis()):
 			return false
 	return free_slots() >= n
@@ -273,16 +283,31 @@ func hover_text() -> String:
 		var pd := Defs.power(job.needs_power)
 		t += "  (needs %s)" % (pd.title if pd else str(job.needs_power))
 	elif not discovered():
-		t += "  (needs stone tools)"
+		t += "  (%s)" % DISCOVERY_NOTES.get(job.needs_discovery, "needs stone tools")
+	if building != null and burn > 0.0:
+		t += "  ON FIRE"
+	elif building != null and damage > 0.0:
+		t += "  (%s: needs repair)" % ("burned out" if damage >= 0.99 else "roof torn")
 	if job.needs_blessed and _blessed_present() < job.min_people:
 		t += "  (only the blessed can do this)"
 	if amount >= 0 and job.node_amount > 1:
 		t += "  %d left" % amount
 	if not can_work_now():
-		t += "  (resting for winter)" if _winter_stopped() else "  (regrowing)"
+		if _winter_stopped():
+			t += "  (resting for winter)"
+		elif not in_season():
+			t += "  (waits for %s)" % ["spring", "summer", "autumn", "winter, when the river runs low"][clampi(job.only_season, 0, 3)]
+		elif job.id == &"astronomy":
+			t += "  (waits for night)"
+		elif job.id == &"sail_islands":
+			t += "  (waits for a calm sea: hold Calm Waters over it)"
+		else:
+			t += "  (regrowing)"
 	if is_fire():
 		t += "  lit" if lit() else "  out"
 	return t
+
+const DISCOVERY_NOTES := {&"stone_tools": "needs stone tools", &"ship": "the ship must be on the sea first"}
 
 ## [hand] radius used for picking this site with the mouse.
 func pick_radius() -> float:
@@ -362,6 +387,15 @@ func _winter_stopped() -> bool:
 func in_season() -> bool:
 	return job == null or job.only_season < 0 or Clock.season == job.only_season
 
+## The hand has calmed the sea (Calm Waters) and no storm is blowing.
+static func sea_calm() -> bool:
+	var w = Game.world
+	if w == null or not is_instance_valid(w) or w.get("era3") == null:
+		return false
+	if w.threats != null and w.threats.era3 != null and w.threats.era3.storm_on():
+		return false
+	return w.era3.sea_calm()
+
 ## Food is nearly gone: the evergreen bushes by the cave keep giving (doc 8.1).
 static func food_crisis() -> bool:
 	return Village.food() < maxi(Village.population(), 2)
@@ -381,6 +415,10 @@ func can_work_now() -> bool:
 		return false
 	if _winter_stopped() or not in_season():
 		return false
+	if job.id == &"astronomy" and not Clock.is_night:
+		return false       # the stars come out at night
+	if job.id == &"sail_islands" and not Site.sea_calm():
+		return false       # the sea is too rough to sail until the hand calms it
 	return amount != 0 or (evergreen and Site.food_crisis())
 
 ## Takes one unit from a gather node. False when depleted.
@@ -411,7 +449,18 @@ func on_cycle_done(_p) -> void:
 		add_fuel(FIRE_FUEL_PER_WOOD)
 	elif job != null and job.id == &"keep_market":
 		_market_day()
+	elif job != null and job.id == &"fight_fire":
+		var b := Site.by_uid(parent_uid)
+		if b != null:
+			b.douse(FIGHT_FIRE_DOUSE)
+	elif job != null and job.id == &"repair_roof":
+		var b2 := Site.by_uid(parent_uid)
+		if b2 != null:
+			b2.repair(REPAIR_PER_CYCLE)
 	Events.job_completed.emit(self)
+
+const FIGHT_FIRE_DOUSE := 0.07
+const REPAIR_PER_CYCLE := 0.2
 
 ## A market stall's round: everyone near the market is cheered (doc 3, joy).
 func _market_day() -> void:
@@ -526,6 +575,7 @@ func add_build_work(w: float) -> void:
 		_finish(false)
 
 func _finish(silent: bool) -> void:
+	Site.env_changed()
 	var builders := workers.duplicate()
 	workers.clear()
 	state = State.FINISHED
@@ -589,6 +639,8 @@ func sim(dt: float) -> void:
 				_begin_raise()
 	if fuel_t > 0.0:
 		fuel_t = maxf(fuel_t - dt, 0.0)
+	if raise_parent != 0 and job != null and job.only_season >= 0:
+		_season_label(not in_season())
 	if bar:
 		if is_group() and (group_running or progress > 0.0):
 			bar.show_value(progress, Color(1.0, 0.85, 0.3))
@@ -598,6 +650,28 @@ func sim(dt: float) -> void:
 			bar.show_value(_materials_fraction(), Color(0.7, 0.55, 0.35))
 		else:
 			bar.hide_bar()
+
+## A raising that waits for its season says so over the crew's spot (the
+## bridge piers wait for winter, when the river runs low).
+var _season_note: Label3D = null
+func _season_label(waiting: bool) -> void:
+	if not waiting:
+		if _season_note != null:
+			_season_note.visible = false
+		return
+	if _season_note == null:
+		_season_note = Label3D.new()
+		_season_note.name = "SeasonNote"
+		_season_note.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		_season_note.font_size = 48
+		_season_note.pixel_size = 0.012
+		_season_note.outline_size = 10
+		_season_note.modulate = Color(0.85, 0.93, 1.0)
+		_season_note.no_depth_test = true
+		_season_note.position = Vector3(0, 3.4, 0)
+		add_child(_season_note)
+	_season_note.text = "Waiting for %s" % ["spring", "summer", "autumn", "winter: the river runs low then"][clampi(job.only_season, 0, 3)]
+	_season_note.visible = true
 
 func _materials_fraction() -> float:
 	var need := 0; var got := 0
@@ -725,7 +799,7 @@ func _begin_raise() -> void:
 		Events.alert.emit(j.season_note, global_position)
 	get_parent().add_child(s)
 	s.global_position = Vector3(at.x, Site.ground(at.x, at.z), at.z)
-	Events.alert.emit("The %s is ready to raise: it needs %d people at once" % [building.title.to_lower(), j.min_people], s.global_position)
+	Events.alert.emit("The %s is ready to raise: it needs %d people at once" % [building.title.to_lower().trim_prefix("the "), j.min_people], s.global_position)
 
 # --- fields -------------------------------------------------------------------------
 
@@ -925,6 +999,7 @@ func _bar_height() -> float:
 	return 2.4
 
 func rebuild_visual() -> void:
+	Site.env_changed()
 	if not is_inside_tree():
 		return
 	if is_field() and not is_in_group(&"field"):
@@ -937,6 +1012,9 @@ func rebuild_visual() -> void:
 	visual.name = "Visual"
 	add_child(visual)
 	_on_amount_changed()
+	_fire_fx = null
+	_update_fire_fx()
+	_update_damage_look()
 
 # --- static helpers -------------------------------------------------------------------
 
@@ -997,9 +1075,37 @@ static func nearest(from: Vector3, r: float, filter: Callable) -> Site:
 			bd = d; best = s
 	return best
 
+## Sites that can ever warm or cheer (fires, warm or joyful buildings), kept
+## so the people's many lookups only look at those, not at the whole town.
+## Rebuilt whenever a site appears, goes, finishes or changes what it is.
+static var _env_ver: int = 0
+static var _env_key: int = -1
+static var _warm_c: Array = []
+static var _joy_c: Array = []
+
+static func env_changed() -> void:
+	_env_ver += 1
+
+static func _env_cands() -> void:
+	var key := _env_ver * 100003 + Village.sites.size()
+	if key == _env_key:
+		return
+	_env_key = key
+	_warm_c.clear()
+	_joy_c.clear()
+	for s in Village.sites:
+		if not is_instance_valid(s):
+			continue
+		var fire: bool = s.is_fire()
+		if fire or (s.building != null and s.building.warmth_radius > 0.0):
+			_warm_c.append(s)
+		if fire or (s.building != null and s.building.joy_radius > 0.0):
+			_joy_c.append(s)
+
 ## A lit fire or warm building whose radius covers `p`, or null.
 static func warmth_at(p: Vector3) -> Site:
-	for s in Village.sites:
+	_env_cands()
+	for s in _warm_c:
 		if is_instance_valid(s):
 			var r: float = s.warmth_radius()
 			if r > 0.0 and s.global_position.distance_squared_to(p) <= r * r:
@@ -1007,7 +1113,8 @@ static func warmth_at(p: Vector3) -> Site:
 	return null
 
 static func joy_at(p: Vector3) -> bool:
-	for s in Village.sites:
+	_env_cands()
+	for s in _joy_c:
 		if is_instance_valid(s):
 			var r: float = s.joy_radius()
 			if r > 0.0 and s.global_position.distance_squared_to(p) <= r * r:
@@ -1047,6 +1154,8 @@ func save_state() -> Dictionary:
 		"children_spawned": children_spawned,
 		"origin": [origin.x, origin.y, origin.z] if origin != Vector3.INF else [],
 		"raise_parent": raise_parent,
+		"burn": burn,
+		"damage": damage,
 		"field": [field_stage, field_grow, field_work, field_cure, field_quality, moisture, blight_t, dry_land, _field_rest] if is_field() else [],
 		"meta": _saved_meta(),
 	}
@@ -1061,6 +1170,7 @@ func _saved_meta() -> Dictionary:
 	return m
 
 func load_state(d: Dictionary) -> void:
+	Site.env_changed()
 	_loaded = true
 	_defs_ready = true
 	uid = int(d.get("uid", uid))
@@ -1097,6 +1207,10 @@ func load_state(d: Dictionary) -> void:
 	var o: Array = d.get("origin", [])
 	origin = Vector3(float(o[0]), float(o[1]), float(o[2])) if o.size() == 3 else pos
 	raise_parent = int(d.get("raise_parent", 0))
+	burn = float(d.get("burn", 0.0))
+	damage = float(d.get("damage", 0.0))
+	if burn > 0.0:
+		add_to_group(&"burning"); add_to_group(&"hazard")
 	var fd: Array = d.get("field", [])
 	if fd.size() >= 9:
 		field_stage = int(fd[0]); field_grow = float(fd[1]); field_work = float(fd[2]); field_cure = float(fd[3])
@@ -1107,3 +1221,203 @@ func load_state(d: Dictionary) -> void:
 	workers.clear(); inside.clear()
 	if is_inside_tree():
 		rebuild_visual()
+
+# --- Era 3: fire, storm damage, repair ----------------------------------------------
+
+## A fire catches here (Era3Threats). Everyone inside or working runs out.
+func start_burning(k: float) -> bool:
+	if burn > 0.0 or state != State.FINISHED or building == null or lift_held:
+		return false
+	burn = clampf(k, 0.01, 1.0)
+	_evacuate()
+	add_to_group(&"burning")
+	add_to_group(&"hazard")
+	ensure_child_job(&"fight_fire")
+	_update_fire_fx()
+	return true
+
+## One second of fire: it grows by itself and the fire watch beats it back.
+func burn_tick(dt: float, grow: float, douse_rate: float) -> void:
+	if burn <= 0.0:
+		return
+	burn = clampf(burn + (grow - douse_rate) * dt, 0.0, 1.0)
+	if burn <= 0.0:
+		_extinguish()
+	else:
+		_update_fire_fx()
+
+## Water on the fire (a bucket line's round, Rain from the hand).
+func douse(amount: float) -> void:
+	if burn <= 0.0:
+		return
+	burn -= amount
+	Village.stats["fire_douses"] = int(Village.stats.get("fire_douses", 0)) + 1
+	if burn <= 0.0:
+		_extinguish()
+	else:
+		_update_fire_fx()
+
+func _extinguish() -> void:
+	burn = 0.0
+	remove_from_group(&"burning")
+	remove_from_group(&"hazard")
+	remove_child_job(&"fight_fire")
+	_update_fire_fx()
+	Village.stats["fires_out"] = int(Village.stats.get("fires_out", 0)) + 1
+	Events.alert.emit("They put out the fire at the %s" % building.title.to_lower().trim_prefix("the "), global_position)
+
+## Left alone, the fire guts the building: it stands empty until it is rebuilt.
+func burn_out() -> void:
+	if burn <= 0.0:
+		return
+	burn = 0.0
+	remove_from_group(&"burning")
+	remove_from_group(&"hazard")
+	remove_child_job(&"fight_fire")
+	_update_fire_fx()
+	Village.stats["burned_out"] = int(Village.stats.get("burned_out", 0)) + 1
+	set_damage(1.0, "")
+
+## Damage (a storm's torn roof 0.4, a fire's gutting 1.0): a repair job appears.
+func set_damage(d: float, line: String) -> void:
+	if building == null or state != State.FINISHED:
+		return
+	damage = maxf(damage, clampf(d, 0.0, 1.0))
+	_evacuate()
+	ensure_child_job(&"repair_roof")
+	_update_damage_look()
+	Village.stats["buildings_damaged"] = int(Village.stats.get("buildings_damaged", 0)) + 1
+	if line != "":
+		Events.alert.emit(line, global_position)
+
+func repair(amount: float) -> void:
+	if damage <= 0.0:
+		return
+	damage = maxf(damage - amount, 0.0)
+	if damage <= 0.0:
+		remove_child_job(&"repair_roof")
+		Events.alert.emit("The %s is mended" % building.title.to_lower().trim_prefix("the "), global_position)
+	_update_damage_look()
+
+func hazard_radius() -> float:
+	return (maxf(building.footprint.x, building.footprint.y) * 0.5 + 1.5) if building != null else 2.0
+
+func _evacuate() -> void:
+	for p in _valid_workers().duplicate():
+		p.go_idle()
+	workers.clear()
+	for p in inside.duplicate():
+		if is_instance_valid(p) and p.has_method("wake"):
+			p.wake()
+	inside.clear()
+
+## The extra job site beside this building for `jid` (bucket line, repair crew).
+func ensure_child_job(jid: StringName) -> Site:
+	for c in Village.sites:
+		if is_instance_valid(c) and c.parent_uid == uid and uid != 0 and c.job != null and c.job.id == jid and not c.is_queued_for_deletion():
+			return c
+	var jd := Defs.job(jid)
+	if jd == null or not is_inside_tree():
+		return null
+	var s: Site = load(DEFAULT_SCENE).instantiate()
+	s.job = jd
+	s.parent_uid = uid
+	get_parent().add_child(s)
+	var front := global_basis * Vector3(0, 0, building.footprint.y * 0.5 + 2.2) if building != null else Vector3(2, 0, 0)
+	var p := global_position + front + (Vector3(2.2, 0, 0) if jid == &"repair_roof" else Vector3.ZERO)
+	s.global_position = Vector3(p.x, Site.ground(p.x, p.z), p.z)
+	return s
+
+func remove_child_job(jid: StringName) -> void:
+	for c in Village.sites.duplicate():
+		if is_instance_valid(c) and c.parent_uid == uid and uid != 0 and c.job != null and c.job.id == jid:
+			c.remove_site()
+
+func _update_fire_fx() -> void:
+	if burn <= 0.0:
+		if _fire_fx != null and is_instance_valid(_fire_fx):
+			_fire_fx.queue_free()
+		_fire_fx = null
+		return
+	if DisplayServer.get_name() == "headless" or building == null:
+		return
+	if _fire_fx == null or not is_instance_valid(_fire_fx):
+		_fire_fx = SiteFire.make(building.footprint)
+		add_child(_fire_fx)
+	_fire_fx.call("set_strength", burn)
+
+## A gutted or roofless building looks it: darkened by soot or weather.
+func _update_damage_look() -> void:
+	if visual == null or not is_instance_valid(visual):
+		return
+	var m: StandardMaterial3D = null
+	if damage > 0.0:
+		m = StandardMaterial3D.new()
+		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		m.albedo_color = Color(0.16, 0.11, 0.08, 0.2 + 0.3 * damage)   # soot and weather, the colours still showing
+	for c in visual.find_children("*", "GeometryInstance3D", true, false):
+		(c as GeometryInstance3D).material_overlay = m
+
+# --- Era 3: Lift Buildings ------------------------------------------------------------
+
+## The hand may lift this building now (Lift Buildings: light enough, nothing burning).
+func can_be_lifted() -> bool:
+	return state == State.FINISHED and building != null and building.weight <= Faith.strength and burn <= 0.0 \
+		and not building.camp and building.id != &"field" and raise_parent == 0 and not is_queued_for_deletion()
+
+func lift_weight() -> float:
+	return building.weight if building != null else 999.0
+
+func on_lifted() -> void:
+	lift_held = true
+	_lift_from = global_position
+	_evacuate()
+	var w = Game.world
+	if w != null and is_instance_valid(w) and w.nav != null:
+		w.nav.remove_obstacle("bld_%d" % get_instance_id())
+
+func held_follow(world_pos: Vector3) -> void:
+	global_position = world_pos
+
+## Set down where there is room on open, dry ground; else it goes back.
+func on_placed(at: Vector3) -> void:
+	lift_held = false
+	var w = Game.world
+	var ok: bool = w != null and is_instance_valid(w) and _room_at(at)
+	var to := at if ok else _lift_from
+	if not to.is_finite():
+		to = at
+	global_position = Vector3(to.x, Site.ground(to.x, to.z), to.z)
+	for c in Village.sites:
+		if is_instance_valid(c) and c.parent_uid == uid and uid != 0 and c != self:
+			var a := TAU * float(c.uid % 7) / 7.0
+			var cp := global_position + Vector3(cos(a), 0, sin(a)) * (pick_radius() + 1.5)
+			c.global_position = Vector3(cp.x, Site.ground(cp.x, cp.z), cp.z)
+	if w != null and is_instance_valid(w) and w.has_method("_on_building_finished"):
+		w._on_building_finished(self)
+	if ok:
+		Village.stats["buildings_moved"] = int(Village.stats.get("buildings_moved", 0)) + 1
+		Flags.remember("The hand picked up the %s and set it down somewhere better." % building.title.to_lower().trim_prefix("the "))
+	else:
+		Events.alert.emit("No room there: the %s goes back where it stood" % building.title.to_lower().trim_prefix("the "), global_position)
+
+func _room_at(at: Vector3) -> bool:
+	var w = Game.world
+	if w.is_water(at) or not w.is_region_open(w.region_at(at)):
+		return false
+	var fp := building.footprint
+	for dx in [-0.5, 0.0, 0.5]:
+		for dz in [-0.5, 0.0, 0.5]:
+			var q: Vector3 = at + global_basis * Vector3(dx * fp.x, 0, dz * fp.y)
+			if w.is_water(q):
+				return false
+	for o in Village.sites:
+		if o == self or not is_instance_valid(o) or o.parent_uid == uid:
+			continue
+		var r := 1.2
+		if o.building != null:
+			r = maxf(o.building.footprint.x, o.building.footprint.y) * 0.45
+		if Vector2(o.global_position.x - at.x, o.global_position.z - at.z).length() < r + maxf(fp.x, fp.y) * 0.45:
+			return false
+	return true

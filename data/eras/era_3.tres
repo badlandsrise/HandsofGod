@@ -14,4 +14,5 @@ music = &"town"
 day_seconds = 80.0
 night_seconds = 28.0
 season_seconds = 240.0
-playable = false
+playable = true
+gate_min_minutes = 55.0

@@ -57,7 +57,7 @@ static func summary(era: int) -> Dictionary:
 		"dreams": (Village.stats.get("dreams_done", []) as Array).duplicate(),
 		"winters": int(Village.stats.get("winters_survived", 0)),
 		"gifts": int(Village.stats.get("gifts", 0)),
-		"first_two": Village.alive().filter(func(p): return p.first_two).map(func(p): return p.given_name),
+		"first_two": BookData.all_records().filter(func(r): return r.get("first_two", false)).map(func(r): return str(r["name"]) + ("" if r.get("alive", false) else " (remembered)")),
 		"day": Clock.day,
 	}
 	return s

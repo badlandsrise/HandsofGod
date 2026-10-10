@@ -13,6 +13,11 @@ var valley: Valley
 var obstacles: Dictionary = {}       # key -> PackedVector3Array outline (y ignored)
 var tree_points: Array = []
 var use_tree_obstacles := true    # small holes so people walk round trunks
+## Only trunks in and around the settlement get holes: every hole multiplies
+## the navmesh's polygons, and by the Town era the open valley holds thousands
+## of trees (a 176k-polygon mesh took 23 s to bake and made every path slow).
+const TREE_HOLES_AROUND := Vector2(40.0, 10.0)
+const TREE_HOLES_WITHIN := 150.0
 var extra_faces := PackedVector3Array()   # walkable faces off the heightmap (the bridge deck)
 var _baking := false
 var _again := false
@@ -83,7 +88,7 @@ func rebake() -> void:
 		src.add_projected_obstruction(pts, valley.ground_y(c.x, c.z) - 2.0, 8.0, true)
 	for t in (tree_points if use_tree_obstacles else []):
 		var tp: Vector3 = t
-		if bounds.has_point(Vector2(tp.x, tp.z)) and _open_at(tp.x, tp.z):
+		if bounds.has_point(Vector2(tp.x, tp.z)) and _open_at(tp.x, tp.z) and Vector2(tp.x, tp.z).distance_to(TREE_HOLES_AROUND) < TREE_HOLES_WITHIN:
 			var r := 0.35
 			src.add_projected_obstruction(PackedVector3Array([tp + Vector3(-r, 0, -r), tp + Vector3(r, 0, -r), tp + Vector3(r, 0, r), tp + Vector3(-r, 0, r)]), tp.y - 2.0, 6.0, false)
 	NavigationServer3D.bake_from_source_geometry_data_async(nm, src, _on_baked.bind(nm))

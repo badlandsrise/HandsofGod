@@ -6,4 +6,10 @@
 script = ExtResource("1_def")
 id = &"observatory"
 title = "Observatory"
+footprint = Vector2(14.0, 14.0)
+cost = {&"blocks": 24, &"wood": 12, &"brass": 6, &"books": 4, &"iron": 4}
+build_work = 60.0
+build_slots = 5
+jobs = Array[StringName]([&"astronomy"])
+weight = 600.0
 era = 3

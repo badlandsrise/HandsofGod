@@ -6,8 +6,13 @@ class_name SiteVisual extends Node3D
 
 ## BuildingDef id -> catalog id, when the names differ.
 const BUILDING_ART := {&"camp": &"era2_shed", &"market": &"market_stall"}
-## Moving parts in the Era 2 kit (scripts/assets/spinner.gd) turn while someone works.
-const SPINNERS: Array[StringName] = [&"Sails", &"Wheel", &"Windlass"]
+## Moving parts in the Era 2 and 3 kits (scripts/assets/spinner.gd) turn while
+## someone works: mill sails and wheels, the well's windlass, the school bell,
+## the observatory dome, the harbour crane. The clock's hands always turn; the
+## fire station's bell rings while anything burns; the lighthouse beam turns
+## at night (Era3World).
+const SPINNERS: Array[StringName] = [&"Sails", &"Wheel", &"Windlass", &"Bell", &"Dome", &"Jib", &"Hands"]
+const ALWAYS_SPIN: Array[StringName] = [&"Hands"]
 
 var site: Site = null
 var _fill_nodes: Array[Node3D] = []   # berries, sticks, deer: shown in proportion to amount
@@ -28,7 +33,9 @@ static func make(s: Site) -> SiteVisual:
 	if s.building != null and s.building.scene != null and s.state == Site.State.FINISHED:
 		v.add_child(s.building.scene.instantiate())
 		return v
-	if s.is_plot():
+	if s.building != null and s.building.id == &"aqueduct":
+		v._aqueduct(s)
+	elif s.is_plot():
 		v._plot(s, seed_v)
 	elif s.is_field():
 		v._field(s)
@@ -41,6 +48,9 @@ static func make(s: Site) -> SiteVisual:
 	v.rotation.y = 0.0
 	for n in v.find_children("*", "", true, false):
 		if SPINNERS.has(StringName(n.name)) and "spinning" in n:
+			if ALWAYS_SPIN.has(StringName(n.name)):
+				n.set("spinning", true)
+				continue
 			v._spinners.append(n)
 			n.set("spinning", false)
 	return v
@@ -59,6 +69,8 @@ func _process(dt: float) -> void:
 		if _spin_t <= 0.0:
 			_spin_t = 0.5
 			var on := site.busy()
+			if site.building != null and site.building.id == &"fire_station":
+				on = site.get_tree().get_first_node_in_group(&"burning") != null
 			for n in _spinners:
 				if is_instance_valid(n):
 					n.set("spinning", on)
@@ -269,20 +281,23 @@ func _staged_plot(s: Site, id: StringName, seed_v: int) -> void:
 	_staged = true
 	var plot_id := StringName(str(id) + "_plot")
 	var frame_id := StringName(str(id) + "_frame")
+	# Era 3 buildings may be drawn smaller than their kit model (the great hall
+	# over the old temple): plot, frame and building all scale together.
+	var k := _fit(id, s.building.footprint) if s.building.era >= 3 else 1.0
 	if s.state == Site.State.PLOT:
 		_hut_stage = 0
-		_art(plot_id, 0)
-		_ghost(_art(id, seed_v))
+		_art(plot_id, 0, Vector3.ZERO, 0.0, k)
+		_ghost(_art(id, seed_v, Vector3.ZERO, 0.0, k))
 	elif s.awaiting_raise() or s.build_progress() < HUT_WALLS_AT or not AssetCatalog.has(id):
 		_hut_stage = 1
-		_art(frame_id if AssetCatalog.has(frame_id) else plot_id, 0)
+		_art(frame_id if AssetCatalog.has(frame_id) else plot_id, 0, Vector3.ZERO, 0.0, k)
 	else:
 		_hut_stage = 2
-		_art(plot_id, 0)
-		_rising_s = 1.0
+		_art(plot_id, 0, Vector3.ZERO, 0.0, k)
+		_rising_s = k
 		_rising_from = 0.55
-		_rising = _art(id, seed_v)
-		_rising.scale.y = _rising_from
+		_rising = _art(id, seed_v, Vector3.ZERO, 0.0, k)
+		_rising.scale.y = _rising_from * k
 
 func _material_piles(s: Site, span: float) -> void:
 	# Material piles grow as builders deliver.
@@ -325,6 +340,13 @@ func _hand_symbol(s: Site) -> void:
 	if s.building == null or s.building.camp or s.building.id == &"temple" or s.building.id == &"field":
 		return
 	var fp := s.building.footprint
+	if s.building.id == &"observatory" or s.building.id == &"great_hall":
+		# Era 3: the hand in the coloured glass over the door
+		_symbol = HandSymbol.make(1.1)
+		_symbol.position = Vector3(0, 4.2, fp.y * 0.5 * (_fit(_art_id(s.building.id), fp) if _art_id(s.building.id) != &"" else 1.0) + 0.1)
+		_symbol.visible = Trust.village_loves_hand()
+		add_child(_symbol)
+		return
 	_symbol = HandSymbol.make(0.55)
 	_symbol.position = Vector3(0, minf(2.6, 1.0 + fp.y * 0.25), fp.y * 0.5 + 0.06)
 	_symbol.visible = Trust.village_loves_hand()
@@ -386,3 +408,43 @@ func _building(bid: StringName, fp: Vector2, seed_v: int) -> void:
 		_art(id, seed_v, Vector3.ZERO, 0.0, _fit(id, fp))
 	else:
 		_art(&"hut_plot", 0, Vector3.ZERO, 0.0, maxf(fp.x, fp.y) / 4.0)
+
+# ---------------------------------------------------------------- the aqueduct
+
+## The aqueduct (Era 3): the castellum at the town end (the site itself) and
+## its arches walking east to the spring, 12 m apart and level with the
+## castellum, on stone plinths where the ground dips. Pegged out while the
+## materials come in, timber frames while it waits for its raising crew, and
+## stone when it is raised.
+func _aqueduct(s: Site) -> void:
+	var finished := s.state == Site.State.FINISHED
+	var framed := s.state == Site.State.BUILDING
+	_art(&"aqueduct_end" if finished else &"aqueduct_plot", 0)
+	if not finished:
+		_ghost(_art(&"aqueduct_end", 0))
+	var level := s.global_position.y
+	var stone := StandardMaterial3D.new()
+	stone.albedo_color = Color(0.62, 0.58, 0.52)
+	stone.roughness = 0.95
+	for i in LayoutEra3.AQUEDUCT_SEGMENTS:
+		var lx := -(LayoutEra3.AQUEDUCT_FIRST + LayoutEra3.AQUEDUCT_SEGMENT * float(i))
+		var at := Vector3(lx, 0, 0)
+		if finished:
+			_art(&"aqueduct", i, at)
+		elif framed:
+			_art(&"aqueduct_frame", i, at)
+		else:
+			_ghost(_art(&"aqueduct", i, at))
+			continue
+		for px in [-4.0, 0.0, 4.0]:
+			var wp := s.to_global(Vector3(lx + px, 0, 0))
+			var g := Site.ground(wp.x, wp.z)
+			var drop := level - g
+			if drop > 0.12:
+				var mi := MeshInstance3D.new()
+				var bm := BoxMesh.new()
+				bm.size = Vector3(1.5, drop + 0.4, 1.5)
+				mi.mesh = bm
+				mi.material_override = stone
+				mi.position = Vector3(lx + px, -drop * 0.5 + 0.1, 0)
+				add_child(mi)

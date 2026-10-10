@@ -13,7 +13,7 @@ const FOOD_PER_PERSON_PER_DAY := 1.0
 const RELEVANT := {
 	1: [&"wood", &"stone"],
 	2: [&"wood", &"stone", &"grain", &"flour", &"water"],
-	3: [&"wood", &"stone", &"iron", &"cloth"],
+	3: [&"wood", &"blocks", &"iron", &"books"],
 	4: [&"steel", &"fuel", &"parts"],
 }
 const STORE_COLORS := {
@@ -411,6 +411,15 @@ func _on_power_pressed(id: StringName) -> void:
 		if d.gesture and hand != null and &"selected_power" in hand:
 			hand.selected_power = id
 			add_toast("%s selected. Hold E over the world." % d.title)
+		elif id == &"lift_buildings" and hand != null and &"selected_power" in hand:
+			# a mode, not a gesture: houses can be picked up while it is selected
+			if hand.selected_power == id:
+				hand.selected_power = &""
+				add_toast("Lift Buildings put away.")
+			else:
+				hand.selected_power = id
+				add_toast("Lift Buildings: click a house to pick it up, click again to set it down. Press again to stop.")
+			_refresh_powers()
 		return
 	if d.free:
 		add_toast("Your people will open this one.")

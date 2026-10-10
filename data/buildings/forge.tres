@@ -6,4 +6,11 @@
 script = ExtResource("1_def")
 id = &"forge"
 title = "Forge"
+footprint = Vector2(10.0, 7.0)
+cost = {&"stone": 10, &"blocks": 4, &"clay": 4}
+build_work = 40.0
+build_slots = 3
+jobs = Array[StringName]([&"forge_iron", &"cast_brass"])
+warmth_radius = 5.0
+weight = 80.0
 era = 3

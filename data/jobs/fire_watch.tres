@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="JobDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/defs/job_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"fire_watch"
+title = "Fire watch"
+era = 3
+kind = 4
+skill = &"engineering"
+max_people = 3
+work_time = 15.0

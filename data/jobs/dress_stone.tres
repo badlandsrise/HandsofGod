@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="JobDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/defs/job_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"dress_stone"
+title = "Dress stone into blocks"
+era = 3
+kind = 1
+skill = &"building"
+max_people = 3
+inputs = {&"stone": 2}
+outputs = {&"blocks": 1}
+work_time = 9.0

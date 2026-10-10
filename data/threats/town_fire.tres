@@ -6,8 +6,9 @@
 script = ExtResource("1_def")
 id = &"town_fire"
 era = 3
-warning_seconds = 15.0
-only_at_night = false
-season = -1
-min_population = 40
+warning_seconds = 20.0
+duration_seconds = 160.0
+min_population = 30
 chance_per_day = 0.1
+warning_text = "Smoke over the rooftops! The bell is ringing."
+start_text = "Fire! Set people on the bucket line by the burning house, or hold Rain over it."

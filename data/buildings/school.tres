@@ -6,4 +6,11 @@
 script = ExtResource("1_def")
 id = &"school"
 title = "School"
+footprint = Vector2(10.0, 10.0)
+cost = {&"wood": 20, &"blocks": 14, &"stone": 6}
+build_work = 50.0
+build_slots = 4
+jobs = Array[StringName]([&"attend_school"])
+joy_radius = 8.0
+weight = 120.0
 era = 3

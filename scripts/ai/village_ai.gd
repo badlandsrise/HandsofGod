@@ -14,6 +14,7 @@ var progression: Progression
 var hand_powers: HandPowers
 var era_transition: EraTransition
 var era2: VillageEra2
+var era3: VillageEra3
 var _last_season: int = -1
 
 func _ready() -> void:
@@ -27,6 +28,7 @@ func _ready() -> void:
 	hand_powers = HandPowers.new(); add_child(hand_powers)
 	era_transition = EraTransition.new(); add_child(era_transition)
 	era2 = VillageEra2.new(); add_child(era2)
+	era3 = VillageEra3.new(); add_child(era3)
 	_last_season = Clock.season
 	Events.season_changed.connect(_on_season)
 

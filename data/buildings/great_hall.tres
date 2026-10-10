@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="BuildingDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/defs/building_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"great_hall"
+title = "Great Hall of the Hand"
+footprint = Vector2(9.0, 19.5)
+cost = {&"blocks": 30, &"wood": 20, &"cloth": 6, &"books": 4, &"iron": 4}
+build_work = 1.0
+build_slots = 6
+jobs = Array[StringName]([&"pray_hall"])
+raise_job = &"great_hall_raising"
+joy_radius = 16.0
+replaces = Array[StringName]([&"temple", &"shrine", &"cairn", &"drying_rack"])
+weight = 800.0
+era = 3

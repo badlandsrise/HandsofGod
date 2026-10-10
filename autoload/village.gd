@@ -30,7 +30,11 @@ func alive() -> Array:
 	return people.filter(func(p): return is_instance_valid(p) and p.alive())
 
 func population() -> int:
-	return alive().size()
+	var n := 0
+	for p in people:
+		if is_instance_valid(p) and p.alive():
+			n += 1
+	return n
 
 func store(kind: StringName) -> int:
 	return stores.get(kind, 0)

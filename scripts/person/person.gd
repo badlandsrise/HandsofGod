@@ -35,7 +35,11 @@ const GRAVITY := 20.0
 const HAND_NEAR := 4.0
 const ARRIVE := 0.35
 const SKILL_PER_CYCLE := 0.04
-const LIGHT_JOBS: Array[StringName] = [&"gather_berries", &"fetch_water", &"draw_water", &"herd_sheep", &"rich_berries"]   # children, from Era 2
+const LIGHT_JOBS: Array[StringName] = [&"gather_berries", &"fetch_water", &"draw_water", &"herd_sheep", &"rich_berries", &"attend_school"]   # children, from Era 2 (school from Era 3)
+## Era 3 sickness: a sick person works at half pace and mends in about this
+## many game seconds (six times faster resting at the clinic, twice when blessed).
+const SICK_TIME := 150.0
+const CLINIC_HEAL := 6.0
 const HOME_RANGE := 90.0                # beyond this a worker sleeps at the nearest shelter (a far-bank camp)
 const WISH_LIFETIME := 90.0
 const WISH_GAP := Vector2(600.0, 1100.0)    # game seconds between a granted wish and the next
@@ -77,6 +81,7 @@ var bonds: Dictionary = {}              # other uid -> bond progress (births.gd)
 var last_birth_age: float = -1000.0
 var named_by_hand: bool = false         # the hand chose this name (first two, baby prayers): a hand mark in the Book
 var first_two: bool = false             # one of the two people of the storm night
+var sick_t: float = 0.0                 # Era 3: seconds of sickness left (never fatal)
 var _cold_t: float = 0.0                # seconds spent frozen (warmth 0): a cold makes them sick
 var _sick_cd: float = 0.0
 
@@ -145,8 +150,8 @@ func _ready() -> void:
 		_apply_opts()
 	_build_nodes()
 	_refresh_look()
-	if not Events.sim_tick.is_connected(sim):
-		Events.sim_tick.connect(sim)
+	if not Events.sim_tick.is_connected(_on_sim_tick):
+		Events.sim_tick.connect(_on_sim_tick)
 		Events.day_started.connect(_on_day)
 		Events.night_started.connect(_on_night)
 		Events.era_changed.connect(_on_era)
@@ -272,6 +277,7 @@ func on_placed(at: Vector3, site: Site) -> void:
 	if not alive():
 		return
 	state = S.FALL
+	_path_to = Vector3.INF          # walk on from where the hand set them down
 	_fall_to = at
 	_fall_site = site
 	_vel_y = 0.0
@@ -304,6 +310,7 @@ func status_text() -> String:
 	if needs[&"warmth"] < 0.3: parts.append("cold")
 	if needs[&"joy"] < 0.25: parts.append("sad")
 	if blessed_t > 0.0: parts.append("blessed")
+	if sick_t > 0.0: parts.append("sick (carry them to the clinic)" if not at_clinic() else "sick, resting at the clinic")
 	if wish != &"":
 		parts.append("wants: " + _wish_title())
 	return " · ".join(parts)
@@ -328,10 +335,13 @@ func rate() -> float:
 	if trust >= 5: r *= 1.25
 	if blessed_t > 0.0: r *= 2.0
 	if stage == Stage.ELDER: r *= 0.6
+	if sick_t > 0.0: r *= 0.5
 	var jd := _job_def()
 	if jd != null:
 		r *= 1.0 + 0.1 * float(stars(_family(jd.skill)) - 1)
-		if Flags.has(&"bronze_tools") and jd.kind in [JobDef.Kind.GATHER, JobDef.Kind.CRAFT, JobDef.Kind.TEND]:
+		if Flags.has(&"iron_tools") and jd.kind in [JobDef.Kind.GATHER, JobDef.Kind.CRAFT, JobDef.Kind.TEND, JobDef.Kind.BUILD]:
+			r *= 1.7           # iron tools: +70% (Era 3), building too
+		elif Flags.has(&"bronze_tools") and jd.kind in [JobDef.Kind.GATHER, JobDef.Kind.CRAFT, JobDef.Kind.TEND]:
 			r *= 1.5           # bronze tools: +50% (doc 4, Era 2)
 		elif jd.kind == JobDef.Kind.GATHER and Flags.has(&"stone_tools"):
 			r *= 1.25          # stone tools: +25% gather speed (doc 4)
@@ -572,6 +582,34 @@ func hurt(amount: float = 1.0, cause: StringName = &"") -> void:
 func is_hurt() -> bool:
 	return hurt_t > 0.0
 
+## Era 3 sickness (never fatal): slower work until they mend.
+func fall_sick() -> void:
+	if state == S.DEAD or sick_t > 0.0 or stage == Stage.BABY:
+		return
+	sick_t = SICK_TIME * Game.rng.randf_range(0.85, 1.15)
+	Village.stats["fell_sick"] = int(Village.stats.get("fell_sick", 0)) + 1
+	if visual: visual.set_hurt(0.6)
+
+func is_sick() -> bool:
+	return sick_t > 0.0
+
+## Resting at the clinic (placed there by the hand): mending fast, not passing it on.
+func at_clinic() -> bool:
+	return job_site != null and is_instance_valid(job_site) and job_site.job != null and job_site.job.id == &"rest_at_clinic" and is_present_at(job_site, 1.6)
+
+func _sim_sick(dt: float) -> void:
+	var k := 1.0
+	if at_clinic():
+		k = CLINIC_HEAL
+	if blessed_t > 0.0:
+		k *= 2.0
+	sick_t = maxf(sick_t - dt * k, 0.0)
+	if sick_t <= 0.0:
+		Village.stats["got_well"] = int(Village.stats.get("got_well", 0)) + 1
+		if visual: visual.set_hurt(0.0)
+		if at_clinic():
+			go_idle()     # mended: back to their life
+
 func sim(dt: float) -> void:
 	if state == S.DEAD:
 		return
@@ -586,6 +624,8 @@ func sim(dt: float) -> void:
 	if hurt_t > 0.0:
 		hurt_t = maxf(hurt_t - dt * (2.0 if blessed_t > 0.0 else 1.0), 0.0)
 		if visual: visual.set_hurt(clampf(hurt_t / HURT_TIME, 0.0, 1.0) * 0.8)
+	if sick_t > 0.0:
+		_sim_sick(dt)
 	match state:
 		S.IDLE: _sim_idle(dt)
 		S.WALK:
@@ -624,7 +664,14 @@ func _sim_needs(dt: float) -> void:
 	needs[&"food"] -= DECAY[&"food"] * Flags.diff_k(&"food") * dt
 	needs[&"water"] -= DECAY[&"water"] * dt
 	var sheltered := state == S.SHELTER and _phase == "inside"
-	var warm_src := sheltered or warmed_t > 0.0 or Site.warmth_at(global_position) != null
+	# Which fires and joyful places are near: looked up a few times a second,
+	# not every tick (a town has a lot of buildings to look through).
+	_env_t -= dt
+	if _env_t <= 0.0:
+		_env_t = ENV_EVERY
+		_env_warm = Site.warmth_at(global_position) != null
+		_env_joy = Site.joy_at(global_position)
+	var warm_src := sheltered or warmed_t > 0.0 or _env_warm
 	var w: float = needs[&"warmth"]
 	if warm_src:
 		w += 0.04 * dt
@@ -657,7 +704,7 @@ func _sim_needs(dt: float) -> void:
 		_has_company = _near_someone(3.0)
 	if _has_company:
 		j += (0.008 if has_trait(&"sociable") else 0.004) * dt
-	if Site.joy_at(global_position):
+	if _env_joy:
 		j += 0.006 * dt
 	needs[&"joy"] = j
 	for k in NEED_KEYS:
@@ -667,6 +714,11 @@ func _sim_needs(dt: float) -> void:
 			Events.person_need_low.emit(self, k)
 		elif needs[k] > 0.4:
 			_low[k] = false
+
+const ENV_EVERY := 0.4
+var _env_t: float = 0.0
+var _env_warm: bool = false
+var _env_joy: bool = false
 
 func _near_someone(r: float) -> bool:
 	var r2 := r * r
@@ -748,7 +800,7 @@ func _sim_idle(dt: float) -> void:
 	if _decide_t > 0.0:
 		return
 	_decide_t = Game.rng.randf_range(1.5, 3.5)
-	if Village.era >= 3 and autonomy_hook.is_valid() and stage != Stage.CHILD:
+	if Village.era >= 3 and autonomy_hook.is_valid():
 		if autonomy_hook.call(self):
 			return
 	# Era 2 autonomy (doc 3): children copy a parent's light job.
@@ -854,12 +906,21 @@ func _nearest_person(r: float) -> Person:
 	return best
 
 func _a_parent() -> Person:
+	# asked every frame for a baby on a hip: looked up again twice a second
+	if absf(Clock.total_t - _parent_t) < 0.5 and (_parent == null or (is_instance_valid(_parent) and _parent.alive())):
+		return _parent
+	_parent_t = Clock.total_t
 	var best: Person = null
-	for p in Village.people:
-		if is_instance_valid(p) and p.alive() and parents.has(p.uid):
-			if best == null or (p.sex == "f" and best.sex != "f"):
-				best = p
+	if not parents.is_empty():
+		for p in Village.people:
+			if is_instance_valid(p) and p.alive() and parents.has(p.uid):
+				if best == null or (p.sex == "f" and best.sex != "f"):
+					best = p
+	_parent = best
 	return best
+
+var _parent: Person = null
+var _parent_t: float = -10.0
 
 # --- work -----------------------------------------------------------------------------
 
@@ -1040,7 +1101,8 @@ func _work_build(dt: float, s: Site) -> void:
 				_go(_store_slot(), WALK_SPEED)
 			if _arrived():
 				# a bundle for a long walk (the bridge, a far-bank plot), one more if strong
-				var want := 1 + clampi(int(global_position.distance_to(s.global_position) / BUNDLE_PER_M), 0, BUNDLE_MAX - 1)
+				var bmax := BUNDLE_MAX * (2 if Flags.has(&"carts") else 1)     # Era 3 carts
+				var want := 1 + clampi(int(global_position.distance_to(s.global_position) / BUNDLE_PER_M), 0, bmax - 1)
 				if has_trait(&"strong"):
 					want += 1
 				var extra := mini(want - 1, mini(s.remaining(_reserved), Village.store(_reserved) - 1))
@@ -1228,10 +1290,48 @@ func _arrived() -> bool:
 	d.y = 0.0
 	return d.length() <= ARRIVE
 
+## Fast-forward: at 3x and up a town of a hundred thinks on every second sim
+## tick and walks on every second physics step (each person in turn, with the
+## time of the steps it skipped); at 5x and up on every third. A tick is a
+## tenth of a game second, so at those speeds nobody can tell.
+const FAST_SCALE := 2.9
+const FASTER_SCALE := 4.5
+var _sim_acc: float = 0.0
+var _move_acc: float = 0.0
+var _move_n: int = 0
+
+static func _stride() -> int:
+	return 1 if Engine.time_scale < FAST_SCALE else (2 if Engine.time_scale < FASTER_SCALE else 3)
+
+func _on_sim_tick(dt: float) -> void:
+	var k := _stride()
+	if k == 1 or state == S.HELD or state == S.FALL:
+		if _sim_acc > 0.0:
+			dt += _sim_acc
+			_sim_acc = 0.0
+		sim(dt)
+		return
+	_sim_acc += dt
+	if (Clock.tick_n + uid) % k == 0:
+		var d := _sim_acc
+		_sim_acc = 0.0
+		sim(d)
+
 func _physics_process(delta: float) -> void:
 	if not Clock.running and state != S.FALL:
 		if visual: visual.animate(delta, _pose(), false, Vector3.INF)
 		return
+	var k := _stride()
+	if k > 1 and state != S.FALL and state != S.HELD and stage != Stage.BABY:
+		_move_acc += delta
+		_move_n += 1
+		if (_move_n + uid) % k != 0:
+			return
+		delta = _move_acc
+		_move_acc = 0.0
+	elif _move_acc > 0.0:
+		delta += _move_acc
+		_move_acc = 0.0
 	motion(delta)
 
 func _process(delta: float) -> void:
@@ -1239,6 +1339,11 @@ func _process(delta: float) -> void:
 		_dead_t += delta
 		if _dead_t > 4.0:
 			queue_free()
+	# Animation runs once per drawn frame, not once per physics step: at 3x
+	# speed a frame holds several physics steps, and a town holds a hundred people.
+	if visual and _anim_dt > 0.0:
+		visual.animate(_anim_dt, _pose(), _moving, _hand_look())
+		_anim_dt = 0.0
 
 ## Moves and animates the person by `dt` seconds.
 func motion(dt: float) -> void:
@@ -1260,8 +1365,9 @@ func motion(dt: float) -> void:
 				_react_to_hand(dt)
 				if _target != Vector3.INF and not _frozen():
 					_step(dt)
-	if visual:
-		visual.animate(dt, _pose(), _moving, _hand_look())
+	_anim_dt += dt
+
+var _anim_dt: float = 0.0
 
 func _step(dt: float) -> void:
 	var pos := global_position
@@ -1282,11 +1388,7 @@ func _step(dt: float) -> void:
 			_stuck_t = 0.0
 			_no_nav_t = 4.0
 	if _no_nav_t <= 0.0 and _use_nav():
-		if nav.target_position.distance_to(_target) > 0.3:
-			nav.target_position = _target
-		var nxt := nav.get_next_path_position()
-		var nd := nxt - pos
-		nd.y = 0.0
+		var nd := _path_dir(pos)
 		if nd.length() > 0.05:
 			dir = nd
 	var spd := _speed
@@ -1302,6 +1404,36 @@ func _step(dt: float) -> void:
 	rotation.y = lerp_angle(rotation.y, atan2(dir.x, dir.z), minf(10.0 * dt, 1.0))
 	_moving = true
 
+## Walking a path: asked of the navigation map once per destination (and
+## again when the map is rebaked), then followed corner by corner. Asking a
+## NavigationAgent every step costs most of a town's frame.
+const CORNER_REACHED := 0.6
+var _path: PackedVector3Array = PackedVector3Array()
+var _path_i: int = 0
+var _path_to: Vector3 = Vector3.INF
+var _path_map_it: int = -1
+
+## Flat direction toward the next corner of the path to _target.
+func _path_dir(pos: Vector3) -> Vector3:
+	var it := NavigationServer3D.map_get_iteration_id(_nav_map)
+	if it != _path_map_it or not _path_to.is_finite() or _path_to.distance_to(_target) > 0.3:
+		_path_to = _target
+		_path_map_it = it
+		_path = NavigationServer3D.map_get_path(_nav_map, pos, _target, true, nav.navigation_layers if nav != null else 1)
+		_path_i = 0
+	while _path_i < _path.size():
+		var c := _path[_path_i]
+		if Vector2(c.x - pos.x, c.z - pos.z).length() > CORNER_REACHED:
+			break
+		_path_i += 1
+	if _path_i >= _path.size():
+		return Vector3.ZERO
+	var d := _path[_path_i] - pos
+	d.y = 0.0
+	return d
+
+var _nav_map: RID = RID()
+
 func _use_nav() -> bool:
 	_nav_check_t -= get_physics_process_delta_time()
 	if _nav_check_t <= 0.0:
@@ -1310,6 +1442,7 @@ func _use_nav() -> bool:
 		if nav != null and is_inside_tree() and get_world_3d() != null:
 			var map := get_world_3d().navigation_map
 			_nav_ok = NavigationServer3D.map_get_iteration_id(map) > 0 and NavigationServer3D.map_get_regions(map).size() > 0
+			_nav_map = map
 	return _nav_ok
 
 func _fall(dt: float) -> void:
@@ -1342,10 +1475,18 @@ func _land() -> void:
 func _carrying_baby() -> bool:
 	if children.is_empty():
 		return false
+	if absf(Clock.total_t - _carry_t) < 0.5:
+		return _carry
+	_carry_t = Clock.total_t
+	_carry = false
 	for p in Village.people:
 		if is_instance_valid(p) and p.stage == Stage.BABY and p.alive() and p.parents.has(uid) and p._carrier() == self:
-			return true
-	return false
+			_carry = true
+			break
+	return _carry
+
+var _carry: bool = false
+var _carry_t: float = -10.0
 
 func _carrier() -> Person:
 	return _a_parent()
@@ -1537,7 +1678,7 @@ func save_state() -> Dictionary:
 		"trust_f": trust_f, "wish": str(wish), "wish_t": wish_t,
 		"job": job_uid, "home": home.uid if home != null and is_instance_valid(home) else 0,
 		"shelter": inside_uid, "state": st, "placed_by_hand": placed_by_hand, "wanderer": wanderer,
-		"blessed_t": blessed_t, "hurt_t": hurt_t, "named_by_hand": named_by_hand, "first_two": first_two, "look": look, "bonds": bd, "last_birth_age": last_birth_age,
+		"blessed_t": blessed_t, "hurt_t": hurt_t, "sick_t": sick_t, "named_by_hand": named_by_hand, "first_two": first_two, "look": look, "bonds": bd, "last_birth_age": last_birth_age,
 		"pos": [p.x, p.y, p.z], "rot_y": rotation.y,
 	}
 
@@ -1569,8 +1710,12 @@ func load_state(d: Dictionary) -> void:
 	wanderer = bool(d.get("wanderer", false))
 	blessed_t = float(d.get("blessed_t", 0.0))
 	hurt_t = float(d.get("hurt_t", 0.0))
+	sick_t = float(d.get("sick_t", 0.0))
 	named_by_hand = bool(d.get("named_by_hand", false))
 	first_two = bool(d.get("first_two", false))
+	if first_two:
+		# saves from before the first two were given their longer lives
+		death_age = maxf(death_age, DEATH_AGE + LayoutEra1.FIRST_TWO_EXTRA_LIFE)
 	var lk: Dictionary = d.get("look", {})
 	look = {"skin": int(lk.get("skin", 0)), "hair": int(lk.get("hair", 0)), "height": float(lk.get("height", 1.0))}
 	if lk.has("outfit"):

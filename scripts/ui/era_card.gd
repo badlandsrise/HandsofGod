@@ -80,7 +80,28 @@ static func summary(e: int) -> Dictionary:
 		"dreams": dreams,
 		"gifts": gifts.map(func(g): return str(g.get("kind", "gift"))),
 		"memory": memory,
+		"first_two": EraCard.first_two(),
 	}
+
+## The two people of the storm night, alive or remembered: [{name, alive}].
+static func first_two() -> Array:
+	var out: Array = []
+	for r in BookData.all_records():
+		if bool(r.get("first_two", false)):
+			out.append({"name": str(r.get("name", "?")), "alive": bool(r.get("alive", false))})
+	return out
+
+## "Ona and Tuk, the first two, are still with us" / "... are remembered" / mixed.
+static func first_two_line(ft: Array) -> String:
+	if ft.is_empty():
+		return ""
+	var alive: Array = ft.filter(func(x): return x["alive"]).map(func(x): return x["name"])
+	var gone: Array = ft.filter(func(x): return not x["alive"]).map(func(x): return x["name"])
+	if gone.is_empty():
+		return "%s, the first two, %s still with us" % [BookData.join_names(alive), "are" if alive.size() > 1 else "is"]
+	if alive.is_empty():
+		return "%s, the first two, %s remembered" % [BookData.join_names(gone), "are" if gone.size() > 1 else "is"]
+	return "%s of the first two is still with us; %s is remembered" % [BookData.join_names(alive), BookData.join_names(gone)]
 
 func show_era(e: int) -> void:
 	if _open or e <= 0:
@@ -154,6 +175,12 @@ func _build() -> void:
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		nv.add_child(l)
 		nums.add_child(nv)
+	# the first two, alive or remembered
+	var ftl := EraCard.first_two_line(d.get("first_two", []))
+	if ftl != "":
+		var fl := UiTheme.wrap(UiTheme.ink_label(ftl, 18, &"italic", UiTheme.INK_SOFT))
+		fl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		v.add_child(fl)
 	# dreams
 	if not (d["dreams"] as Array).is_empty():
 		var dh := UiTheme.ink_label("Dreams that came true", 22, &"title", UiTheme.INK_RED)

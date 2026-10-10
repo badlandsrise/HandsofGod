@@ -5,7 +5,21 @@ class_name Flags extends RefCounted
 ## Village Book.
 
 static func has(id: StringName) -> bool:
-	return (Village.stats.get("flags", []) as Array).has(str(id))
+	var a = Village.stats.get("flags", null)
+	if not (a is Array):
+		return false
+	# asked thousands of times a second by a town: a set, rebuilt when the list changes
+	if not is_same(a, _src) or (a as Array).size() != _n:
+		_src = a
+		_n = (a as Array).size()
+		_set.clear()
+		for f in a:
+			_set[StringName(str(f))] = true
+	return _set.has(id)
+
+static var _set: Dictionary = {}
+static var _src = null
+static var _n: int = -1
 
 ## Sets a flag. Returns true the first time.
 static func set_flag(id: StringName) -> bool:

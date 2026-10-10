@@ -10,6 +10,7 @@ const TICK := 0.1
 const SPEEDS: Array[float] = [0.0, 1.0, 2.0, 3.0]
 
 var speed_index: int = 1
+var tick_n: int = 0                 # sim ticks so far (people think on alternate ticks at fast speeds)
 var day: int = 1
 var is_night: bool = false
 var season: int = Season.SPRING
@@ -55,6 +56,7 @@ func day_fraction() -> float:
 func season_fraction() -> float:
 	return season_t / season_seconds
 
+
 func _process(delta: float) -> void:
 	var now := Time.get_ticks_usec()
 	real_delta = minf((now - _last_us) / 1000000.0, 0.1)
@@ -84,6 +86,7 @@ func _process(delta: float) -> void:
 	while _acc >= TICK and n < 8:
 		_acc -= TICK
 		n += 1
+		tick_n += 1
 		Events.sim_tick.emit(TICK)
 
 func save_state() -> Dictionary:

@@ -6,7 +6,12 @@
 script = ExtResource("1_def")
 id = &"observatory"
 era = 3
-text = "A house for watching the stars."
 gate = true
+text = "A house on the hilltop for watching the stars."
+voice = "The hand came from somewhere. We dream of a house on the quarry hilltop for watching the stars, to see where."
 needs_buildings = {&"observatory": 1}
+needs_flags = Array[StringName]([&"star_charts"])
+needs_regions = Array[StringName]([&"coast"])
+needs_population = 88
+quiet_before = 120.0
 reward_faith = 15.0

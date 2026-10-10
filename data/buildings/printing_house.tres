@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="BuildingDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/defs/building_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"printing_house"
+title = "Printing house"
+footprint = Vector2(11.0, 8.0)
+cost = {&"wood": 12, &"blocks": 6, &"iron": 2}
+build_work = 45.0
+build_slots = 3
+jobs = Array[StringName]([&"print_books"])
+weight = 100.0
+era = 3

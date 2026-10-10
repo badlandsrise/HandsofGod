@@ -94,10 +94,10 @@ static func winters_since_start(d: DreamDef) -> int:
 	return int(Village.stats.get("winters_survived", 0)) - int(Village.stats.get("dream_started_winters", 0))
 
 static func region_title(r: StringName) -> String:
-	return {&"east_bank": "the East Bank", &"southern_plains": "the Southern Plains", &"hill_quarry": "the Hill Quarry"}.get(r, str(r).replace("_", " "))
+	return {&"east_bank": "the East Bank", &"southern_plains": "the Southern Plains", &"hill_quarry": "the Hill Quarry", &"coast": "the Coast"}.get(r, str(r).replace("_", " "))
 
 static func flag_title(f: StringName) -> String:
-	return {&"festival": "the first festival", &"harvest_festival": "a harvest festival"}.get(f, str(f).replace("_", " "))
+	return {&"festival": "the first festival", &"harvest_festival": "a harvest festival", &"star_charts": "the star charts"}.get(f, str(f).replace("_", " "))
 
 ## 0..1 how far along the dream is (pips for the HUD).
 static func progress(d: DreamDef) -> float:

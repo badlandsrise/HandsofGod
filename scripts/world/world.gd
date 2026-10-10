@@ -31,6 +31,7 @@ var nav: Nav
 var threats: Threats
 var wolves: Wolves
 var era2: Era2World
+var era3: Era3World
 var fire: FirePit
 var storm: StormOpening
 var dynamic: Node3D
@@ -129,6 +130,9 @@ func build() -> void:
 	era2 = Era2World.new()
 	add_child(era2)
 	era2.setup(self)
+	era3 = Era3World.new()
+	add_child(era3)
+	era3.setup(self)
 	threats = Threats.new()
 	add_child(threats)
 	wolves = threats.wolves
@@ -154,6 +158,7 @@ func _keep_out_zones() -> Array:
 		for spot in LayoutEra1.PLOT_SPOTS[id]:
 			z.append([spot, 5.0 if id == &"stone_circle" else 3.5])
 	z.append_array(LayoutEra2.keep_out())
+	z.append_array(LayoutEra3.keep_out())
 	return z
 
 func _v3(p: Vector2, lift: float = 0.0) -> Vector3:
@@ -548,7 +553,7 @@ func spawn_plot(building_id: StringName, at: Vector3) -> Site:
 		if building_id == &"bridge" and era2 != null:
 			y = era2.bank_height(Vector2(at.x, at.z))    # rests on the banks, over the water
 		s.position = Vector3(at.x, y, at.z)
-		s.rotation.y = b.yaw
+		s.rotation.y = LayoutEra3.YAW.get(building_id, b.yaw)
 	dynamic.add_child(s)
 	return s as Site
 
@@ -637,6 +642,8 @@ func _open_region_visual(id: StringName, instant: bool) -> void:
 			nav.remove_obstacle("meadow_log_%d" % i)
 	if era2 != null:
 		era2.on_region_opened(id, instant)
+	if era3 != null:
+		era3.on_region_opened(id, instant)
 	if instant:
 		return
 	regions.lighten(id)
@@ -693,6 +700,8 @@ func edge_point(region: StringName) -> Vector3:
 	var r := Valley.canon(region)
 	if LayoutEra2.EDGES.has(r) and is_region_open(r):
 		return _v3(LayoutEra2.EDGES[r])
+	if LayoutEra3.EDGES.has(r) and is_region_open(r):
+		return _v3(LayoutEra3.EDGES[r])
 	if r == &"western_meadow" or (r == &"" and is_region_open(&"western_meadow")):
 		return _v3(Vector2(-185.0, 8.0))
 	if r == &"valley_floor" or (r == &"" and is_region_open(&"valley_floor")):
@@ -705,6 +714,8 @@ func _on_era_changed(e: int) -> void:
 		camera_rig.max_dist = minf(75.0 + 20.0 * float(e - 1), 120.0)
 	if era2 != null:
 		era2.refresh()
+	if era3 != null:
+		era3.refresh()
 
 func _on_building_finished(site) -> void:
 	if not is_instance_valid(site) or not (site is Node3D):
@@ -763,6 +774,7 @@ static func _replaced_by(b: BuildingDef, s: Site) -> bool:
 func plot_spots(building_id: StringName) -> Array:
 	var out: Array = LayoutEra1.PLOT_SPOTS.get(building_id, []).duplicate()
 	out.append_array(LayoutEra2.spots(building_id))
+	out.append_array(LayoutEra3.spots(building_id))
 	return out
 
 func _ensure_active_dream_plots() -> void:
@@ -818,6 +830,8 @@ func clear_dynamic() -> void:
 		threats.reset()
 	if era2:
 		era2.reset()
+	if era3:
+		era3.reset()
 	trunk_site = null
 	_restart_village_ai()
 
@@ -871,6 +885,7 @@ func save_state() -> Dictionary:
 		"weather": [look.rain_target, look.storm],
 		"threats": threats.save_state(),
 		"era2": era2.save_state(),
+		"era3": era3.save_state(),
 		"opened_at": opened_at.keys().map(func(k): return [str(k), opened_at[k]]),
 	}
 
@@ -901,6 +916,7 @@ func load_state(d: Dictionary, nodes: Array) -> void:
 	Clock.apply_era(Defs.era(Village.era))
 	Save.restore_nodes(dynamic, nodes)
 	era2.load_state(d.get("era2", {}))
+	era3.load_state(d.get("era3", {}))
 	threats.load_state(d.get("threats", {}))
 	apply_safety_net()
 	_ensure_active_dream_plots()

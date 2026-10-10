@@ -8,7 +8,13 @@ class_name HandPowers extends Node
 ##            people the hand sets down are blessed as well.
 ##   rain     (Era 2) rain falls from the hand onto the fields near `at`:
 ##            they drink it up, the answer to a drought and the way the dry
-##            Southern Plains are farmed.
+##            Southern Plains are farmed. (Era 3) Over a burning building it
+##            beats the fire down.
+##   calm_waters  (Era 3) over the sea: the waves lie down for a while, so
+##            the ship can sail to the islands (Era3World.calm)
+##   guiding_light (Era 3) at night over the sky: the northern lights come
+##            out, and astronomers at the observatory work twice as fast
+## In a storm (Era 3) Warmth held over people also shields them from the gusts.
 
 const RADIUS := 3.5
 const FIRE_RADIUS := 7.0
@@ -17,6 +23,8 @@ const BLESS_SECONDS := 30.0
 const FIRE_FUEL_PER_PULSE := 4.0
 const RAIN_RADIUS := 7.0
 const RAIN_PER_PULSE := 0.08
+const RAIN_DOUSE := 0.05
+const GUIDE_SECONDS := 20.0
 
 var _rain_fx: CPUParticles3D = null
 var _rain_t: float = 0.0
@@ -35,8 +43,54 @@ func on_gesture(id: StringName, at: Vector3) -> int:
 			return bless_at(at)
 		&"rain":
 			_show_rain(at)
-			return rain_at(at)
+			return rain_at(at) + douse_at(at)
+		&"calm_waters":
+			return calm_at(at)
+		&"guiding_light":
+			return guide_at(at)
 	return 0
+
+## Rain on a burning building beats the fire down.
+static func douse_at(at: Vector3) -> int:
+	var n := 0
+	for s in Village.sites:
+		if not is_instance_valid(s) or s.burn <= 0.0:
+			continue
+		var d: Vector3 = s.global_position - at
+		d.y = 0.0
+		if d.length() <= s.pick_radius() + RAIN_RADIUS * 0.5:
+			s.douse(RAIN_DOUSE)
+			n += 1
+	if n > 0:
+		Village.stats["rain_on_fire"] = int(Village.stats.get("rain_on_fire", 0)) + 1
+	return n
+
+## Calm Waters over open water: the sea lies down for a while.
+static func calm_at(at: Vector3) -> int:
+	var w = Game.world
+	if w == null or not is_instance_valid(w) or w.get("era3") == null:
+		return 0
+	w.era3.calm(at)
+	return 1
+
+## The Guiding Light at night: the northern lights, and the astronomers see far.
+static func guide_at(at: Vector3) -> int:
+	var w = Game.world
+	if w == null or not is_instance_valid(w) or w.get("era3") == null:
+		return 0
+	if not Clock.is_night:
+		return 0
+	w.era3.northern_lights(GUIDE_SECONDS)
+	Village.stats["guided_t"] = Clock.total_t + GUIDE_SECONDS
+	var n := 0
+	for s in Village.sites:
+		if is_instance_valid(s) and s.job != null and s.job.id == &"astronomy" and not s.is_plot():
+			for p in s.workers:
+				if is_instance_valid(p):
+					p.bless(GUIDE_SECONDS)
+					n += 1
+	Village.stats["guide_pulses"] = int(Village.stats.get("guide_pulses", 0)) + 1
+	return maxi(n, 1)
 
 ## Waters every field within RAIN_RADIUS of `at`; returns how many.
 static func rain_at(at: Vector3) -> int:
