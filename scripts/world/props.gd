@@ -114,18 +114,64 @@ static func bush_mesh() -> ArrayMesh:
 		[ball(0.55, 6), Transform3D(Basis(), Vector3(0.5, 0.4, 0.2)), leaf.lightened(0.08)],
 	], 0.08, 9)
 
-## A tuft of three crossed blades, ~0.5 m tall. Alpha 1 = sways; base is darker.
+## A tuft of 7 curved blades (two segments each), ~0.5 m tall. Alpha 1 = sways (tips);
+## rgb shades blades a little differently.
 static func grass_mesh() -> ArrayMesh:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	for k in 3:
-		var a := k * PI / 3.0 + 0.3
-		var d := Vector3(cos(a), 0, sin(a)) * 0.16
-		var side := Vector3(-d.z, 0, d.x).normalized()
-		var tip := d * 1.6 + Vector3(0, 0.55 + 0.1 * k, 0)
-		for tri in [[d * 0.2 - side * 0.08, d * 0.2 + side * 0.08, tip]]:
-			for v in tri:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 77
+	for k in 7:
+		var a := rng.randf() * TAU
+		var root := Vector3(cos(a), 0, sin(a)) * rng.randf_range(0.0, 0.12)
+		var lean := Vector3(cos(a), 0, sin(a)) * rng.randf_range(0.08, 0.22)
+		var side := Vector3(-sin(a + 1.2), 0, cos(a + 1.2)) * rng.randf_range(0.035, 0.055)
+		var h := rng.randf_range(0.35, 0.6)
+		var mid := root + lean * 0.4 + Vector3(0, h * 0.55, 0)
+		var tip := root + lean + Vector3(0, h, 0)
+		var shade := rng.randf_range(0.7, 0.9)
+		var c0 := Color(shade, shade, shade, 0.0)
+		var c1 := Color(shade, shade, shade, 0.55)
+		var c2 := Color(shade, shade, shade, 1.0)
+		var tris := [[root - side, root + side, mid + side * 0.6, c0, c0, c1],
+			[root - side, mid + side * 0.6, mid - side * 0.6, c0, c1, c1],
+			[mid - side * 0.6, mid + side * 0.6, tip, c1, c1, c2]]
+		for t in tris:
+			for i in 3:
 				st.set_normal(Vector3.UP)
-				st.set_color(Color(0.8, 0.8, 0.8, 1.0) if v == tip else Color(0.55, 0.55, 0.55, 0.0))
+				st.set_color(t[3 + i])
+				st.add_vertex(t[i])
+	return st.commit()
+
+## Ground clutter: kind 0 clover (three round leaves), 1 a fallen leaf, 2 a tiny flower.
+static func clutter_mesh(kind: int) -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var disc := func(c: Vector3, r: float, col: Color, y: float, segs: int) -> void:
+		for i in segs:
+			var a0 := TAU * i / segs
+			var a1 := TAU * (i + 1) / segs
+			for v in [c + Vector3(0, y, 0), c + Vector3(cos(a0) * r, y, sin(a0) * r), c + Vector3(cos(a1) * r, y, sin(a1) * r)]:
+				st.set_normal(Vector3.UP)
+				st.set_color(col)
 				st.add_vertex(v)
+	match kind:
+		0:
+			for i in 3:
+				var a := TAU * i / 3.0
+				disc.call(Vector3(cos(a), 0, sin(a)) * 0.06, 0.06, Color(0.28, 0.5, 0.2), 0.05, 6)
+		1:
+			# an elongated leaf
+			var col := Color(0.62, 0.38, 0.15)
+			var pts := [Vector3(-0.09, 0.02, 0), Vector3(0, 0.03, 0.04), Vector3(0.09, 0.02, 0), Vector3(0, 0.03, -0.04)]
+			for t in [[0, 1, 2], [0, 2, 3]]:
+				for i in t:
+					st.set_normal(Vector3.UP)
+					st.set_color(col)
+					st.add_vertex(pts[i])
+		_:
+			for i in 5:
+				var a := TAU * i / 5.0
+				disc.call(Vector3(cos(a), 0, sin(a)) * 0.035, 0.03, Color(0.96, 0.92, 0.8), 0.12, 5)
+			disc.call(Vector3.ZERO, 0.025, Color(0.95, 0.75, 0.2), 0.125, 5)
 	return st.commit()

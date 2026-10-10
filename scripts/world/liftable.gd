@@ -52,23 +52,18 @@ func build_log_visual(len_m: float, radius: float, branchy: bool) -> void:
 	var v := Node3D.new()
 	v.name = "Visual"
 	add_child(v)
-	var bark := Color(0.38, 0.26, 0.16)
-	var log_mesh := Props.cyl(radius * 0.9, radius, len_m, 8)
-	var mi := Props.add_mesh(v, log_mesh, bark, Vector3(0, radius, 0))
-	mi.rotation.z = PI * 0.5
-	var cap := Props.cyl(radius * 0.85, radius * 0.85, 0.02, 8)
-	for sx in [-1.0, 1.0]:
-		var c := Props.add_mesh(v, cap, Color(0.72, 0.58, 0.38), Vector3(sx * len_m * 0.5, radius, 0))
-		c.rotation.z = PI * 0.5
 	if branchy:
-		var rng := RandomNumberGenerator.new()
-		rng.seed = int(len_m * 100.0)
-		for i in 5:
-			var twig := Props.add_mesh(v, Props.cyl(radius * 0.2, radius * 0.4, len_m * 0.35, 5), bark.lightened(0.05),
-				Vector3(rng.randf_range(-len_m * 0.4, len_m * 0.4), radius + 0.2, rng.randf_range(-0.2, 0.2)))
-			twig.rotation = Vector3(rng.randf_range(-0.9, 0.9), rng.randf() * TAU, rng.randf_range(0.5, 1.2))
-			var leaves := Props.add_mesh(v, Props.ball(0.45, 6), Color(0.24, 0.4, 0.2), twig.position + twig.basis.y * len_m * 0.18)
-			leaves.scale = Vector3(1.2, 0.8, 1.0)
+		# the storm branch: a dead limb lying on its side, crown and all
+		var br := AssetCatalog.instance(&"tree_dead", 3)
+		br.rotation = Vector3(0.0, 0.0, PI * 0.5)
+		br.position = Vector3(len_m * 0.5, radius + 0.1, 0)
+		br.scale = Vector3.ONE * (len_m / 5.1)
+		v.add_child(br)
+	else:
+		# log_fallen lies along x, 3.5 m long at scale 1
+		var lg := AssetCatalog.instance(&"log_fallen", int(len_m * 10.0))
+		lg.scale = Vector3(len_m / 3.5, radius / 0.42, radius / 0.42)
+		v.add_child(lg)
 	# a body for physics picking (layer 2 = liftables) that also blocks walkers
 	var body := StaticBody3D.new()
 	body.name = "Body"

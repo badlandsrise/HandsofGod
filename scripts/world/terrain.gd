@@ -26,9 +26,16 @@ func build(v: Valley) -> void:
 		[fire, Vector2(-18.0, -2.0)], [Vector2(-18.0, -2.0), Valley.WEST_GAP + Vector2(-10, 0)],
 		[Valley.EAST_GAP + Vector2(10, 0), Vector2(110.0, 15.0)],
 		[Valley.WEST_GAP + Vector2(-10, 0), Vector2(-115.0, 5.0)],
+		[fire, Vector2(-9.5, -20.0)], [fire, Vector2(-14.0, 3.0)], [fire, Vector2(7.5, 9.0)],
 	]
+	paths = _wiggle(paths)
 	material = ShaderMaterial.new()
 	material.shader = load("res://scenes/world/shaders/terrain.gdshader")
+	material.set_shader_parameter("noise_large", _noise_tex(11, 0.012, 4))
+	material.set_shader_parameter("noise_mid", _noise_tex(23, 0.03, 3))
+	material.set_shader_parameter("noise_fine", _noise_tex(37, 0.06, 2))
+	material.set_shader_parameter("mask_rect", Vector4(DETAIL.position.x, DETAIL.position.y, DETAIL.size.x, DETAIL.size.y))
+	GroundLook.apply(material, GroundLook.current())
 	visual = Node3D.new()
 	visual.name = "Visual"
 	add_child(visual)
@@ -52,8 +59,9 @@ func _chunk_mesh(x0: float, z0: float, step: float) -> ArrayMesh:
 	var verts := PackedVector3Array()
 	var norms := PackedVector3Array()
 	var cols := PackedColorArray()
+	var uv2 := PackedVector2Array()
 	var idx := PackedInt32Array()
-	verts.resize(w * w); norms.resize(w * w); cols.resize(w * w)
+	verts.resize(w * w); norms.resize(w * w); cols.resize(w * w); uv2.resize(w * w)
 	for j in w:
 		for i in w:
 			var x := x0 + i * step
@@ -64,6 +72,7 @@ func _chunk_mesh(x0: float, z0: float, step: float) -> ArrayMesh:
 			var nrm := valley.normal_at(x, z)
 			norms[k] = nrm
 			cols[k] = splat(x, z, y, nrm)
+			uv2[k] = shore(x, z, y)
 	for j in cells:
 		for i in cells:
 			var a := j * w + i
@@ -84,6 +93,7 @@ func _chunk_mesh(x0: float, z0: float, step: float) -> ArrayMesh:
 		verts.append(v - Vector3(0, 3.0, 0))
 		norms.append(norms[border[bi]])
 		cols.append(cols[border[bi]])
+		uv2.append(uv2[border[bi]])
 	for bi in border.size() - 1:
 		var t0: int = border[bi]
 		var t1: int = border[bi + 1]
@@ -96,10 +106,88 @@ func _chunk_mesh(x0: float, z0: float, step: float) -> ArrayMesh:
 	arr[Mesh.ARRAY_VERTEX] = verts
 	arr[Mesh.ARRAY_NORMAL] = norms
 	arr[Mesh.ARRAY_COLOR] = cols
+	arr[Mesh.ARRAY_TEX_UV2] = uv2
 	arr[Mesh.ARRAY_INDEX] = idx
 	var m := ArrayMesh.new()
 	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
 	return m
+
+## A seamless 256 px noise texture for the ground shader.
+static func _noise_tex(seed_v: int, freq: float, octaves: int) -> NoiseTexture2D:
+	var fn := FastNoiseLite.new()
+	fn.seed = seed_v
+	fn.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+	fn.frequency = freq
+	fn.fractal_octaves = octaves
+	var t := NoiseTexture2D.new()
+	t.width = 256
+	t.height = 256
+	t.seamless = true
+	t.generate_mipmaps = true
+	t.noise = fn
+	return t
+
+const MASK_PX := 0.5     # metres per ground-mask texel
+
+## Bakes the ground mask (contact shadow, canopy, moss) over DETAIL from the trees,
+## rocks and props, so the ground darkens under what stands on it.
+## trees: Array[Vector3]; blobs: Array of [Vector3 centre, radius, kind] with kind
+## 0 = contact shadow, 2 = moss.
+func bake_ground_mask(trees: Array, blobs: Array) -> void:
+	var w := int(DETAIL.size.x / MASK_PX)
+	var h := int(DETAIL.size.y / MASK_PX)
+	var data := PackedByteArray()
+	data.resize(w * h * 3)
+	data.fill(0)
+	for t in trees:
+		var p: Vector3 = t
+		_stamp(data, w, h, p.x, p.z, 2.2, 0, 0.75)      # trunk contact shadow
+		_stamp(data, w, h, p.x, p.z, 4.5, 1, 0.9)       # canopy: forest floor
+	for b in blobs:
+		var p: Vector3 = b[0]
+		var r: float = b[1]
+		var kind: int = b[2]
+		_stamp(data, w, h, p.x, p.z, r, kind, 0.8)
+		if kind == 0:
+			_stamp(data, w, h, p.x, p.z, r * 1.4, 2, 0.45)   # a little moss round boulders
+	var img := Image.create_from_data(w, h, false, Image.FORMAT_RGB8, data)
+	material.set_shader_parameter("ground_mask", ImageTexture.create_from_image(img))
+
+func _stamp(data: PackedByteArray, w: int, h: int, x: float, z: float, r: float, ch: int, strength: float) -> void:
+	var cx := (x - DETAIL.position.x) / MASK_PX
+	var cz := (z - DETAIL.position.y) / MASK_PX
+	var rp := r / MASK_PX
+	var i0 := maxi(int(cx - rp), 0)
+	var i1 := mini(int(cx + rp) + 1, w - 1)
+	var j0 := maxi(int(cz - rp), 0)
+	var j1 := mini(int(cz + rp) + 1, h - 1)
+	for j in range(j0, j1 + 1):
+		for i in range(i0, i1 + 1):
+			var d := Vector2(i - cx, j - cz).length() / rp
+			if d >= 1.0:
+				continue
+			var v := int(255.0 * strength * (1.0 - d * d) * (1.0 - d * d))
+			var k := (j * w + i) * 3 + ch
+			if v > data[k]:
+				data[k] = v
+
+## Desire lines are never ruler-straight: split each segment and bend it gently.
+func _wiggle(segs: Array) -> Array:
+	var out: Array = []
+	for sgm in segs:
+		var a: Vector2 = sgm[0]
+		var b: Vector2 = sgm[1]
+		var n := maxi(int(a.distance_to(b) / 5.0), 1)
+		var side := (b - a).orthogonal().normalized()
+		var prev := a
+		for i in range(1, n + 1):
+			var t := float(i) / float(n)
+			var p := a.lerp(b, t)
+			if i < n:
+				p += side * sin(t * PI) * valley.noise.get_noise_2d(p.x * 3.0, p.y * 3.0) * 4.0
+			out.append([prev, p])
+			prev = p
+	return out
 
 static func _seg_dist(p: Vector2, a: Vector2, b: Vector2) -> float:
 	var ab := b - a
@@ -113,29 +201,48 @@ func path_dist(x: float, z: float) -> float:
 		best = minf(best, _seg_dist(p, s[0], s[1]))
 	return best
 
-## Splat weights (grass, dirt, rock, sand) as a Color.
+## Shore data for the ground shader (UV2): x = 1 at the waterline fading to 0 about
+## 1.5 m up the bank, y = 1 on the sandy coast (else river mud).
+func shore(x: float, z: float, y: float) -> Vector2:
+	var above := INF
+	if absf(z - Valley.river_z(x)) < 20.0:
+		above = y - Valley.river_level(x)
+	if z > Valley.STREAM_HEAD_Z and z < Valley.river_z(Valley.stream_x(z)) and absf(x - Valley.stream_x(z)) < 4.0:
+		above = minf(above, y - valley.stream_level(z))
+	var coast := Valley.coast_d(x, z) > -60.0 and y < 2.5
+	if coast:
+		above = minf(above, y - Valley.SEA_LEVEL)
+	var band := 0.0
+	if above < INF:
+		band = 1.0 - Valley.ss(-0.1, 1.5, above)
+	return Vector2(band, 1.0 if coast else 0.0)
+
+## Splat weights (grass, dirt, rock, bank) as a Color.
 func splat(x: float, z: float, y: float, nrm: Vector3) -> Color:
 	var slope := 1.0 - nrm.y
 	var n := valley.noise.get_noise_2d(x * 3.0, z * 3.0)
 	var rock := Valley.ss(0.18, 0.36, slope + n * 0.05)
 	rock = maxf(rock, Valley.ss(45.0, 70.0, y + n * 8.0) * 0.8)
 	var p := Vector2(x, z)
-	var dirt := 1.0 - Valley.ss(4.0, 8.5, p.distance_to(Valley.FIRE) + n * 2.0)
-	dirt = maxf(dirt, 1.0 - Valley.ss(3.0, 8.0, p.distance_to(Valley.CAVE_MOUTH) + n * 2.0))
-	dirt = maxf(dirt, (1.0 - Valley.ss(0.5, 1.6, path_dist(x, z) + n * 1.0)) * 0.75)
-	if Rect2(-205, -85, 405, 195).has_point(p):
-		dirt = maxf(dirt, Valley.ss(0.55, 0.7, valley.noise.get_noise_2d(x * 1.7 + 50.0, z * 1.7)) * 0.45)
+	var dirt := 1.0 - Valley.ss(2.6, 5.5, p.distance_to(Valley.FIRE) + n * 1.5)
+	dirt = maxf(dirt, 1.0 - Valley.ss(2.0, 5.0, p.distance_to(Valley.CAVE_MOUTH) + n * 1.5))
+	# paths worn by use: a bare middle, trampled edges
+	var pd := path_dist(x, z) + n * 0.6
+	dirt = maxf(dirt, (1.0 - Valley.ss(0.2, 0.9, pd)) * 0.8)
+	if Rect2(-205, -85, 405, 195).has_point(p) and p.length() > 60.0:
+		dirt = maxf(dirt, Valley.ss(0.65, 0.78, valley.noise.get_noise_2d(x * 1.7 + 50.0, z * 1.7)) * 0.2)
 	# dry Southern Plains read dusty
 	if z > 160.0 and x < 150.0:
 		dirt = maxf(dirt, 0.35 + 0.2 * n)
+	# the bank: damp mud along the river and the stream, sand on the coast
 	var sand := 0.0
 	var dr := absf(z - Valley.river_z(x))
-	if dr < 16.0 and y < Valley.river_level(x) + 1.1:
-		sand = 1.0 - Valley.ss(0.4, 1.1, y - Valley.river_level(x))
+	if dr < 18.0 and y < Valley.river_level(x) + 1.6:
+		sand = 1.0 - Valley.ss(0.5, 1.6, y - Valley.river_level(x) + n * 0.3)
 	if y < 1.4 and Valley.coast_d(x, z) > -60.0:
 		sand = maxf(sand, 1.0 - Valley.ss(0.6, 1.4, y))
-	if z > Valley.STREAM_HEAD_Z and absf(x - Valley.stream_x(z)) < 2.8:
-		dirt = maxf(dirt, 0.7)
+	if z > Valley.STREAM_HEAD_Z and z < Valley.river_z(Valley.stream_x(z)):
+		sand = maxf(sand, 1.0 - Valley.ss(2.2, 3.4, absf(x - Valley.stream_x(z)) + n * 0.6))
 	sand *= 1.0 - rock
 	dirt *= (1.0 - rock) * (1.0 - sand)
 	var grass := maxf(0.0, 1.0 - rock - dirt - sand)

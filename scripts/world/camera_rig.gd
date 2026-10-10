@@ -19,13 +19,15 @@ const DEFAULT_BOUNDS := AABB(Vector3(-30, -5, -30), Vector3(60, 30, 60))
 var camera: Camera3D
 var focus: Vector3 = Vector3.ZERO
 var yaw: float = 0.0
-var dist: float = 34.0
+var dist: float = 28.0
 var target_focus: Vector3 = Vector3.ZERO
 var target_yaw: float = 0.0
-var target_dist: float = 34.0
+var target_dist: float = 28.0
 var input_enabled: bool = true
 
 var _drag: bool = false
+var dof: CameraAttributesPractical
+@export var tilt_shift: bool = true
 
 func _ready() -> void:
 	add_to_group(&"camera_rig")
@@ -36,6 +38,13 @@ func _ready() -> void:
 		camera.name = "Camera3D"
 		add_child(camera)
 	camera.fov = 45.0
+	# Mild tilt-shift: the far valley and anything right under the lens go soft, so the
+	# Clearing reads as a diorama. Distances follow the zoom (see _apply).
+	dof = CameraAttributesPractical.new()
+	dof.dof_blur_far_enabled = true
+	dof.dof_blur_near_enabled = true
+	dof.dof_blur_amount = 0.06
+	camera.attributes = dof
 	camera.near = 0.3
 	camera.far = 400.0
 	camera.current = true
@@ -116,6 +125,13 @@ func _apply() -> void:
 		return
 	camera.global_position = f + off
 	camera.look_at(f, Vector3.UP)
+	if dof:
+		dof.dof_blur_far_enabled = tilt_shift
+		dof.dof_blur_near_enabled = tilt_shift
+		dof.dof_blur_far_distance = dist * 1.45
+		dof.dof_blur_far_transition = dist * 1.6
+		dof.dof_blur_near_distance = dist * 0.45
+		dof.dof_blur_near_transition = dist * 0.3
 
 func _unhandled_input(e: InputEvent) -> void:
 	if not input_enabled:

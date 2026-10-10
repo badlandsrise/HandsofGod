@@ -16,6 +16,9 @@ extends RefCounted
 const SHADER := preload("res://assets/models/materials/hog_flat.gdshader")
 const SHADER_2S := preload("res://assets/models/materials/hog_flat_2s.gdshader")
 const VILLAGER_SHADER := preload("res://assets/models/materials/villager.gdshader")
+## World scatter (MultiMesh trees, rocks, plants): the same grade plus wind, snow and the
+## dimming of locked regions. See scatter_material().
+const SCATTER_SHADER := preload("res://scenes/world/shaders/scatter.gdshader")
 const PALETTE_SIZE := 10
 
 ## Era palettes. The first four swatches of each era are the DESIGN 12.2 palette; the rest
@@ -180,6 +183,30 @@ static func apply_to_tree(node: Node, pull: float = 0.3, tint: Color = Color.WHI
 		apply_to_tree(c, pull, tint, saturation)
 
 
+static var _scatter: Dictionary = {}   # source material id|sway -> scatter material
+
+## The scatter twin of a palette material: same colours, plus wind sway (0 = rigid,
+## 1 = leaves), snow on upward faces and the locked-region dimming.
+static func scatter_material(src: Material, sway: float = 0.0) -> Material:
+	if not (src is ShaderMaterial) or not ((src as ShaderMaterial).shader == SHADER or (src as ShaderMaterial).shader == SHADER_2S):
+		return src
+	var key := "%d|%.2f" % [src.get_instance_id(), sway]
+	if _scatter.has(key):
+		return _scatter[key]
+	var s := src as ShaderMaterial
+	var m := ShaderMaterial.new()
+	m.shader = SCATTER_SHADER
+	for p in ["albedo_color", "albedo_texture", "use_texture", "palette_pull", "source_saturation", "softness", "rim_strength"]:
+		var v = s.get_shader_parameter(p)
+		if v != null:
+			m.set_shader_parameter(p, v)
+	m.set_shader_parameter("sway", sway)
+	m.resource_name = s.resource_name + "_scatter"
+	register(m)
+	_scatter[key] = m
+	return m
+
+
 static func _new_material(two_sided: bool) -> ShaderMaterial:
 	var m := ShaderMaterial.new()
 	m.shader = SHADER_2S if two_sided else SHADER
@@ -191,7 +218,7 @@ static func _new_material(two_sided: bool) -> ShaderMaterial:
 static func register(m: ShaderMaterial) -> void:
 	if _registered.has(m.get_instance_id()):
 		return
-	if m.shader != SHADER and m.shader != SHADER_2S and m.shader != VILLAGER_SHADER:
+	if m.shader != SHADER and m.shader != SHADER_2S and m.shader != VILLAGER_SHADER and m.shader != SCATTER_SHADER:
 		return
 	_registered[m.get_instance_id()] = true
 	_apply_era_to(m)

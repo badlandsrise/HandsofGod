@@ -11,18 +11,17 @@ func build_trunk(length: float) -> void:
 	var v := Node3D.new()
 	v.name = "Visual"
 	add_child(v)
-	var bark := Color(0.34, 0.23, 0.15)
-	var trunk := Props.add_mesh(v, Props.cyl(0.75, 0.95, length, 9), bark, Vector3(0, 0.85, 0))
-	trunk.rotation.x = PI * 0.5
-	var cap := Props.add_mesh(v, Props.cyl(0.85, 0.85, 0.05, 9), Color(0.7, 0.55, 0.36), Vector3(0, 0.85, length * 0.5))
-	cap.rotation.x = PI * 0.5
-	# root plate at the far end, a few broken limbs
-	var roots := Props.add_mesh(v, Props.cyl(1.9, 1.6, 0.6, 8), Color(0.3, 0.22, 0.15), Vector3(0, 1.3, -length * 0.5))
-	roots.rotation.x = PI * 0.5
-	Props.add_mesh(v, Props.ball(1.2, 6), Color(0.36, 0.29, 0.2), Vector3(0, 1.0, -length * 0.5 - 0.3)).scale = Vector3(1.6, 1.3, 0.6)
-	for i in 4:
-		var limb := Props.add_mesh(v, Props.cyl(0.12, 0.25, 2.4, 6), bark.lightened(0.05), Vector3(0, 1.4, -length * 0.3 + i * length * 0.2))
-		limb.rotation = Vector3(0.3 * (i - 1.5), 0.0, 0.9 if i % 2 == 0 else -0.9)
+	# the catalog trunk lies along its x axis, about 9 m at scale 1: stretch it over the gap
+	var art := AssetCatalog.instance(&"trunk_fallen")
+	art.rotation.y = PI * 0.5
+	art.scale = Vector3(length / 9.0, 1.15, 1.15)
+	v.add_child(art)
+	# a broken crown of branches at the far end
+	var crown := AssetCatalog.instance(&"tree_dead", 1)
+	crown.rotation = Vector3(PI * 0.5, 0.0, 0.3)
+	crown.position = Vector3(0.6, 1.0, -length * 0.5 + 0.5)
+	crown.scale = Vector3.ONE * 0.9
+	v.add_child(crown)
 	var body := StaticBody3D.new()
 	body.name = "Body"
 	body.collision_layer = 1

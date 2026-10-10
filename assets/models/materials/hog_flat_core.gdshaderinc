@@ -57,6 +57,7 @@ vec3 hog_grade(vec3 c) {
 	return g * era_tint.rgb;
 }
 
+#ifndef HOG_CUSTOM_FRAGMENT
 void fragment() {
 	vec4 base = albedo_color;
 	if (use_texture) {
@@ -67,3 +68,4 @@ void fragment() {
 	RIM = rim_strength;
 	RIM_TINT = 0.6;
 }
+#endif

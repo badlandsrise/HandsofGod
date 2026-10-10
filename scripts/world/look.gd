@@ -207,7 +207,7 @@ func _update(delta: float, snap: bool = false) -> void:
 		light = Valley.ss(0.0, 0.22, s)
 		warm = 1.0 - Valley.ss(0.15, 0.6, s)
 		sun.light_energy = lerpf(0.0, 1.35, light)
-		sun.light_color = Color(1.0, 0.6, 0.36).lerp(Color(1.0, 0.93, 0.82), 1.0 - warm)
+		sun.light_color = Color(1.0, 0.6, 0.36).lerp(Color(1.0, 0.9, 0.76), 1.0 - warm)
 		sun.visible = true
 		moon.light_energy = lerpf(0.22, 0.0, Valley.ss(0.0, 0.2, s))
 		_aim(moon, 1.0 - u, deg_to_rad(30.0), -0.4)
@@ -216,7 +216,7 @@ func _update(delta: float, snap: bool = false) -> void:
 		sun.light_energy = 0.0
 		sun.visible = false
 		_aim(moon, v, lerpf(deg_to_rad(15.0), deg_to_rad(55.0), sin(PI * v)), -0.4)
-		moon.light_energy = 0.24 * (0.45 if storm else 1.0)
+		moon.light_energy = 0.3 * (0.7 if storm else 1.0)
 	var stormy := clampf(rain_amount * (1.3 if storm else 0.7), 0.0, 1.0)
 	sun.light_energy *= 1.0 - stormy * 0.6
 	# ---- sky, ambient and fog

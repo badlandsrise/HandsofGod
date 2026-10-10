@@ -6,6 +6,8 @@ uniform vec4 shallow : source_color = vec4(0.32, 0.6, 0.62, 1.0);
 uniform vec4 deep : source_color = vec4(0.1, 0.3, 0.42, 1.0);
 uniform float flow_speed = 0.6;
 uniform vec2 flow_dir = vec2(1.0, 0.0);
+uniform vec4 shallow_tint : source_color = vec4(0.16, 0.24, 0.17, 1.0);
+uniform sampler2D depth_tex : hint_depth_texture, filter_linear_mipmap;
 
 varying vec3 wpos;
 
@@ -26,11 +28,20 @@ void fragment() {
 	// foam flecks and rain rings
 	float fl = hog_noise(wpos.xz * 1.7 - flow_dir * TIME * flow_speed * 3.0);
 	c += vec3(smoothstep(0.86, 0.97, fl * n2 * 1.6)) * 0.12;
+	// shoreline: thin foam right at the edge, then darker, clearer shallows over the bed
+	float dz = texture(depth_tex, SCREEN_UV).r;
+	vec4 vp = INV_PROJECTION_MATRIX * vec4(SCREEN_UV * 2.0 - 1.0, dz, 1.0);
+	vp.xyz /= vp.w;
+	float thick = max(VERTEX.z - vp.z, 0.0);           // view-space water thickness
+	float sh = 1.0 - smoothstep(0.0, 1.6, thick);
+	c = mix(c, shallow_tint.rgb, sh * 0.55);
+	float foam = (1.0 - smoothstep(0.0, 0.22, thick)) * (0.6 + 0.4 * hog_noise(wpos.xz * 2.0 + TIME * 0.3));
+	c = mix(c, vec3(0.85, 0.88, 0.84), foam * 0.7);
 	c = mix(c, vec3(0.86, 0.9, 0.95), hog_frost * 0.15);
 	c = hog_dim(c, hog_region_light(wpos));
 	ALBEDO = c;
 	ROUGHNESS = 0.18 + hog_wet * 0.2;
 	METALLIC = 0.0;
 	SPECULAR = 0.35;
-	ALPHA = 0.82;
+	ALPHA = mix(0.88, 0.55, sh * (1.0 - foam));
 }

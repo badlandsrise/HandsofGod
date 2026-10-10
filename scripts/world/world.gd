@@ -16,6 +16,7 @@ const HAND_CANDIDATES := ["res://scenes/hand/hand.tscn"]
 const HUD_CANDIDATES := ["res://scenes/ui/hud.tscn"]
 const TITLE_SCENE := "res://scenes/world/title.tscn"
 const BOT_SCRIPT := "res://tests/bot/bot.gd"
+const SHOTS_SCRIPT := "res://tests/shots/shot_director.gd"
 const LOG_COUNT := 3
 const LOG_WEIGHT := 4.0
 const BRANCH_WEIGHT := 2.0
@@ -48,6 +49,7 @@ var _trunk_offset := Vector3.ZERO
 var built: bool = false
 var build_ms: int = 0
 var opened_at: Dictionary = {}    # region id -> Clock.total_t when it opened
+var _props_blocking: Array = []   # [centre, size, yaw] of fixed props people walk round
 
 func _enter_tree() -> void:
 	Game.world = self
@@ -69,6 +71,12 @@ func _ready() -> void:
 			var bot: Node = load(BOT_SCRIPT).new()
 			bot.name = "Bot"
 			add_child(bot)
+	elif Game.flags.has("shots") and ResourceLoader.exists(SHOTS_SCRIPT):
+		new_game()
+		Clock.running = true
+		var sd: Node = load(SHOTS_SCRIPT).new()
+		sd.name = "ShotDirector"
+		add_child(sd)
 	elif Game.flags.has("no-title"):
 		new_game()
 		Clock.running = true
@@ -81,6 +89,9 @@ func build() -> void:
 	if built:
 		return
 	var t0 := Time.get_ticks_msec()
+	AssetCatalog.set_era(Village.era)
+	if not Events.era_changed.is_connected(AssetCatalog.set_era):
+		Events.era_changed.connect(AssetCatalog.set_era)
 	valley = Valley.new()
 	valley.generate()
 	look = Look.new()
@@ -96,9 +107,16 @@ func build() -> void:
 	add_child(foliage)
 	foliage.build(valley, terrain, _keep_out_zones())
 	_build_props()
+	_bake_ground_mask()
 	nav = Nav.new()
 	add_child(nav)
 	nav.setup(valley, foliage.tree_points)
+	for r in foliage.rock_points:
+		var rp: Vector3 = r[0]
+		nav.set_box_obstacle("rock_%d_%d" % [roundi(rp.x), roundi(rp.z)], rp, Vector2.ONE * float(r[1]) * 1.4, 0.0)
+	for i in _props_blocking.size():
+		var b: Array = _props_blocking[i]
+		nav.set_box_obstacle("prop_%d" % i, b[0], b[1], b[2])
 	dynamic = Node3D.new()
 	dynamic.name = "Dynamic"
 	add_child(dynamic)
@@ -134,7 +152,7 @@ func _build_props() -> void:
 	var props := Node3D.new()
 	props.name = "Props"
 	add_child(props)
-	# ---- the cave in the cliff
+	# ---- the cave, set into the rock face of the shelf north of the Clearing
 	var cave := Node3D.new()
 	cave.name = "Cave"
 	props.add_child(cave)
@@ -142,15 +160,28 @@ func _build_props() -> void:
 	var cv := Node3D.new()
 	cv.name = "Visual"
 	cave.add_child(cv)
-	var rock := Color(0.4, 0.38, 0.36)
-	Props.add_mesh(cv, Props.box(Vector3(6.0, 4.5, 0.6)), Color(0.04, 0.035, 0.035), Vector3(0, 2.0, -8.6))
-	for sx in [-1.0, 1.0]:
-		var pillar := Props.add_mesh(cv, Props.ball(2.0, 7), rock.darkened(0.1), Vector3(sx * 3.9, 2.0, -3.0))
-		pillar.scale = Vector3(0.9, 1.6, 1.6)
-	var lintel := Props.add_mesh(cv, Props.ball(2.4, 7), rock, Vector3(0, 6.6, -3.6))
-	lintel.scale = Vector3(2.4, 0.8, 1.4)
-	var roof := Props.add_mesh(cv, Props.box(Vector3(7.0, 1.2, 7.0)), rock.darkened(0.2), Vector3(0, 6.4, -6.5))
-	roof.rotation.x = 0.05
+	var mouth := AssetCatalog.instance(&"cave_mouth")
+	mouth.scale = Vector3.ONE * 1.35
+	mouth.position = Vector3(0, -0.6, -5.2)
+	cv.add_child(mouth)
+	# a dark back wall so the opening reads as deep from the high camera
+	var back := Props.add_mesh(cv, Props.box(Vector3(5.5, 5.0, 0.5)), Color(0.03, 0.025, 0.02), Vector3(0, 2.0, -9.5))
+	back.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	# the cliff: rock faces either side of the cave, stepping up onto the shelf
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 2701
+	var cliffs := Node3D.new()
+	cliffs.name = "Cliff"
+	props.add_child(cliffs)
+	for x in [-58.0, -42.0, -26.0, -13.5, 13.5, 26.0, 42.0, 58.0]:
+		var c := AssetCatalog.instance(&"cliff")
+		var z := -33.5 + rng.randf_range(-1.0, 1.0) + absf(x) * 0.02
+		c.position = Vector3(x, valley.ground_y(x, z + 4.0) - 1.2, z)
+		c.rotation.y = rng.randf_range(-0.12, 0.12) + (PI if absf(x) > 50.0 and rng.randf() < 0.5 else 0.0)
+		var k := rng.randf_range(1.1, 1.45) if absf(x) > 20.0 else 1.0
+		c.scale = Vector3(k * 1.05, k * rng.randf_range(1.35, 1.6), k)
+		cliffs.add_child(c)
+		_props_blocking.append([Vector3(x, 0, z + 1.0), Vector2(16.0 * k, 5.0), c.rotation.y])
 	stash = Node3D.new()
 	stash.name = "Stash"
 	stash.add_to_group("stockpile")
@@ -165,12 +196,11 @@ func _build_props() -> void:
 	wood.name = "Firewood"
 	props.add_child(wood)
 	wood.position = _v3(Vector2(-23.5, 6.5))
-	var wv := Node3D.new()
+	var wv := AssetCatalog.instance(&"firewood_pile")
 	wv.name = "Visual"
+	wv.scale = Vector3.ONE * 1.2
 	wood.add_child(wv)
-	for i in 6:
-		var lg := Props.add_mesh(wv, Props.cyl(0.12, 0.14, 1.6, 6), Color(0.42, 0.29, 0.17), Vector3((i % 3) * 0.3 - 0.3, 0.14 + (i / 3) * 0.24, 0))
-		lg.rotation.x = PI * 0.5
+	_props_blocking.append([wood.position, Vector2(1.8, 2.4), 0.0])
 	# ---- the fallen trunk to the Valley Floor
 	trunk = Blocker.new()
 	trunk.name = "FallenTrunk"
@@ -203,15 +233,32 @@ func _build_props() -> void:
 	giant.name = "GiantTree"
 	props.add_child(giant)
 	giant.position = _v3(Vector2(-132.0, -22.0), -0.5)
-	var gv := MeshInstance3D.new()
+	var gv := AssetCatalog.instance(&"tree_broad", 2)
 	gv.name = "Visual"
-	gv.mesh = Props.broadleaf_mesh()
-	var gm := ShaderMaterial.new()
-	gm.shader = load("res://scenes/world/shaders/foliage.gdshader")
-	gv.material_override = gm
-	gv.scale = Vector3.ONE * 4.5
+	gv.scale = Vector3.ONE * 4.2
 	giant.add_child(gv)
 	_reset_props()
+
+## Darkens the ground at the feet of trees, rocks and props, lays forest floor under
+## the canopy and moss along the cliff foot (Terrain.bake_ground_mask).
+func _bake_ground_mask() -> void:
+	var blobs: Array = []
+	for r in foliage.rock_points:
+		blobs.append([r[0], float(r[1]) * 1.3, 0])
+	blobs.append_array(foliage.contact_points)
+	for b in _props_blocking:
+		var size: Vector2 = b[1]
+		blobs.append([b[0], maxf(size.x, size.y) * 0.45, 0])
+	for x in range(-60, 61, 3):
+		var z := -29.5 + valley.noise.get_noise_2d(x * 3.0, 9.0) * 2.0
+		blobs.append([Vector3(x, 0, z), 4.0, 2])          # moss at the cliff foot
+		blobs.append([Vector3(x, 0, z - 1.0), 3.0, 0])
+	blobs.append([_v3(Valley.FIRE), 3.2, 0])
+	var trees: Array = []
+	for t in foliage.tree_points:
+		if Terrain.DETAIL.has_point(Vector2(t.x, t.z)):
+			trees.append(t)
+	terrain.bake_ground_mask(trees, blobs)
 
 ## Puts the fixed props back to their new-game state.
 func _reset_props() -> void:
@@ -313,7 +360,7 @@ func set_title_mode(on: bool) -> void:
 
 func _frame_play_camera() -> void:
 	if camera_rig != null and camera_rig.has_method("snap_to"):
-		camera_rig.snap_to(_v3(Vector2(0.0, -14.0)), 34.0)
+		camera_rig.snap_to(_v3(Vector2(0.0, -15.0)), 28.0)
 
 func _activate_play_camera() -> void:
 	var cam: Camera3D = null

@@ -116,7 +116,7 @@ func _job(id: StringName, seed_v: int) -> void:
 			_flame = fire.find_child("Fire", true, false) as Node3D
 			for i in 3:
 				var a := TAU * i / 3.0 + 0.5
-				_art(&"log_fallen", i, Vector3(cos(a), 0, sin(a)) * 2.6, -a, 0.55)
+				_art(&"log_fallen", i, Vector3(cos(a), 0, sin(a)) * 2.7, -a + PI * 0.5, 0.5)
 		&"carry_log":
 			_art(&"log_fallen", seed_v, Vector3.ZERO, 0.0, 0.85)
 		&"haul_log":
@@ -176,7 +176,7 @@ func _building(bid: StringName, fp: Vector2, seed_v: int) -> void:
 			_flame = fire.find_child("Fire", true, false) as Node3D
 			for i in 4:
 				var a := TAU * i / 4.0 + 0.4
-				_art(&"log_fallen", i, Vector3(cos(a), 0, sin(a)) * 2.4, -a, 0.6)
+				_art(&"log_fallen", i, Vector3(cos(a), 0, sin(a)) * 2.6, -a + PI * 0.5, 0.55)
 			return
 		&"hut":
 			_art(&"hut", seed_v, Vector3.ZERO, 0.0)

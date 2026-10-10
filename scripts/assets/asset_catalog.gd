@@ -19,6 +19,7 @@ const CATALOG_PATH := "res://assets/catalog/catalog.json"
 
 static var _data: Dictionary = {}
 static var _scenes: Dictionary = {}   # path -> PackedScene (or null if it failed)
+static var _baked: Dictionary = {}    # "id|variant|season" -> ArrayMesh
 
 
 static func _load() -> void:
@@ -114,6 +115,56 @@ static func instance(id: StringName, variant: int = 0, season: StringName = &"")
 		float(e.get("saturation", 1.0)))
 	root.add_child(model)
 	return root
+
+
+## One static ArrayMesh for a variant (all its mesh parts merged, catalog scale/offset
+## applied, palette materials on its surfaces), for MultiMesh scatter. Cached.
+## Lights, particles and skinned parts are skipped.
+static func baked_mesh(id: StringName, variant: int = 0, season: StringName = &"") -> ArrayMesh:
+	var n := maxi(variant_count(id, season), 1)
+	var key := "%s|%d|%s" % [id, posmod(variant, n), season]
+	if _baked.has(key):
+		return _baked[key]
+	var root := instance(id, variant, season)
+	var by_mat: Dictionary = {}    # Material -> SurfaceTool
+	var order: Array = []
+	for node in root.find_children("*", "MeshInstance3D", true, false):
+		var mi := node as MeshInstance3D
+		if mi.mesh == null or mi.skin != null or not mi.visible:
+			continue
+		var xf := _rel_xform(root, mi)
+		for si in mi.mesh.get_surface_count():
+			if mi.mesh.surface_get_primitive_type(si) != Mesh.PRIMITIVE_TRIANGLES:
+				continue
+			var m: Material = mi.material_override
+			if m == null:
+				m = mi.get_surface_override_material(si)
+			if m == null:
+				m = mi.mesh.surface_get_material(si)
+			if not by_mat.has(m):
+				var st := SurfaceTool.new()
+				st.begin(Mesh.PRIMITIVE_TRIANGLES)
+				by_mat[m] = st
+				order.append(m)
+			(by_mat[m] as SurfaceTool).append_from(mi.mesh, si, xf)
+	var out := ArrayMesh.new()
+	for m in order:
+		var st: SurfaceTool = by_mat[m]
+		st.commit(out)
+		out.surface_set_material(out.get_surface_count() - 1, m)
+	root.free()
+	_baked[key] = out
+	return out
+
+
+static func _rel_xform(root: Node3D, n: Node3D) -> Transform3D:
+	var xf := Transform3D.IDENTITY
+	var cur: Node = n
+	while cur != null and cur != root:
+		if cur is Node3D:
+			xf = (cur as Node3D).transform * xf
+		cur = cur.get_parent()
+	return xf
 
 
 ## Regrade every catalog material to an era (1..4).

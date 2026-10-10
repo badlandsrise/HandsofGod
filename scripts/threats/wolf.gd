@@ -25,26 +25,26 @@ func _ready() -> void:
 	_build_visual()
 
 func _build_visual() -> void:
-	var v := Node3D.new()
+	var v := AssetCatalog.instance(&"wolf")
 	v.name = "Visual"
+	v.scale = Vector3.ONE * 1.15
 	add_child(v)
-	var fur := Color(0.3, 0.3, 0.33)
-	Props.add_mesh(v, Props.box(Vector3(0.55, 0.5, 1.3)), fur, Vector3(0, 0.75, 0))
-	Props.add_mesh(v, Props.box(Vector3(0.42, 0.4, 0.5)), fur, Vector3(0, 0.95, 0.8))
-	Props.add_mesh(v, Props.box(Vector3(0.22, 0.2, 0.35)), fur.darkened(0.2), Vector3(0, 0.85, 1.15))
-	Props.add_mesh(v, Props.box(Vector3(0.1, 0.2, 0.1)), fur, Vector3(-0.13, 1.25, 0.75))
-	Props.add_mesh(v, Props.box(Vector3(0.1, 0.2, 0.1)), fur, Vector3(0.13, 1.25, 0.75))
-	var tail := Props.add_mesh(v, Props.box(Vector3(0.12, 0.12, 0.6)), fur, Vector3(0, 0.95, -0.85))
-	tail.rotation.x = 0.5
-	for x in [-0.18, 0.18]:
-		for z in [-0.45, 0.45]:
-			var leg := Node3D.new()
-			leg.position = Vector3(x, 0.5, z)
-			v.add_child(leg)
-			Props.add_mesh(leg, Props.box(Vector3(0.12, 0.5, 0.12)), fur.darkened(0.15), Vector3(0, -0.25, 0))
-			_legs.append(leg)
-	for x in [-0.1, 0.1]:
-		_eyes.append(Props.add_mesh(v, Props.ball(0.045, 6), Color(1.0, 0.85, 0.2), Vector3(x, 1.02, 1.06), 3.0))
+	for n in v.find_children("*", "MeshInstance3D", true, false):
+		var mi := n as MeshInstance3D
+		if absf(mi.position.y - 0.286) < 0.01 and absf(absf(mi.position.z) - 0.313) < 0.01:
+			_legs.append(mi)    # the four legs: swing them while trotting
+	var eye := StandardMaterial3D.new()
+	eye.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	eye.albedo_color = Color(1.0, 0.85, 0.25)
+	for x in [-0.065, 0.065]:
+		var e := MeshInstance3D.new()
+		var sm := SphereMesh.new(); sm.radius = 0.04; sm.height = 0.08; sm.radial_segments = 6; sm.rings = 3
+		e.mesh = sm
+		e.material_override = eye
+		e.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		e.position = Vector3(x, 0.98, 0.76)
+		v.add_child(e)
+		_eyes.append(e)
 
 func scare(from: Vector3) -> void:
 	if state == S.FLEE:
@@ -58,7 +58,7 @@ func scare(from: Vector3) -> void:
 	if away.length() < 0.1:
 		away = global_position - home
 	rotation.y = atan2(away.x, away.z)
-	Audio.sfx("res://assets/audio/sfx/wolf_yelp.ogg", global_position)
+	Audio.sfx("res://assets/audio/sfx/wolf_howl.ogg", global_position, 1.7, -8.0)
 
 func _process(delta: float) -> void:
 	_anim += delta
@@ -115,7 +115,7 @@ func _process(delta: float) -> void:
 	global_position.y = w.ground_y(global_position.x, global_position.z)
 	var sw := sin(_anim * 14.0) * 0.7 if moved else 0.0
 	for i in _legs.size():
-		_legs[i].rotation.x = sw if i % 2 == 0 else -sw
+		_legs[i].rotation.x = (sw if i % 2 == 0 else -sw) * 0.6
 	for e in _eyes:
 		e.visible = Clock.is_night
 
@@ -144,6 +144,6 @@ func _bite(p: Node3D) -> void:
 		if p.has_method("hurt"):
 			p.hurt(1.0, &"wolf")
 		Events.alert.emit("A wolf bit %s!" % str(p.get("given_name") if p.get("given_name") else "someone"), p.global_position)
-	Audio.sfx("res://assets/audio/sfx/wolf_bite.ogg", global_position)
+	Audio.sfx("res://assets/audio/sfx/too_heavy.ogg", global_position, 1.6, -4.0)   # a sharp snap
 	# worst case is one person hurt: after a bite the wolf runs off
 	scare(global_position + Vector3(sin(rotation.y), 0, cos(rotation.y)) * 2.0)
