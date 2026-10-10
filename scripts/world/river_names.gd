@@ -1,7 +1,7 @@
 class_name RiverNames extends Node3D
 ## [polish] The waters' names, lettered on the water like a map: "the Stream"
 ## down the Clearing and "the Great River" along its course. Each label shows
-## once the land beside it is open (Regions.light), so locked land under the
+## once the land on either bank is open (Regions.light), so locked land under the
 ## mist keeps its secrets. Austin's note: "unclear which river is the Great River".
 
 const STREAM_NAME := "the Stream"
@@ -15,7 +15,7 @@ const OUTLINE := Color(0.08, 0.2, 0.3)
 
 var regions: Regions = null
 var _labels: Array[Label3D] = []
-var _region_of: Array[int] = []
+var _region_of: Array = []       # per label: the region indices either side of the water
 
 static func make(v: Valley, r: Regions) -> RiverNames:
 	var n := RiverNames.new()
@@ -24,15 +24,15 @@ static func make(v: Valley, r: Regions) -> RiverNames:
 	for z in STREAM_AT:
 		var x := Valley.stream_x(z)
 		var dir := Vector2(Valley.stream_x(z + 1.0) - x, 1.0)
-		n._add(STREAM_NAME, Vector3(x, v.stream_level(z) + 0.12, z), dir, 1.5, v.region_index(x - 6.0, z))
+		n._add(STREAM_NAME, Vector3(x, v.stream_level(z) + 0.12, z), dir, 1.5, [v.region_index(x - 6.0, z), v.region_index(x + 6.0, z)])
 	for x in RIVER_AT:
 		var z := Valley.river_z(x)
 		var dir := Vector2(1.0, Valley.river_z(x + 1.0) - z)
-		n._add(RIVER_NAME, Vector3(x, Valley.river_level(x) + 0.12, z), dir, 3.4, v.region_index(x, z - 16.0))
+		n._add(RIVER_NAME, Vector3(x, Valley.river_level(x) + 0.12, z), dir, 3.4, [v.region_index(x, z - 16.0), v.region_index(x, z + 16.0)])
 	return n
 
 ## A label lying flat on the water, its text running along `dir` (x, z).
-func _add(text: String, at: Vector3, dir: Vector2, em: float, region: int) -> void:
+func _add(text: String, at: Vector3, dir: Vector2, em: float, region: Array) -> void:
 	var l := Label3D.new()
 	l.text = text
 	l.font = UiTheme.font(&"title_italic")
@@ -58,8 +58,11 @@ func _add(text: String, at: Vector3, dir: Vector2, em: float, region: int) -> vo
 func _process(_delta: float) -> void:
 	for i in _labels.size():
 		var a := 1.0
-		if regions != null and _region_of[i] >= 0 and _region_of[i] < regions.light.size():
-			a = regions.light[_region_of[i]]
+		if regions != null:
+			a = 0.0
+			for r in _region_of[i]:
+				if int(r) >= 0 and int(r) < regions.light.size():
+					a = maxf(a, regions.light[int(r)])
 		var l := _labels[i]
 		l.visible = a > 0.02
 		l.modulate.a = 0.85 * a
