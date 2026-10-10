@@ -7,6 +7,6 @@ script = ExtResource("1_def")
 id = &"steady_hand"
 title = "Steady Hand"
 era = 4
-cost = 280.0
+cost = 200.0
 what_it_does = "Fine placement at slow speed"
 what_it_opens = "Docking stages, threading the crew gantry"
