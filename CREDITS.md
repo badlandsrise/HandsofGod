@@ -25,6 +25,16 @@
 designed and built in-engine for Hands of God by Claude (`scripts/front/`,
 `tools/music/front.py`).
 
+## The goodbye and its credits roll
+
+The ending (`scripts/ending/`) rolls these credits in game as "Among the Stars", with the
+names of the player's own people and lines from their Village Book woven between them. The
+roll is built from this file (`scripts/ending/credits_roll.gd`); keep the two in step.
+
+## Engine
+
+Made with the **Godot Engine** (MIT licence, https://godotengine.org/license).
+
 ## Art
 
 All third-party art is CC0 (public domain dedication); credit is given anyway. Hand-built props,
