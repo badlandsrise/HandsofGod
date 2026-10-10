@@ -130,7 +130,7 @@ func _person_row(p: Person) -> Button:
 	b.add_child(row)
 	var age := STAGES[clampi(p.stage, 0, 3)] as String
 	if &"age" in p:
-		age += " (%d)" % int(p.get(&"age"))
+		age += ", %d" % int(float(p.get(&"age")) / 60.0)   # a game minute is a year (doc section 3)
 	var wish := ""
 	if &"wish" in p:
 		wish = str(p.get(&"wish"))

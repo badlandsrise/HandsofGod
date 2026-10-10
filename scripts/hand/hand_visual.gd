@@ -26,7 +26,7 @@ const MAX_GHOSTS := 20
 
 ## Wrist to fingertip is ~1.9 units: 8.5 makes it ~16 m, about ten people long
 ## (DESIGN 12.1 asks for ~12; a little less keeps the high camera clear).
-@export var hand_scale: float = 8.5
+@export var hand_scale: float = 10.5   # 1.9 units x 10.5 = 20 m, about 12 people
 
 var model: Node3D
 var mat: ShaderMaterial
@@ -411,7 +411,8 @@ func _update_tooltip(hand: Hand) -> void:
 	tip_panel.scale = Vector2(sc, sc)
 	tip_panel.reset_size()
 	var vp := get_viewport().get_visible_rect().size
-	var pos := sp + Vector2(26, 20)
+	# Below the slot pips and the "needs N" badge when they show.
+	var pos := sp + (Vector2(26, 62) if badge.visible else Vector2(26, 20))
 	var sz := tip_panel.size * sc
 	pos.x = minf(pos.x, vp.x - sz.x - 8)
 	pos.y = minf(pos.y, vp.y - sz.y - 8)
