@@ -60,6 +60,7 @@ func _run() -> void:
 	await test_guidance()
 	await test_hud_idle()
 	await test_stores_bar()
+	test_playtest_end()
 	await test_save_page_fits()
 	print("UI tests: %d passed, %d failed" % [passes, fails])
 	finished = true
@@ -633,6 +634,15 @@ func test_stores_bar() -> void:
 	hud.free()
 	Village.load_state({"stats": {}})
 	_reset()
+
+## The playtest build stops at the last built era (EraDef.playable).
+func test_playtest_end() -> void:
+	Village.load_state({"era": 4, "stats": {}})
+	check(not Defs.era(4).playable, "playtest end: Era 4 is not playable yet")
+	check(GoalPanel.state()["mode"] == &"free", "playtest end: the goal panel says the playtest ends here")
+	Village.load_state({"era": 3, "stats": {}})
+	check(GoalPanel.state()["mode"] != &"free", "playtest end: Era 3 still has its dreams")
+	Village.load_state({"stats": {}})
 
 # ---------------------------------------------------------------- the Save page
 

@@ -245,7 +245,14 @@ func _build() -> void:
 	keep.custom_minimum_size = Vector2(200, 50)
 	keep.pressed.connect(keep_playing)
 	bh.add_child(keep)
-	if str(d["next_title"]) != "":
+	var nxt := Defs.era(e + 1)
+	if nxt != null and not nxt.playable:
+		# The playtest build stops at the last built era: say so plainly.
+		var pl := UiTheme.wrap(UiTheme.ink_label("This is as far as the playtest goes. Era %d, %s, is still being built. Your town lives on if you want to stay, and thank you for playing." % [e + 1, nxt.title], 18, &"italic", UiTheme.INK_SOFT))
+		pl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		v.add_child(pl)
+		v.move_child(pl, bh.get_index())
+	elif str(d["next_title"]) != "":
 		var go := Button.new()
 		go.text = "Continue to Era %d" % (e + 1)
 		go.custom_minimum_size = Vector2(260, 50)

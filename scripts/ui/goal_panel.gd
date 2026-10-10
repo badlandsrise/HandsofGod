@@ -12,7 +12,7 @@ signal look_at(at: Vector3)
 
 const W := 318.0
 
-var mode: StringName = &""          # &"dream", &"teaser", &"age_done", &"none"
+var mode: StringName = &""          # &"dream", &"teaser", &"age_done", &"free", &"none"
 var dream_id: StringName = &""
 var _sig: String = "~"
 var _box: VBoxContainer
@@ -32,8 +32,10 @@ func _ready() -> void:
 ## The state shown now, without building anything (tests read it).
 static func state() -> Dictionary:
 	var e := Defs.era(Village.era)
-	if e == null or not e.playable:
+	if e == null:
 		return {"mode": &"none"}
+	if not e.playable:
+		return {"mode": &"free"}       # an era not built yet: the playtest ends here
 	var d := Dreams.active_dream()
 	if d == null:
 		return {"mode": &"age_done"}
@@ -68,6 +70,7 @@ func refresh() -> void:
 		&"dream": _build_dream(d, st["items"])
 		&"teaser": _build_teaser(str(st["hint"]), float(st["stir"]))
 		&"age_done": _build_age_done()
+		&"free": _build_free()
 
 func _process(_d: float) -> void:
 	if _flash_t > 0.0:
@@ -160,6 +163,16 @@ func _build_age_done() -> void:
 	_head("EVERY DREAM OF THIS AGE CAME TRUE", UiTheme.GOOD)
 	var next := Defs.era(Village.era + 1)
 	var l := Hud.make_label("The age can turn. Open the Village Book (F1) and begin the next one when you are ready." if next != null else "The people have everything they dreamed of.", 15)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.custom_minimum_size.x = W - 24.0
+	_box.add_child(l)
+
+## An era that is not built yet (EraDef.playable = false): the playtest ends,
+## the town lives on.
+func _build_free() -> void:
+	_head("THE PLAYTEST ENDS HERE", UiTheme.GOOD)
+	var ed := Defs.era(Village.era)
+	var l := Hud.make_label("Era %d, %s, is still being built. Your town lives on: stay as long as you like. Thank you for playing!" % [Village.era, ed.title if ed != null else "the next age"], 15)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.custom_minimum_size.x = W - 24.0
 	_box.add_child(l)
