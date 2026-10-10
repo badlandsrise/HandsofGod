@@ -3,7 +3,7 @@ extends Site
 
 var slots: int = 3
 var needs: int = 3
-var title: String = "Haul log"
+var mock_title: String = "Haul log"
 
 func _ready() -> void:
 	super()
@@ -29,7 +29,7 @@ func group_needs() -> int: return needs
 func slot_position(i: int) -> Vector3:
 	var a := PI + PI * float(i) / float(maxi(slots - 1, 1))
 	return global_position + Vector3(cos(a) * 1.4, 0, sin(a) * 1.0 + 0.9)
-func hover_text() -> String: return "%s %d/%d" % [title, workers.size(), slots]
+func hover_text() -> String: return "%s %d/%d" % [mock_title, workers.size(), slots]
 func pick_radius() -> float: return 2.0
 func slots_filled() -> int: return workers.size()
 func max_slots() -> int: return slots

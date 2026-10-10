@@ -98,16 +98,16 @@ func place(p: Person, s: Site) -> void:
 func test_data() -> void:
 	check(D.powers.size() == 16, "all 16 powers load (%d)" % D.powers.size())
 	var g2: PowerDef = D.power(&"grip_2")
-	check(g2 != null and g2.free and g2.grip == 2, "Grip II is free and grips 2")
+	check(g2 != null and g2.free and g2.grip == 3, "Grip II is free and grips 3")
 	var grips: Array = []
 	for id in [&"grip_2", &"grip_3", &"grip_4", &"grip_5"]:
 		grips.append(D.power(id).grip)
-	check(grips == [2, 5, 10, 20], "grip ladder 1, 2, 5, 10, 20")
+	check(grips == [3, 5, 10, 20], "grip ladder 1, 3, 5, 10, 20")
 	var st: Array = []
 	for id in [&"strength_1", &"strength_2", &"lift_buildings", &"strength_3"]:
 		st.append(D.power(id).strength)
 	check(st == [4.0, 10.0, 40.0, 100.0], "strength 4, 10, 40, 100")
-	check(D.power(&"strength_1").opens_region == &"western_meadow" and D.power(&"grip_2").opens_region == &"valley_floor", "power regions match section 10")
+	check(D.power(&"reach").opens_region == &"east_bank" and D.power(&"strength_1").opens_region == &"", "power regions match section 10 (Era 1 regions open by world blockers)")
 	check(D.eras.size() == 4 and D.era(1).day_seconds == 75.0 and D.era(1).night_seconds == 30.0 and D.era(1).season_seconds == 240.0, "4 eras, Era 1 timing")
 	var e1: EraDef = D.era(1)
 	check(e1.dreams.size() == 4 and D.dream(e1.dreams[-1]).gate, "Era 1 dreams end in the gate")
