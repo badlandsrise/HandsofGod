@@ -11,7 +11,7 @@ signal finished
 const LENGTH := 7.5
 const PULL_AT := 3.4            # when the camera pulls back to take in the tribe
 const BAR_H := 70.0
-const GAZE_RADIUS := 45.0       # the tribe within this of the wanderer turn to look
+const WATCHERS := 6              # the nearest of the tribe stop and turn to look
 
 var wanderer: Node3D = null
 var line: String = ""
@@ -25,6 +25,7 @@ var _cam_back_dist := -1.0
 var _cam_input := true
 var _hand: Node = null
 var _hand_input := true
+var _hidden: Array = []          # [node, was_visible]: HUD, glove and its tooltip
 var _top: ColorRect
 var _bottom: ColorRect
 var _skip: Label
@@ -75,6 +76,16 @@ func _ready() -> void:
 	if _hand != null and &"input_enabled" in _hand:
 		_hand_input = bool(_hand.input_enabled)
 		_hand.input_enabled = false
+	# a clean frame: no HUD, no glove, no tooltip while it plays
+	var hide: Array = [get_tree().get_first_node_in_group(&"hud"), _hand]
+	if _hand != null:
+		var v = _hand.get_node_or_null(^"Visual")
+		if v != null and &"tip_layer" in v:
+			hide.append(v.tip_layer)
+	for n in hide:
+		if n != null and &"visible" in n:
+			_hidden.append([n, n.visible])
+			n.visible = false
 	_frame_wanderer(true)
 
 func _bar(top: bool) -> ColorRect:
@@ -132,28 +143,47 @@ func _frame_wanderer(snap: bool) -> void:
 	else:
 		_cam.focus_on(wanderer.global_position, 15.0)
 
-## The tribe and the newcomer in one frame; the tribe turns to look.
+## The tribe and the newcomer in one frame; the tribe turns to look. The
+## watchers are the nearest few of the village (not the newcomer's own group);
+## when they are far apart the camera frames the tribe, looking the
+## stranger's way.
+var _watchers: Array = []
+
 func _frame_tribe() -> void:
 	var at := wanderer.global_position
-	var sum := at
-	var n := 1
-	var watchers := 0
-	for p in Village.alive():
-		if p == wanderer or not is_instance_valid(p) or not p.visible:
-			continue
-		var d: float = (p as Node3D).global_position.distance_to(at)
-		if d > GAZE_RADIUS:
-			continue
-		if not _gazed and p.has_method(&"gaze"):
-			p.gaze(wanderer, LENGTH - t + 1.5, watchers == 0)
-			watchers += 1
-		if d < 30.0:
-			sum += (p as Node3D).global_position
+	if not _gazed:
+		_gazed = true
+		var cands: Array = []
+		for p in Village.alive():
+			if p == wanderer or not is_instance_valid(p) or not p.visible:
+				continue
+			var d: float = (p as Node3D).global_position.distance_to(at)
+			if bool(p.get(&"wanderer")) and d < 6.0:
+				continue      # arrived with them
+			cands.append([d, p])
+		cands.sort_custom(func(a, b): return a[0] < b[0])
+		for i in mini(cands.size(), WATCHERS):
+			var p = cands[i][1]
+			if p.has_method(&"gaze"):
+				p.gaze(wanderer, LENGTH - t + 1.5, i == 0)
+			_watchers.append(p)
+	if _cam == null:
+		return
+	var c := Vector3.ZERO
+	var n := 0
+	for p in _watchers:
+		if is_instance_valid(p):
+			c += (p as Node3D).global_position
 			n += 1
-	_gazed = true
-	if _cam != null:
-		var c := sum / float(n)
-		_cam.focus_on(c.lerp(at, 0.35), clampf(14.0 + (c - at).length() * 0.9, 18.0, 34.0))
+	if n == 0:
+		_cam.focus_on(at, 18.0)
+		return
+	c /= float(n)
+	var gap := Vector2(c.x - at.x, c.z - at.z).length()
+	if gap <= 40.0:
+		_cam.focus_on(c.lerp(at, 0.4), clampf(16.0 + gap * 0.9, 18.0, 46.0))
+	else:
+		_cam.focus_on(c + (at - c).normalized() * 8.0, 22.0)
 
 func _finish() -> void:
 	if done:
@@ -165,6 +195,9 @@ func _finish() -> void:
 			_cam.focus_on(_cam_back, _cam_back_dist)
 	if _hand != null and is_instance_valid(_hand):
 		_hand.input_enabled = _hand_input
+	for h in _hidden:
+		if is_instance_valid(h[0]):
+			h[0].visible = h[1]
 	finished.emit()
 	queue_free()
 

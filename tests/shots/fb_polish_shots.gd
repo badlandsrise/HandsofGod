@@ -139,13 +139,26 @@ func _warmth_shot() -> void:
 func _wanderer_shot() -> void:
 	var w = _w()
 	Village.stats.erase("guide_first_wanderer")
+	_quiet_hud()
 	w.hud.visible = true
+	Clock.running = true
 	var ai = w.village_ai
 	var arr: Array = ai.wanderers.arrive(1, &"")
-	await _frames(4)
 	var g = w.hud.get(&"guidance")
-	var sc: WandererScene = g.scene if g != null else null
-	print("SHOTS wanderer scene: %s" % [sc])
+	if g != null:
+		g._beat = {}
+		g._queue = g._queue.filter(func(b): return b.get("scene", false))
+	var sc: WandererScene = null
+	for i in 60:
+		if w.hud.has_method(&"close_top_modal"):
+			w.hud.close_top_modal()
+		if "naming" in w.hud and w.hud.naming != null and w.hud.naming.is_open():
+			w.hud.naming.accept()
+		await _frames(1)
+		sc = g.scene if g != null else null
+		if sc != null:
+			break
+	print("SHOTS wanderer scene: %s (can_run %s, running %s, modal %s, queue %d)" % [sc, g.can_run() if g else false, Clock.running, w.hud.modal_open() if w.hud.has_method(&"modal_open") else "?", g._queue.size() if g else -1])
 	if sc == null:
 		return
 	sc.set_process(false)
