@@ -1,0 +1,12 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/assets/villager_visual.gd" id="1_vv"]
+[ext_resource type="AnimationLibrary" path="res://assets/models/characters/anims/villager_anims.res" id="2_anims"]
+
+[node name="VillagerVisual" type="Node3D"]
+script = ExtResource("1_vv")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+libraries = {
+&"": ExtResource("2_anims")
+}

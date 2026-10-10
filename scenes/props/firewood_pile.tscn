@@ -1,0 +1,29 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/models/props/resource-wood.glb" id="1_li8w7"]
+
+[node name="FirewoodPile" type="Node3D" unique_id=1019367455]
+
+[node name="resource-wood2" type="Node3D" parent="." unique_id=738649299 instance=ExtResource("1_li8w7")]
+transform = Transform3D(7, 0, 0, 0, 7, 0, 0, 0, 7, 0, 0, -0.3)
+metadata/hog_pull = 0.5
+metadata/hog_sat = 0.45
+metadata/hog_tint = Color(0.8784314, 0.76862746, 0.65882355, 1)
+
+[node name="@Node3D@7" type="Node3D" parent="." unique_id=1357716378 instance=ExtResource("1_li8w7")]
+transform = Transform3D(6.9829483, 0, 0.4882953, 0, 7, 0, -0.4882953, 0, 6.9829483, 0, 0, 0.3)
+metadata/hog_pull = 0.5
+metadata/hog_sat = 0.45
+metadata/hog_tint = Color(0.8784314, 0.76862746, 0.65882355, 1)
+
+[node name="@Node3D@8" type="Node3D" parent="." unique_id=638409884 instance=ExtResource("1_li8w7")]
+transform = Transform3D(6.9904065, 0, -0.36635172, 0, 7, 0, 0.36635172, 0, 6.9904065, 0.05, 0.4, 0)
+metadata/hog_pull = 0.5
+metadata/hog_sat = 0.45
+metadata/hog_tint = Color(0.8784314, 0.76862746, 0.65882355, 1)
+
+[node name="@Node3D@9" type="Node3D" parent="." unique_id=614358031 instance=ExtResource("1_li8w7")]
+transform = Transform3D(1.7101002, 0, 4.6984634, 0, 5, 0, -4.6984634, 0, 1.7101002, -0.1, 0, 0.85)
+metadata/hog_pull = 0.5
+metadata/hog_sat = 0.45
+metadata/hog_tint = Color(0.8784314, 0.76862746, 0.65882355, 1)

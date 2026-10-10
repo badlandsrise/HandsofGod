@@ -1,0 +1,121 @@
+{
+  "version": 1,
+  "doc": "Logical art ids -> scenes. Read by scripts/assets/asset_catalog.gd. scale/offset/rotation_y are applied to the model under a wrapper node; footprint is [x, z] in metres after scaling; pull is how hard the shader pulls the model's colours toward the era palette; tint multiplies its source colours. variants are picked by index; seasons replace variants (autumn, winter).",
+  "defaults": { "scale": 1.0, "offset": [0, 0, 0], "rotation_y": 0.0, "footprint": [1, 1], "pull": 0.3, "tint": "#ffffff", "era": 1 },
+  "entries": {
+    "tree_pine": {
+      "category": "nature", "scale": 2.4, "footprint": [4.5, 4.5], "pull": 0.25,
+      "variants": ["res://assets/models/nature/PineTree_1.fbx", "res://assets/models/nature/PineTree_2.fbx", "res://assets/models/nature/PineTree_3.fbx", "res://assets/models/nature/PineTree_4.fbx", "res://assets/models/nature/PineTree_5.fbx"],
+      "seasons": {
+        "autumn": ["res://assets/models/nature/PineTree_Autumn_1.fbx", "res://assets/models/nature/PineTree_Autumn_2.fbx", "res://assets/models/nature/PineTree_Autumn_3.fbx", "res://assets/models/nature/PineTree_Autumn_4.fbx", "res://assets/models/nature/PineTree_Autumn_5.fbx"],
+        "winter": ["res://assets/models/nature/PineTree_Snow_1.fbx", "res://assets/models/nature/PineTree_Snow_2.fbx", "res://assets/models/nature/PineTree_Snow_3.fbx", "res://assets/models/nature/PineTree_Snow_4.fbx", "res://assets/models/nature/PineTree_Snow_5.fbx"]
+      }
+    },
+    "tree_broad": {
+      "category": "nature", "scale": 2.3, "footprint": [6, 6], "pull": 0.25,
+      "variants": ["res://assets/models/nature/CommonTree_1.fbx", "res://assets/models/nature/CommonTree_2.fbx", "res://assets/models/nature/CommonTree_3.fbx", "res://assets/models/nature/CommonTree_4.fbx", "res://assets/models/nature/CommonTree_5.fbx"],
+      "seasons": {
+        "autumn": ["res://assets/models/nature/CommonTree_Autumn_1.fbx", "res://assets/models/nature/CommonTree_Autumn_2.fbx", "res://assets/models/nature/CommonTree_Autumn_3.fbx", "res://assets/models/nature/CommonTree_Autumn_4.fbx", "res://assets/models/nature/CommonTree_Autumn_5.fbx"],
+        "winter": ["res://assets/models/nature/CommonTree_Snow_1.fbx", "res://assets/models/nature/CommonTree_Snow_2.fbx", "res://assets/models/nature/CommonTree_Snow_3.fbx", "res://assets/models/nature/CommonTree_Snow_4.fbx", "res://assets/models/nature/CommonTree_Snow_5.fbx"]
+      }
+    },
+    "tree_birch": {
+      "category": "nature", "scale": 2.1, "footprint": [4, 4], "pull": 0.25,
+      "variants": ["res://assets/models/nature/BirchTree_1.fbx", "res://assets/models/nature/BirchTree_2.fbx", "res://assets/models/nature/BirchTree_3.fbx", "res://assets/models/nature/BirchTree_4.fbx", "res://assets/models/nature/BirchTree_5.fbx"],
+      "seasons": {
+        "autumn": ["res://assets/models/nature/BirchTree_Autumn_1.fbx", "res://assets/models/nature/BirchTree_Autumn_2.fbx", "res://assets/models/nature/BirchTree_Autumn_3.fbx", "res://assets/models/nature/BirchTree_Autumn_4.fbx", "res://assets/models/nature/BirchTree_Autumn_5.fbx"],
+        "winter": ["res://assets/models/nature/BirchTree_Snow_1.fbx", "res://assets/models/nature/BirchTree_Snow_2.fbx", "res://assets/models/nature/BirchTree_Snow_3.fbx", "res://assets/models/nature/BirchTree_Snow_4.fbx", "res://assets/models/nature/BirchTree_Snow_5.fbx"]
+      }
+    },
+    "tree_willow": {
+      "category": "nature", "scale": 2.2, "footprint": [6, 6], "pull": 0.25,
+      "variants": ["res://assets/models/nature/Willow_1.fbx", "res://assets/models/nature/Willow_2.fbx", "res://assets/models/nature/Willow_3.fbx", "res://assets/models/nature/Willow_4.fbx", "res://assets/models/nature/Willow_5.fbx"]
+    },
+    "tree_dead": {
+      "category": "nature", "scale": 2.3, "footprint": [4, 4], "pull": 0.25,
+      "variants": ["res://assets/models/nature/CommonTree_Dead_1.fbx", "res://assets/models/nature/CommonTree_Dead_2.fbx", "res://assets/models/nature/CommonTree_Dead_3.fbx", "res://assets/models/nature/BirchTree_Dead_1.fbx", "res://assets/models/nature/BirchTree_Dead_2.fbx"],
+      "seasons": {
+        "winter": ["res://assets/models/nature/CommonTree_Dead_Snow_1.fbx", "res://assets/models/nature/CommonTree_Dead_Snow_2.fbx", "res://assets/models/nature/CommonTree_Dead_Snow_3.fbx"]
+      }
+    },
+    "bush": {
+      "category": "nature", "scale": 1.0, "footprint": [1.5, 1.5], "pull": 0.25,
+      "variants": ["res://assets/models/nature/Bush_1.fbx", "res://assets/models/nature/Bush_2.fbx"],
+      "seasons": { "winter": ["res://assets/models/nature/Bush_Snow_1.fbx", "res://assets/models/nature/Bush_Snow_2.fbx"] }
+    },
+    "berry_bush": {
+      "category": "nature", "scale": 1.1, "footprint": [1.6, 1.6], "pull": 0.15,
+      "variants": ["res://assets/models/nature/BushBerries_1.fbx", "res://assets/models/nature/BushBerries_2.fbx"],
+      "seasons": { "winter": ["res://assets/models/nature/Bush_Snow_1.fbx", "res://assets/models/nature/Bush_Snow_2.fbx"] }
+    },
+    "rock_small": {
+      "category": "nature", "scale": 1.0, "footprint": [0.9, 0.9], "pull": 0.3,
+      "variants": ["res://assets/models/nature/Rock_2.fbx", "res://assets/models/nature/Rock_3.fbx", "res://assets/models/nature/Rock_5.fbx", "res://assets/models/nature/Rock_Moss_2.fbx", "res://assets/models/nature/Rock_Moss_5.fbx"],
+      "seasons": { "winter": ["res://assets/models/nature/Rock_Snow_2.fbx", "res://assets/models/nature/Rock_Snow_3.fbx", "res://assets/models/nature/Rock_Snow_5.fbx"] }
+    },
+    "rock_large": {
+      "category": "nature", "scale": 3.2, "offset": [0, 0.3, 0], "footprint": [3.5, 3.5], "pull": 0.3,
+      "variants": ["res://assets/models/nature/Rock_6.fbx", "res://assets/models/nature/Rock_4.fbx", "res://assets/models/nature/Rock_Moss_6.fbx", "res://assets/models/nature/Rock_Moss_4.fbx", "res://assets/models/nature/Rock_7.fbx"],
+      "seasons": { "winter": ["res://assets/models/nature/Rock_Snow_6.fbx", "res://assets/models/nature/Rock_Snow_4.fbx", "res://assets/models/nature/Rock_Snow_7.fbx"] }
+    },
+    "cliff": { "category": "nature", "footprint": [14, 6], "variants": ["res://scenes/props/cliff.tscn"] },
+    "grass_clump": {
+      "category": "nature", "scale": 0.6, "footprint": [0.4, 0.4], "pull": 0.25,
+      "variants": ["res://assets/models/nature/Grass.fbx", "res://assets/models/nature/Grass_2.fbx", "res://assets/models/nature/Grass_Short.fbx"]
+    },
+    "flowers": {
+      "category": "nature", "scale": 0.9, "footprint": [0.6, 0.6], "pull": 0.2,
+      "variants": ["res://assets/models/nature/Flowers.fbx", "res://assets/models/nature/Plant_5.fbx"]
+    },
+    "fern": {
+      "category": "nature", "scale": 0.9, "footprint": [1.2, 1.2], "pull": 0.25,
+      "variants": ["res://assets/models/nature/Plant_1.fbx", "res://assets/models/nature/Plant_3.fbx", "res://assets/models/nature/Plant_4.fbx"]
+    },
+    "lilypad": { "category": "nature", "scale": 0.8, "footprint": [1, 1], "variants": ["res://assets/models/nature/Lilypad.fbx"] },
+    "log_fallen": {
+      "category": "nature", "scale": 1.3, "rotation_y": 90, "footprint": [3.5, 1], "pull": 0.3,
+      "variants": ["res://assets/models/nature/WoodLog.fbx", "res://assets/models/nature/WoodLog_Moss.fbx"],
+      "seasons": { "winter": ["res://assets/models/nature/WoodLog_Snow.fbx"] }
+    },
+    "trunk_fallen": {
+      "category": "nature", "scale": 3.4, "rotation_y": 90, "footprint": [9.5, 3], "pull": 0.3,
+      "variants": ["res://assets/models/nature/WoodLog_Moss.fbx"],
+      "seasons": { "winter": ["res://assets/models/nature/WoodLog_Snow.fbx"] }
+    },
+    "stump": {
+      "category": "nature", "scale": 1.2, "footprint": [1.4, 1.4], "pull": 0.3,
+      "variants": ["res://assets/models/nature/TreeStump.fbx", "res://assets/models/nature/TreeStump_Moss.fbx"],
+      "seasons": { "winter": ["res://assets/models/nature/TreeStump_Snow.fbx"] }
+    },
+    "campfire": { "category": "prop", "footprint": [1.8, 1.8], "variants": ["res://scenes/props/campfire.tscn"] },
+    "firewood_pile": { "category": "prop", "footprint": [1.6, 1.4], "variants": ["res://scenes/props/firewood_pile.tscn"] },
+    "flint_node": { "category": "prop", "footprint": [2, 2], "variants": ["res://scenes/props/flint_node.tscn"] },
+    "hut": { "category": "building", "footprint": [4, 4], "variants": ["res://scenes/props/hut.tscn"] },
+    "hut_plot": { "category": "building", "footprint": [4, 4], "variants": ["res://scenes/props/hut_plot.tscn"] },
+    "hut_frame": { "category": "building", "footprint": [4, 4], "variants": ["res://scenes/props/hut_frame.tscn"] },
+    "food_store": { "category": "building", "footprint": [3, 3], "variants": ["res://scenes/props/food_store.tscn"] },
+    "drying_rack": { "category": "building", "footprint": [2.6, 1], "variants": ["res://scenes/props/drying_rack.tscn"] },
+    "cairn": { "category": "building", "footprint": [1.4, 1.4], "variants": ["res://scenes/props/cairn.tscn"] },
+    "shrine": { "category": "building", "footprint": [4, 3], "variants": ["res://scenes/props/shrine.tscn"] },
+    "stone_circle": { "category": "building", "footprint": [12, 12], "variants": ["res://scenes/props/stone_circle.tscn"] },
+    "cave_mouth": { "category": "nature", "footprint": [14, 8], "variants": ["res://scenes/props/cave_mouth.tscn"] },
+    "deer": { "category": "animal", "placeholder": true, "footprint": [1.6, 0.6], "variants": ["res://scenes/props/deer.tscn"] },
+    "wolf": { "category": "animal", "placeholder": true, "footprint": [1.4, 0.5], "variants": ["res://scenes/props/wolf.tscn"] },
+    "bear": { "category": "animal", "placeholder": true, "footprint": [2.2, 1], "era": 2, "variants": ["res://scenes/props/bear.tscn"] },
+    "sheep": { "category": "animal", "era": 2, "footprint": [1.3, 0.7], "variants": ["res://scenes/props/sheep.tscn"] },
+    "horse": { "category": "animal", "era": 2, "footprint": [2.3, 0.8], "variants": ["res://scenes/props/horse.tscn"] },
+    "villager": { "category": "person", "footprint": [0.6, 0.6], "variants": ["res://scenes/people/villager_visual.tscn"] },
+    "tool_axe": { "category": "prop", "scale": 3.5, "footprint": [0.4, 0.2], "pull": 0.5, "saturation": 0.5, "variants": ["res://assets/models/props/tool-axe.glb"] },
+    "tool_pickaxe": { "category": "prop", "scale": 3.5, "footprint": [0.6, 0.2], "pull": 0.5, "saturation": 0.5, "variants": ["res://assets/models/props/tool-pickaxe.glb"] },
+    "bedroll": { "category": "prop", "scale": 4.0, "footprint": [1.3, 2.4], "pull": 0.5, "saturation": 0.2, "tint": "#c8a07a", "variants": ["res://assets/models/props/bedroll.glb"] },
+    "fish": { "category": "prop", "scale": 2.5, "footprint": [0.6, 0.3], "pull": 0.4, "saturation": 0.5, "variants": ["res://assets/models/props/fish.glb", "res://assets/models/props/fish-large.glb"] },
+    "crop_wheat": { "category": "nature", "era": 2, "scale": 1.0, "footprint": [0.4, 0.4], "pull": 0.2, "variants": ["res://assets/models/nature/Wheat.fbx"] },
+    "crop_corn": { "category": "nature", "era": 2, "scale": 1.0, "footprint": [1, 1], "pull": 0.2, "variants": ["res://assets/models/nature/Corn_1.fbx", "res://assets/models/nature/Corn_2.fbx"] },
+    "era2_cottage": { "category": "building", "era": 2, "saturation": 0.8, "footprint": [5.5, 5.5], "variants": ["res://scenes/props/era2_cottage.tscn"] },
+    "era2_longhouse": { "category": "building", "era": 2, "saturation": 0.8, "footprint": [5.5, 7.5], "variants": ["res://scenes/props/era2_longhouse.tscn"] },
+    "era2_shed": { "category": "building", "era": 2, "saturation": 0.8, "footprint": [3, 3], "variants": ["res://scenes/props/era2_shed.tscn"] },
+    "era2_wagon": { "category": "prop", "era": 2, "footprint": [2, 4], "pull": 0.2, "variants": ["res://assets/models/village/Prop_Wagon.gltf"], "offset": [0, 0, 1.15] },
+    "era2_crate": { "category": "prop", "era": 2, "footprint": [1.1, 1.1], "pull": 0.2, "scale": 0.8, "variants": ["res://assets/models/village/Prop_Crate.gltf"] },
+    "era2_fence": { "category": "prop", "era": 2, "footprint": [2, 0.2], "pull": 0.2, "variants": ["res://assets/models/village/Prop_WoodenFence_Single.gltf", "res://assets/models/village/Prop_WoodenFence_Extension1.gltf"] }
+  }
+}

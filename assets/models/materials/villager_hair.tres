@@ -1,0 +1,11 @@
+[gd_resource type="ShaderMaterial" format=3]
+
+[ext_resource type="Shader" path="res://assets/models/materials/villager.gdshader" id="1_n4cfl"]
+
+[resource]
+resource_name = "hog_villager_hair"
+render_priority = 0
+shader = ExtResource("1_n4cfl")
+shader_parameter/part = 1
+shader_parameter/era_tint = Color(1, 0.9529412, 0.8784314, 1)
+shader_parameter/era_saturation = 0.92

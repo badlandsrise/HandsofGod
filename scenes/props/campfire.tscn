@@ -1,0 +1,97 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/models/props/campfire-pit.glb" id="1_t5gdp"]
+[ext_resource type="Script" path="res://scripts/assets/flicker.gd" id="2_qxf8f"]
+[ext_resource type="Material" path="res://assets/models/materials/flame.tres" id="3_hocco"]
+[ext_resource type="Material" path="res://assets/models/materials/flame_core.tres" id="4_uw18v"]
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_oagb3"]
+top_radius = 0.0
+bottom_radius = 0.2
+height = 0.9
+radial_segments = 5
+rings = 1
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_fibnk"]
+top_radius = 0.0
+bottom_radius = 0.14
+height = 0.63
+radial_segments = 5
+rings = 1
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_gikb7"]
+top_radius = 0.0
+bottom_radius = 0.15
+height = 0.675
+radial_segments = 5
+rings = 1
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_gne65"]
+top_radius = 0.0
+bottom_radius = 0.13
+height = 0.585
+radial_segments = 5
+rings = 1
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_grqth"]
+top_radius = 0.0
+bottom_radius = 0.12
+height = 0.54
+radial_segments = 5
+rings = 1
+
+[node name="Campfire" type="Node3D" unique_id=1038689136]
+
+[node name="campfire-pit2" type="Node3D" parent="." unique_id=1281091634 instance=ExtResource("1_t5gdp")]
+transform = Transform3D(6, 0, 0, 0, 6, 0, 0, 0, 6, 0, 0, 0)
+metadata/hog_pull = 0.4
+metadata/hog_sat = 0.55
+
+[node name="Fire" type="Node3D" parent="." unique_id=558594272]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15, 0)
+script = ExtResource("2_qxf8f")
+
+[node name="Flame0" type="Node3D" parent="Fire" unique_id=1764290875]
+
+[node name="@MeshInstance3D@2" type="MeshInstance3D" parent="Fire/Flame0" unique_id=865728651]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
+material_override = ExtResource("3_hocco")
+mesh = SubResource("CylinderMesh_oagb3")
+
+[node name="Flame1" type="Node3D" parent="Fire" unique_id=586296285]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.14, 0, 0.08)
+
+[node name="@MeshInstance3D@3" type="MeshInstance3D" parent="Fire/Flame1" unique_id=1689751576]
+transform = Transform3D(0.7986355, 0, 0.60181504, 0, 1, 0, -0.60181504, 0, 0.7986355, 0, 0.315, 0)
+material_override = ExtResource("3_hocco")
+mesh = SubResource("CylinderMesh_fibnk")
+
+[node name="Flame2" type="Node3D" parent="Fire" unique_id=1059088860]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.12, 0, 0.1)
+
+[node name="@MeshInstance3D@4" type="MeshInstance3D" parent="Fire/Flame2" unique_id=939858722]
+transform = Transform3D(0.2756373, 0, 0.9612617, 0, 1, 0, -0.9612617, 0, 0.2756373, 0, 0.3375, 0)
+material_override = ExtResource("3_hocco")
+mesh = SubResource("CylinderMesh_gikb7")
+
+[node name="Flame3" type="Node3D" parent="Fire" unique_id=1203907114]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.02, 0, -0.13)
+
+[node name="@MeshInstance3D@5" type="MeshInstance3D" parent="Fire/Flame3" unique_id=1282908745]
+transform = Transform3D(-0.35836807, 0, 0.9335804, 0, 1, 0, -0.9335804, 0, -0.35836807, 0, 0.2925, 0)
+material_override = ExtResource("3_hocco")
+mesh = SubResource("CylinderMesh_gne65")
+
+[node name="Flame4" type="Node3D" parent="Fire" unique_id=340779214]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.02)
+
+[node name="@MeshInstance3D@6" type="MeshInstance3D" parent="Fire/Flame4" unique_id=417083368]
+transform = Transform3D(-0.84804815, 0, 0.52991915, 0, 1, 0, -0.52991915, 0, -0.84804815, 0, 0.27, 0)
+material_override = ExtResource("4_uw18v")
+mesh = SubResource("CylinderMesh_grqth")
+
+[node name="FireLight" type="OmniLight3D" parent="Fire" unique_id=935296208]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+light_color = Color(1, 0.6039216, 0.2901961, 1)
+light_energy = 1.6
+omni_range = 7.0

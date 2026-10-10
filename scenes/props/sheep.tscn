@@ -1,0 +1,10 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/assets/animal_visual.gd" id="1_n2fol"]
+[ext_resource type="PackedScene" path="res://assets/models/animals/Sheep.fbx" id="2_wqocv"]
+
+[node name="Sheep" type="Node3D" unique_id=908272801]
+script = ExtResource("1_n2fol")
+
+[node name="Model" type="Node3D" parent="." unique_id=1262237441 instance=ExtResource("2_wqocv")]
+transform = Transform3D(0.17, 0, 0, 0, 0.17, 0, 0, 0, 0.17, 0, 0, 0)
