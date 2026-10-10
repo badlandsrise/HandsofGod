@@ -71,6 +71,44 @@ const NAMED := {
 	"wolf": ["#6e6a66", false],
 	"wolf_light": ["#b7b0a6", false],
 	"antler": ["#d9c9a6", false],
+	# Era 2 (Village): timber and daub, thatch, clay, wool and linen, bronze (DESIGN 12.2)
+	"daub": ["#ece3cf", false],
+	"timber": ["#5e4130", false],
+	"straw": ["#cfa65c", true],
+	"straw_dark": ["#9a7a40", false],
+	"terracotta": ["#b5573a", false],
+	"clay": ["#9c5f45", false],
+	"clay_light": ["#d39a6a", false],
+	"soil": ["#6b4b33", false],
+	"soil_dark": ["#4b3424", false],
+	"crop_young": ["#93b04a", true],
+	"crop_green": ["#6f8a3c", true],
+	"crop_gold": ["#d9b256", true],
+	"crop_blight": ["#8a6e3e", true],
+	"leaf": ["#5d7d34", false],
+	"carrot": ["#d97a2e", false],
+	"bronze": ["#b8843a", false],
+	"verdigris": ["#4f9a7c", false],
+	"wool": ["#eee6d4", false],
+	"linen": ["#e8dcc0", true],
+	"cloth_red": ["#a8432e", true],
+	"cloth_blue": ["#5c84a6", true],
+	"cloth_gold": ["#d0a040", true],
+	"cloth_green": ["#6f8a3c", true],
+	"water": ["#5f93b0", false],
+	"bread": ["#c48a40", false],
+	"rope": ["#b49a6c", false],
+	"leather": ["#7a4a2c", false],
+	"hand_gold": ["#e2b44c", false],
+	"stone_light": ["#a9a397", false],
+}
+
+## Named library materials that carry a tileable texture (made by gen_era2_textures.py,
+## saved by build_era2.gd): id -> [albedo hex, double sided, texture path].
+const NAMED_TEXTURED := {
+	"thatch": ["#ffffff", false, "res://assets/textures/era2/thatch.png"],
+	"planks": ["#ffffff", false, "res://assets/textures/era2/planks.png"],
+	"daub_tex": ["#ffffff", false, "res://assets/textures/era2/daub.png"],
 }
 
 static var _era: int = 1
@@ -103,9 +141,12 @@ static func material(mat_name: String) -> ShaderMaterial:
 			register(loaded)
 			_named[mat_name] = loaded
 			return loaded
-	var spec: Array = NAMED.get(mat_name, ["#ff00ff", false])
+	var spec: Array = NAMED.get(mat_name, NAMED_TEXTURED.get(mat_name, ["#ff00ff", false]))
 	var m := _new_material(spec[1])
 	m.set_shader_parameter("albedo_color", Color(spec[0]))
+	if spec.size() > 2 and ResourceLoader.exists(spec[2]):
+		m.set_shader_parameter("albedo_texture", load(spec[2]))
+		m.set_shader_parameter("use_texture", true)
 	m.set_shader_parameter("palette_pull", 0.0)
 	m.resource_name = "hog_" + mat_name
 	_named[mat_name] = m

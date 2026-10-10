@@ -15,7 +15,7 @@ All packs are CC0. The pipeline is in `scripts/assets/tools/prep_packs.py` (its 
 | quaternius-modular-scifi-megakit (Standard) | 48.6 MB | 190 pieces, gltf / fbx / obj | yes | later (Era 4) |
 | quaternius-ultimate-spaceships | 0.9 MB | 5 ships, fbx / obj / blend | no | later (rocket) |
 | kenney-survival-kit | 1.9 MB | 80 models, glb / fbx / obj, one colormap texture | yes, GLB | **Primary: Era 1 props** (38 models) |
-| kenney-pirate-kit | 3.2 MB | 72 models, glb / fbx / obj | yes | later (boats, harbour) |
+| kenney-pirate-kit | 3.2 MB | 72 models, glb / fbx / obj | yes | **Era 2 row boats** (2 boats + paddle, own colormap in `assets/models/boats/`) |
 | kenney-city-kit-commercial | 4.1 MB | 41 models, glb / fbx / obj | yes | later (Era 4) |
 | kenney-city-kit-industrial | 5.0 MB | 37 models, glb / fbx / obj | yes | later (Era 4) |
 | kenney-space-kit | 6.7 MB | 153 models, glb / fbx / obj / dae / stl, 772 png previews | yes | later (launch) |
@@ -39,6 +39,30 @@ low-poly primitive placeholders (`scenes/props/deer.tscn` etc., flagged `"placeh
 | Era 2 buildings | Quaternius Medieval Village MegaKit | `assets/models/village/` 25 glTF pieces (normal/ORM maps stripped, base colours at 512 px in `assets/textures/village/`), assembled into `era2_cottage`, `era2_longhouse`, `era2_shed` |
 | Villagers | Quaternius Universal Base Characters + Universal Animation Library (same skeleton) | `assets/models/characters/` 2 bodies + 8 hair pieces (textures stripped, body-region mask baked into vertex colour), `anims/villager_anims.res` (17 baked clips) |
 | Farm animals | Quaternius Farm Animals | `assets/models/animals/` Sheep, Horse, Cow, Pig (FBX, with Idle/Walk/... clips) |
+
+## The Era 2 (Village) kit
+
+Built in code by `scripts/assets/tools/build_era2.gd` into `scenes/props/era2/*.scn` (98 scenes):
+
+    godot --headless --path . -s res://scripts/assets/tools/build_era2.gd [-- --only=mill,fields]
+
+Pack pieces are copied in by `scripts/assets/tools/prep_era2.py` (MegaKit walls, doors, shutters,
+chimney; Kenney workbenches, barrels, crates; Pirate Kit row boats), and the thatch / plank / daub
+textures are painted by `scripts/assets/tools/gen_era2_textures.py`. Everything else (roofs,
+timber frames, ovens, kilns, fields, piles, tools, stalls, the temple) is modelled from the
+named palette materials; Era 2 adds daub, timber, straw, thatch, terracotta, clay, soil, crop
+greens and golds, bronze, wool, linen, dyed cloth and hand gold (`ArtPalette.NAMED`).
+
+- Buildings have three stages like the Era 1 hut: `<id>_plot` (pegged, strung outline with the
+  materials stacked beside it), `<id>_frame` (timber frame, scaffold and ladder), `<id>` (done).
+- Moving parts are named nodes running `scripts/assets/spinner.gd` (`speed`, `axis`, `spinning`):
+  `mill/Sails`, `kiln/Wheel` (potter's wheel), `well/Windlass` (stopped by default).
+- The temple of the Hand keeps the Era 1 shrine stone as its altar, with the hand painted in
+  red ochre; the hand is also on the pediment, the doors, the ridge finial and the painted pots
+  (section 5: "painted on pots and temple doors").
+- Villagers: `VillagerVisual.set_era(2)` switches to woven clothes (linen undershirt, hose or
+  long skirt, trim bands, belts, aprons) and hats on some outfits (straw hat, coif, felt cap,
+  headscarf, on a head-bone attachment). Without a call it follows `ArtPalette.current_era()`.
 
 Import settings: Godot defaults for scenes (LODs generated, shadow meshes on); **no collision is
 generated**: gameplay owns its shapes, and the catalog's footprint is there to size them.
@@ -72,8 +96,22 @@ the ground at their footprint centre and face +Z.
   rock_large cliff grass_clump flowers fern lilypad log_fallen trunk_fallen stump campfire
   firewood_pile flint_node hut hut_frame hut_plot food_store drying_rack cairn shrine stone_circle
   cave_mouth deer* wolf* villager tool_axe tool_pickaxe bedroll fish`
-- Era 2: `era2_cottage era2_longhouse era2_shed era2_wagon era2_crate era2_fence crop_wheat
-  crop_corn sheep horse bear*` (`*` placeholder)
+- Era 2 (earlier): `era2_cottage` (now the kit cottages) `era2_longhouse era2_shed era2_wagon
+  era2_crate era2_fence crop_wheat crop_corn sheep horse bear*` (`*` placeholder)
+- Era 2 buildings, each with `_plot` and `_frame`: `cottage` (2 variants) `granary mill bakery
+  kiln smelter smithy weaver workshop barn temple bridge well watchtower sheep_pen`; plus
+  `market_stall` (3 awnings) `market_stall_frame charcoal_clamp jetty`
+- Era 2 farming: `field` (variants: tilled, sprouts, growing, ripe, stubble) and the single states
+  `field_tilled field_sprouts field_growing field_ripe field_stubble field_blighted field_parched`,
+  `garden_plot sheaves haystack scarecrow`
+- Era 2 resources: `grain_sacks flour_sacks bread_basket pots pots_unfired clay_pile planks_pile
+  charcoal_pile ore_pile bronze_ingots wool_bales cloth_bolts barrels water_trough`; nodes and
+  hazards `clay_pit copper_ore rockfall`
+- Era 2 props: `fence_wattle fence_wattle_gate handcart` (empty, loaded) `hay_wagon raft raft_frame
+  rowboat fishing_boat`; tools `tool_axe_bronze tool_pickaxe_bronze tool_hoe tool_sickle
+  tool_pitchfork tool_shovel tool_hammer`; animals `cow pig`
 - Seasons: trees, bushes, rocks, logs and stumps have `autumn` and/or `winter` variant lists.
 
-Contact sheets: `tests/assets/contact_era1.png`, `tests/assets/villagers.png`.
+Contact sheets: `tests/assets/contact_era1.png`, `tests/assets/villagers.png`; Era 2:
+`tests/shots/era2_art_kit.png` and the diorama `tests/shots/era2_village.png`
+(`tests/assets/era2_shots.gd`, `--shot=kit` or `--shot=village`).

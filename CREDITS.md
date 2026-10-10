@@ -28,11 +28,19 @@ shaders and the placeholder animals are made for this project.
 | Universal Animation Library (Standard) | Quaternius | CC0 | https://quaternius.itch.io/universal-animation-library |
 | Farm Animals (Animated) | Quaternius | CC0 | https://quaternius.itch.io/lowpoly-animated-animals (quaternius.com/packs/farmanimal.html) |
 | Survival Kit | Kenney (www.kenney.nl) | CC0 | https://kenney.nl/assets/survival-kit |
+| Pirate Kit (row boats) | Kenney (www.kenney.nl) | CC0 | https://kenney.nl/assets/pirate-kit |
 | Hand models and hand poses (godot-xr-tools) | Miodrag Sejic (DigitalN8m4r3), GodotVR/godot-xr-tools | CC0 | https://github.com/GodotVR/godot-xr-tools |
 
 The hand is a white cartoon glove modelled for Hands of God on the CC0 godot-xr-tools
 base hand (Hand_low_R) by Miodrag Sejic, keeping its OpenXR skeleton and poses
 (`assets/models/hand/`).
+
+The Era 2 (Village) kit was made for Hands of God: its buildings, construction stages, fields,
+piles, tools, carts, stalls and the temple are modelled in code (`scripts/assets/tools/build_era2.gd`)
+around CC0 pieces from the Medieval Village MegaKit (plaster walls, doors, shutters, chimney),
+the Survival Kit (workbenches, barrels, crates), the Pirate Kit (row boats), Farm Animals (cow,
+pig) and the Ultimate Nature Pack (rocks). The thatch, plank and daub textures
+(`assets/textures/era2/`) are procedural, painted by `scripts/assets/tools/gen_era2_textures.py`.
 
 ## Ground textures
 

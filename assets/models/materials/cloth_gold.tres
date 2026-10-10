@@ -1,0 +1,13 @@
+[gd_resource type="ShaderMaterial" format=3]
+
+[ext_resource type="Shader" path="res://assets/models/materials/hog_flat_2s.gdshader" id="1_urqoc"]
+
+[resource]
+resource_name = "hog_cloth_gold"
+render_priority = 0
+shader = ExtResource("1_urqoc")
+shader_parameter/albedo_color = Color(0.8156863, 0.627451, 0.2509804, 1)
+shader_parameter/palette_pull = 0.0
+shader_parameter/palette = PackedColorArray(0.78431374, 0.5647059, 0.18039216, 1, 0.41960785, 0.49803922, 0.22745098, 1, 0.22745098, 0.21176471, 0.2, 1, 0.9098039, 0.5019608, 0.22745098, 1, 0.5411765, 0.3529412, 0.23137255, 1, 0.9019608, 0.8352941, 0.6901961, 1, 0.54901963, 0.52156866, 0.47058824, 1, 0.24705882, 0.32156864, 0.1882353, 1, 0.61960787, 0.23137255, 0.14901961, 1, 0.65882355, 0.6901961, 0.2901961, 1)
+shader_parameter/era_tint = Color(1, 0.9529412, 0.8784314, 1)
+shader_parameter/era_saturation = 0.92
