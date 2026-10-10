@@ -408,6 +408,9 @@ static func step(p, w: Site, dt: float) -> void:
 		return
 	match p._phase:
 		"to_task":
+			if not is_instance_valid(p.task_site):
+				_drop(p, w)          # [era3] its task was finished and freed (a paved stretch)
+				return
 			var t: Site = p.task_site
 			if not _task_ok(w, t) or _need(w, t) <= 0.0:
 				_drop(p, w)
@@ -417,6 +420,9 @@ static func step(p, w: Site, dt: float) -> void:
 				p._phase = "work"
 				p._timer = 0.0
 		"work":
+			if not is_instance_valid(p.task_site):
+				_drop(p, w)
+				return
 			var t2: Site = p.task_site
 			if not _task_ok(w, t2):
 				_drop(p, w)

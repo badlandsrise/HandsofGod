@@ -192,7 +192,7 @@ func _aqueduct() -> void:
 	check(raise.can_accept(1), "Grip IV opens the crew of ten")
 	raise._complete_group([])
 	check(aq.state == Site.State.FINISHED and Flags.has(&"clean_water"), "raised: clean water")
-	_grow_to(75)
+	_grow_to(Defs.dream(&"aqueduct").needs_population)
 	check(w.era3.fountain != null and w.era3.fountain.visible, "a fountain runs in the square")
 	var arches := aq.visual.get_children().filter(func(c): return str(c.name).begins_with("aqueduct") or (c is Node3D and c.scene_file_path.contains("aqueduct")))
 	check(aq.visual.get_child_count() >= LayoutEra3.AQUEDUCT_SEGMENTS + 1, "the arches walk east from the castellum (%d parts)" % aq.visual.get_child_count())
@@ -468,7 +468,7 @@ func _first_two() -> void:
 # ---------------------------------------------------------------- the gate
 
 func _gate() -> void:
-	_grow_to(88)
+	_grow_to(Defs.dream(&"observatory").needs_population)
 	w.village_ai.dreams.update()
 	check(Dreams.is_done(&"observatory") and int(Village.stats.get("era_gate_done", 0)) == 3, "the observatory dream is the Era 3 gate")
 	check(EraTransition.enter_era(4) and Village.era == 4, "the gate leads on to Era 4")
