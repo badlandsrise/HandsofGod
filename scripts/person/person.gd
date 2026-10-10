@@ -57,6 +57,7 @@ var state: int = S.IDLE
 var placed_by_hand: bool = false
 var wanderer: bool = false
 var blessed_t: float = 0.0
+var hurt_t: float = 0.0                 # seconds of injury left (a wolf bite): slower, heals
 var warmed_t: float = 0.0
 var look: Dictionary = {"skin": 0, "hair": 0, "height": 1.0}
 var bonds: Dictionary = {}              # other uid -> bond progress (births.gd)
@@ -142,7 +143,7 @@ func _generate() -> void:
 		if not traits.has(t):
 			traits.append(t)
 	look = {"skin": rng.randi() % PersonVisual.SKIN.size(), "hair": rng.randi() % PersonVisual.HAIR.size(),
-		"height": rng.randf_range(0.92, 1.08)}
+		"height": rng.randf_range(0.92, 1.08), "outfit": (rng.randi() % 4) * 2 + (1 if sex == "f" else 0)}
 	age = rng.randf_range(STAGE_START[Stage.ADULT] + 60.0, STAGE_START[Stage.ADULT] + 600.0)
 	death_age = DEATH_AGE + rng.randf_range(-DEATH_JITTER, DEATH_JITTER)
 	wish_t = rng.randf_range(30.0, 70.0)
@@ -197,12 +198,11 @@ func _build_nodes() -> void:
 func _refresh_look() -> void:
 	if visual == null:
 		return
-	visual.apply_look(int(look.get("skin", 0)), int(look.get("hair", 0)), float(look.get("height", 1.0)), stage == Stage.ELDER)
-	var sc := 1.0
-	match stage:
-		Stage.BABY: sc = 0.42
-		Stage.CHILD: sc = 0.7
-	visual.body.scale = Vector3.ONE * float(look.get("height", 1.0)) * sc
+	# Older saves have no outfit: derive one that matches the person's sex.
+	var outfit := int(look.get("outfit", -1))
+	if outfit < 0:
+		outfit = (posmod(int(look.get("skin", 0)) + int(look.get("hair", 0)) + uid, 4)) * 2 + (1 if sex == "f" else 0)
+	visual.apply_look(int(look.get("skin", 0)), int(look.get("hair", 0)), float(look.get("height", 1.0)), stage == Stage.ELDER, stage, outfit)
 	var wj := _job_def()
 	visual.set_job_colour(wj.skill if wj != null else &"")
 
@@ -463,6 +463,24 @@ func die(cause: String = "old age") -> void:
 
 # --- sim (10 Hz) -------------------------------------------------------------------
 
+const HURT_TIME := 120.0                # a bite heals in about two game minutes
+
+## An injury (a wolf bite, a fall). It slows them and heals by itself; in Era 1 it
+## never kills. `amount` 1.0 is one bite; bites stack up to three.
+func hurt(amount: float = 1.0, cause: StringName = &"") -> void:
+	if state == S.DEAD:
+		return
+	hurt_t = minf(hurt_t + HURT_TIME * amount, HURT_TIME * 3.0)
+	needs[&"joy"] = maxf(float(needs.get(&"joy", 0.5)) - 0.15, 0.0)
+	if visual: visual.set_hurt(0.8)
+	if cause != &"wolf":    # the wolf raises its own alert
+		Events.alert.emit("%s was hurt" % given_name, global_position)
+	if state == S.WORK or state == S.IDLE or state == S.WALK or state == S.WAIT_GROUP:
+		flee_from(global_position + Vector3(Game.rng.randf_range(-1, 1), 0, Game.rng.randf_range(-1, 1)), 1.0)
+
+func is_hurt() -> bool:
+	return hurt_t > 0.0
+
 func sim(dt: float) -> void:
 	if state == S.DEAD:
 		return
@@ -474,6 +492,9 @@ func sim(dt: float) -> void:
 	_sim_wish(dt)
 	blessed_t = maxf(blessed_t - dt, 0.0)
 	warmed_t = maxf(warmed_t - dt, 0.0)
+	if hurt_t > 0.0:
+		hurt_t = maxf(hurt_t - dt * (2.0 if blessed_t > 0.0 else 1.0), 0.0)
+		if visual: visual.set_hurt(clampf(hurt_t / HURT_TIME, 0.0, 1.0) * 0.8)
 	match state:
 		S.IDLE: _sim_idle(dt)
 		S.WALK:
@@ -1066,6 +1087,7 @@ func _step(dt: float) -> void:
 	if stage == Stage.ELDER: spd *= 0.75
 	elif stage == Stage.CHILD: spd *= 0.9
 	if Clock.season == Clock.Season.WINTER: spd *= 0.85
+	if hurt_t > 0.0: spd *= 0.6
 	var st := minf(spd * dt, dist)
 	pos += dir.normalized() * st
 	pos.y = Site.ground(pos.x, pos.z)
@@ -1109,6 +1131,15 @@ func _land() -> void:
 	adjust_trust(-0.02)      # set down somewhere pointless
 	_decide_t = Game.rng.randf_range(1.0, 2.5)
 
+## True when a baby of theirs rides on their hip (it follows _carrier()).
+func _carrying_baby() -> bool:
+	if children.is_empty():
+		return false
+	for p in Village.people:
+		if is_instance_valid(p) and p.stage == Stage.BABY and p.alive() and p.parents.has(uid) and p._carrier() == self:
+			return true
+	return false
+
 func _carrier() -> Person:
 	return _a_parent()
 
@@ -1116,7 +1147,7 @@ func _follow_carrier(_dt: float) -> void:
 	var c := _carrier()
 	if c != null and c.visible:
 		visible = true
-		var p := c.global_position + c.global_basis * Vector3(0.32, 0.95, 0.22)
+		var p := c.global_position + c.global_basis * Vector3(0.05, 0.82, 0.3)
 		global_position = p
 		rotation.y = c.rotation.y
 	elif c != null and not c.visible:
@@ -1185,10 +1216,12 @@ func _pose() -> int:
 		S.SLEEP:
 			return PersonVisual.Pose.SLEEP if _phase == "asleep" else PersonVisual.Pose.WALK
 		S.FLEE:
-			return PersonVisual.Pose.COWER if not _moving else PersonVisual.Pose.WALK
+			return PersonVisual.Pose.COWER if not _moving else PersonVisual.Pose.RUN
 	if stage == Stage.BABY:
 		return PersonVisual.Pose.SIT
 	if not _cargo.is_empty():
+		return PersonVisual.Pose.CARRY
+	if _moving and _carrying_baby():
 		return PersonVisual.Pose.CARRY
 	if state == S.WORK and not _moving:
 		var jd := _job_def()
@@ -1290,7 +1323,7 @@ func save_state() -> Dictionary:
 		"trust_f": trust_f, "wish": str(wish), "wish_t": wish_t,
 		"job": job_uid, "home": home.uid if home != null and is_instance_valid(home) else 0,
 		"shelter": inside_uid, "state": st, "placed_by_hand": placed_by_hand, "wanderer": wanderer,
-		"blessed_t": blessed_t, "look": look, "bonds": bd, "last_birth_age": last_birth_age,
+		"blessed_t": blessed_t, "hurt_t": hurt_t, "look": look, "bonds": bd, "last_birth_age": last_birth_age,
 		"pos": [p.x, p.y, p.z], "rot_y": rotation.y,
 	}
 
@@ -1321,8 +1354,11 @@ func load_state(d: Dictionary) -> void:
 	placed_by_hand = bool(d.get("placed_by_hand", false))
 	wanderer = bool(d.get("wanderer", false))
 	blessed_t = float(d.get("blessed_t", 0.0))
+	hurt_t = float(d.get("hurt_t", 0.0))
 	var lk: Dictionary = d.get("look", {})
 	look = {"skin": int(lk.get("skin", 0)), "hair": int(lk.get("hair", 0)), "height": float(lk.get("height", 1.0))}
+	if lk.has("outfit"):
+		look["outfit"] = int(lk["outfit"])
 	bonds.clear()
 	var bd: Dictionary = d.get("bonds", {})
 	for k in bd: bonds[int(k)] = float(bd[k])
