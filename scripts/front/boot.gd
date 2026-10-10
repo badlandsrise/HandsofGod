@@ -16,6 +16,7 @@ func _ready() -> void:
 		Options.load_options()
 	ResourceLoader.load_threaded_request(WORLD)
 	var direct := Game.testing() or Game.flags.has("shots") or Game.flags.has("no-title") or bool(Options.get_opt("skip_intros"))
+	direct = direct or Game.flags.has("capture")     # [capture] dev-only marketing capture (docs/CAPTURE.md)
 	if direct:
 		_go_world.call_deferred()
 		return

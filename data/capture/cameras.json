@@ -1,0 +1,66 @@
+{
+  "_doc": "Marketing capture camera presets (scripts/capture/capture_camera.gd, docs/CAPTURE.md). A spec frames a ground point: focus [x, z] in metres (y comes from the terrain, plus focus_h), the camera sits dist metres away at yaw_deg (0 = south of the focus looking north at the cliffs; positive turns the camera towards +x, the east) and pitch_deg above the horizon. fov in degrees, tilt_shift = the game's diorama depth of field, far = draw distance. A preset with no 'eras' entry frames the same view in every era (the matching before/after valley views); 'eras' overrides fields for one era. A move eases from one spec (or preset name) to another over 'duration' seconds; an orbit is a move that only turns the yaw.",
+  "default": "village_close",
+  "presets": {
+    "valley_wide": {
+      "key": 1, "label": "The valley, wide (matching in every era)",
+      "focus": [30, 10], "dist": 215, "yaw_deg": 0, "pitch_deg": 30, "fov": 50, "tilt_shift": false, "far": 2400
+    },
+    "village_close": {
+      "key": 2, "label": "The village, close (matching in every era)",
+      "focus": [0, -6], "dist": 44, "yaw_deg": -12, "pitch_deg": 38, "fov": 45, "tilt_shift": true
+    },
+    "fire_green": {
+      "key": 3, "label": "The fire and the green (matching in every era)",
+      "focus": [-1, -9], "dist": 23, "yaw_deg": 24, "pitch_deg": 30, "fov": 45, "tilt_shift": true
+    },
+    "river": {
+      "key": 4, "label": "The river and the village behind it (matching in every era)",
+      "focus": [22, 96], "dist": 95, "yaw_deg": 8, "pitch_deg": 20, "fov": 45, "tilt_shift": false, "far": 2000
+    },
+    "workplace": {
+      "key": 5, "label": "Where the work is (per era)",
+      "focus": [-11, -21], "dist": 26, "yaw_deg": -28, "pitch_deg": 36, "fov": 45, "tilt_shift": true,
+      "eras": {
+        "2": {"focus": [-1, -19], "dist": 28, "yaw_deg": 18},
+        "3": {"focus": [62, -6], "dist": 32, "yaw_deg": -22, "pitch_deg": 34}
+      }
+    },
+    "hero_low": {
+      "key": 6, "label": "Hero: a low angle across the village to the cliffs (matching in every era)",
+      "focus": [0, -10], "focus_h": 2.2, "dist": 18, "yaw_deg": 4, "pitch_deg": 7, "fov": 40, "tilt_shift": false, "far": 1600
+    }
+  },
+  "moves": {
+    "dolly_village": {
+      "key": 7, "label": "Slow dolly in over the village (20 s)", "duration": 20,
+      "from": {"focus": [6, 2], "dist": 72, "yaw_deg": -34, "pitch_deg": 44, "fov": 45, "tilt_shift": true},
+      "to": {"focus": [-1, -9], "dist": 30, "yaw_deg": 8, "pitch_deg": 28, "fov": 45, "tilt_shift": true}
+    },
+    "orbit_fire": {
+      "key": 8, "label": "Orbit round the fire (30 s, 120 degrees)", "duration": 30,
+      "from": {"focus": [-1, -9], "dist": 32, "yaw_deg": -60, "pitch_deg": 28, "fov": 45, "tilt_shift": true},
+      "to": {"focus": [-1, -9], "dist": 32, "yaw_deg": 60, "pitch_deg": 28, "fov": 45, "tilt_shift": true}
+    },
+    "crane_reveal": {
+      "key": 9, "label": "Crane up from the hero angle to the whole valley (25 s)", "duration": 25,
+      "from": "hero_low",
+      "to": "valley_wide"
+    }
+  },
+  "spoiler": {
+    "_doc": "SPOILER (--spoiler=goodbye): keys jump to a beat of the goodbye (its own cinematic camera), or pin a camera in the launch site's frame (pos and look are local to the pad: the tower on -x, the crowd's side +z).",
+    "default": "evening",
+    "presets": {
+      "evening":   {"key": 1, "label": "The last evening on the plateau", "beat": "evening", "at": 6.0},
+      "crew":      {"key": 2, "label": "The crew at the shrine stone", "beat": "crew", "at": 2.0},
+      "rocket":    {"key": 3, "label": "The rocket on the pad, the countdown", "beat": "countdown", "at": 4.0},
+      "liftoff":   {"key": 4, "label": "Liftoff", "beat": "liftoff", "at": 0.0},
+      "wave":      {"key": 5, "label": "The wave", "beat": "wave", "at": 3.0},
+      "light":     {"key": 6, "label": "The light blinks twice", "beat": "light", "at": 2.0},
+      "lineage":   {"key": 7, "label": "The lineage in the stars", "beat": "lineage", "at": 2.0},
+      "rocket_low": {"key": 8, "label": "Hero: low under the rocket (pinned camera)", "pos": [14, 2.2, 30], "look": [-1, 16, 0], "fov": 42},
+      "pad_wide":  {"key": 9, "label": "The pad and the crowd, wide (pinned camera)", "pos": [40, 26, 78], "look": [-2, 8, 0], "fov": 46}
+    }
+  }
+}

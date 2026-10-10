@@ -17,6 +17,7 @@ const HUD_CANDIDATES := ["res://scenes/ui/hud.tscn"]
 const TITLE_SCENE := "res://scenes/world/title.tscn"
 const BOT_SCRIPT := "res://tests/bot/bot.gd"
 const SHOTS_SCRIPT := "res://tests/shots/shot_director.gd"
+const CAPTURE_SCRIPT := "res://scripts/capture/capture.gd"   # [capture] dev-only, docs/CAPTURE.md
 const LOG_COUNT := 3
 const LOG_WEIGHT := 4.0
 const BRANCH_WEIGHT := 2.0
@@ -81,6 +82,9 @@ func _ready() -> void:
 		var sd: Node = load(SHOTS_SCRIPT).new()
 		sd.name = "ShotDirector"
 		add_child(sd)
+	elif Game.flags.has("capture") and ResourceLoader.exists(CAPTURE_SCRIPT):
+		# [capture] developer-only marketing capture mode (scripts/capture/)
+		add_child(load(CAPTURE_SCRIPT).new())
 	elif Game.flags.has("goodbye"):
 		_dev_goodbye()
 	elif Game.flags.has("no-title"):
