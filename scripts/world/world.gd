@@ -18,6 +18,7 @@ const TITLE_SCENE := "res://scenes/world/title.tscn"
 const BOT_SCRIPT := "res://tests/bot/bot.gd"
 const SHOTS_SCRIPT := "res://tests/shots/shot_director.gd"
 const WORLD_SHOTS_SCRIPT := "res://tests/shots/fb_world_shots.gd"
+const CAPTURE_SCRIPT := "res://scripts/capture/capture.gd"   # [capture] dev-only, docs/CAPTURE.md
 const LOG_COUNT := 3
 const LOG_WEIGHT := 4.0
 const BRANCH_WEIGHT := 2.0
@@ -91,6 +92,9 @@ func _ready() -> void:
 		var ws: Node = load(WORLD_SHOTS_SCRIPT).new()
 		ws.name = "WorldShots"
 		add_child(ws)
+	elif Game.flags.has("capture") and ResourceLoader.exists(CAPTURE_SCRIPT):
+		# [capture] developer-only marketing capture mode (scripts/capture/)
+		add_child(load(CAPTURE_SCRIPT).new())
 	elif Game.flags.has("goodbye"):
 		_dev_goodbye()
 	elif Game.flags.has("no-title"):
