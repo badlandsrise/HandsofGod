@@ -15,7 +15,7 @@ const NAMES := ["Ama", "Bo", "Cira", "Dov", "Esi", "Fen"]
 const COLOURS := [Color(0.85, 0.45, 0.3), Color(0.35, 0.55, 0.8), Color(0.55, 0.7, 0.35),
 	Color(0.8, 0.7, 0.3), Color(0.65, 0.4, 0.7), Color(0.4, 0.7, 0.7)]
 
-var hand: Hand
+# `hand` is world.gd's member (a Hand here).
 var site: Site
 var rig: CameraRig
 var _frames: int = 0
