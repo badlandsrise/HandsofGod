@@ -5,11 +5,12 @@ extends Node3D
 ##   xvfb-run -a -s "-screen 0 1600x900x24" godot --rendering-driver vulkan --path . \
 ##     res://tests/assets/contact_sheet.tscn -- --sheet=era1
 ##   ... -- --sheet=villagers
+##   ... -- --sheet=outfits      (every outfit of Eras 1-4 and the crew suits, front on)
 ##   ... -- --sheet=ids --ids=hut,campfire --out=res://tests/assets/x.png [--era=2] [--season=winter]
 ##
 ## era1 lays out every catalog id (plus a few villagers for scale) and writes
 ## tests/assets/contact_era1.png; villagers shows outfits, ages and animation states and
-## writes tests/assets/villagers.png. Without a display it just builds the scene and quits.
+## writes tests/assets/villagers.png; outfits writes tests/shots/villager_outfits.png. Without a display it just builds the scene and quits.
 
 const VILLAGER_STATES := [&"idle", &"walk", &"run", &"carry", &"work", &"sit", &"wave", &"cheer",
 	&"cower", &"held", &"fall", &"dead"]
@@ -33,6 +34,9 @@ func _ready() -> void:
 		"villagers":
 			_villagers()
 			out = "res://tests/assets/villagers.png"
+		"outfits":
+			_outfits()
+			out = "res://tests/shots/villager_outfits.png"
 		"ids":
 			_layout(String(_args.get("ids", "")).split(",", false), false)
 			out = "res://tests/assets/contact_ids.png"
@@ -144,6 +148,35 @@ func _villagers() -> void:
 		v.position = Vector3((i % 6) * 2.0, 0, 6.0 + (i / 6) * 3.0)
 		_caption(String(VILLAGER_STATES[i]), Vector3((i % 6) * 2.0, 0.05, 7.0 + (i / 6) * 3.0), 0.45)
 	_camera(Vector3(5.25, 0.6, 5.2), 8.2, -32.0)
+
+
+## Cloth per era and outfit; a few are deliberately close to the wearer's skin
+## (SKINS[i % 6]) so a hem or a sleeve that only reads by colour shows up.
+const OUTFIT_CLOTHS := [
+	["#6b4428", "#8a5a3b", "#5a3a24", "#6e4a32", "#e0b48c", "#7b3f2a", "#6e5034", "#c99a72"],
+	["#5c84a6", "#c99a72", "#6f8a3c", "#d0a040", "#8a5a3b", "#a8432e", "#7b3f2a", "#c4956c"],
+	["#2c3e6a", "#2f8c88", "#5a3a24", "#73503a", "#8a5a3b", "#d4a13a", "#4a5f78", "#c4956c"],
+	["#c8442e", "#2f8c88", "#1c2a4a", "#73503a", "#4a5f78", "#5c84a6", "#e0a526", "#c4956c"],
+]
+
+## Every outfit of every era, adults idle, front on: one row per era, the
+## crew's flight suits at the end of the Era 4 row.
+func _outfits() -> void:
+	const DX := 1.35
+	const DZ := 6.0
+	for era in range(1, 5):
+		var z := (era - 1) * DZ
+		_caption("Era %d" % era, Vector3(-1.6, 0.05, z + 0.2), 0.75)
+		var n := 10 if era == 4 else 8
+		for i in n:
+			var v := _villager(i, &"idle")
+			v.set_era(era)
+			v.set_look(Color(SKINS[i % SKINS.size()]), Color(HAIRS[i % HAIRS.size()]), Color(OUTFIT_CLOTHS[era - 1][i % 8]), i % 8)
+			if i >= 8:
+				v.set_crew(true)
+			v.position = Vector3(i * DX, 0, z)
+			_caption("crew %s" % ("m" if i == 8 else "f") if i >= 8 else str(i), Vector3(i * DX, 0.05, z + 0.75), 0.4)
+	_camera(Vector3(4.5 * DX - 0.8, 0.85, 1.5 * DZ + 0.3), 8.6, -18.0)
 
 
 func _villager(i: int, state: StringName) -> VillagerVisual:

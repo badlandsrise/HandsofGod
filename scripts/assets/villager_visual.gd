@@ -87,11 +87,11 @@ const OUTFITS_ERA4 := [
 	[0, ["Hair_SimpleParted", "Eyebrows_Regular"], Vector4(0.06, 0.79, 0.5, 0.53), Vector4(3, 0, 0, 0.5), "#c8442e", &"hard_hat"],      # overalls, hard hat
 	[1, ["Hair_Buns", "Eyebrows_Female"], Vector4(0.3, 0.79, 0.64, 0.56), Vector4(3, 1, 0, 0.72), "#f26b1d", &""],                     # lab coat
 	[0, ["Hair_Buzzed", "Hair_Beard", "Eyebrows_Regular"], Vector4(0.3, 0.79, 0.64, 0.53), Vector4(3, 1, 0, 0.72), "#1c2a4a", &""],   # lab coat, navy tie
-	[1, ["Hair_Long", "Eyebrows_Female"], Vector4(0.3, 0.79, 0.34, 0.56), Vector4(3, 2, 0, 0.72), "#c8442e", &"pillbox"],              # dress, red belt and shoes, pillbox
+	[1, ["Hair_Long", "Eyebrows_Female"], Vector4(0.24, 0.79, 0.34, 0.56), Vector4(3, 2, 0, 0.72), "#c8442e", &"pillbox"],              # dress, red belt and shoes, pillbox
 	[0, ["Hair_Long", "Hair_Beard", "Eyebrows_Regular"], Vector4(0.47, 0.79, 0.64, 0.53), Vector4(3, 2, 1, 0.72), "#c8442e", &"trilby"],  # suit and tie, trilby
 	[1, ["Hair_BuzzedFemale", "Eyebrows_Female"], Vector4(0.06, 0.79, 0.5, 0.56), Vector4(3, 0, 0, 0.48), "#f2eee6", &"kerchief"],     # overalls, kerchief
 	[0, ["Hair_Beard", "Eyebrows_Regular"], Vector4(0.06, 0.79, 0.5, 0.53), Vector4(3, 0, 0, 0.55), "#e0a526", &"flat_cap"],           # overalls, flat cap
-	[1, ["Hair_SimpleParted", "Eyebrows_Female"], Vector4(0.3, 0.79, 0.3, 0.56), Vector4(3, 2, 0, 0.72), "#1c2a4a", &""],              # dress, navy belt
+	[1, ["Hair_SimpleParted", "Eyebrows_Female"], Vector4(0.24, 0.79, 0.3, 0.56), Vector4(3, 2, 0, 0.72), "#1c2a4a", &""],              # dress, navy belt
 ]
 ## The crew's flight suits, [male, female]: style.y = 3, trim = the orange bands.
 const CREW_SUITS := [

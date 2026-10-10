@@ -139,14 +139,18 @@ func chain_text(p) -> String:
 		parts.append(name_of(int(u)))
 	return "  ·  ".join(parts)
 
-## The lineage drawing: {nodes: [{uid, name, depth, crew, commander}], edges: [[from, to]], depth}
-## from the first two down to every crew member.
+## The lineage drawing, a descending family tree from the first two to every
+## crew member: {nodes: [{uid, name, depth, crew, commander, line}],
+## edges: [[parent, child]], families: [{parents: [a, b], children: [...]}], depth}.
+## `line` marks the direct line (the first two, each ancestor of a crew member,
+## the crew); the other parent of each child on the line is drawn too, faint,
+## so every couple is joined and every child hangs from its two parents.
 func lineage() -> Dictionary:
 	var nodes := {}
 	var edges: Array = []
 	var maxd := 0
 	for u in first_two:
-		nodes[u] = {"uid": u, "name": name_of(u), "depth": 0, "crew": false, "commander": false}
+		nodes[u] = {"uid": u, "name": name_of(u), "depth": 0, "crew": false, "commander": false, "line": true}
 	for p in crew:
 		var l := line_for(p)
 		if l.is_empty():
@@ -154,7 +158,8 @@ func lineage() -> Dictionary:
 		for i in l.size():
 			var u := int(l[i])
 			if not nodes.has(u):
-				nodes[u] = {"uid": u, "name": name_of(u), "depth": i, "crew": false, "commander": false}
+				nodes[u] = {"uid": u, "name": name_of(u), "depth": i, "crew": false, "commander": false, "line": true}
+			nodes[u]["line"] = true
 			maxd = maxi(maxd, i)
 			if i > 0:
 				var e := [int(l[i - 1]), u]
@@ -162,14 +167,39 @@ func lineage() -> Dictionary:
 					edges.append(e)
 		nodes[int(p.uid)]["crew"] = true
 		nodes[int(p.uid)]["commander"] = p == commander
-	# both of the first two lead down: draw the partner's line to the first child too
-	if first_two.size() == 2:
-		for e in edges.duplicate():
-			if first_two.has(e[0]):
-				var other: int = first_two[1] if e[0] == first_two[0] else first_two[0]
-				if by.has(e[1]) and (by[e[1]]["parents"] as Array).has(other) and not edges.has([other, e[1]]):
-					edges.append([other, e[1]])
-	return {"nodes": nodes.values(), "edges": edges, "depth": maxd}
+	# the other parent of each child on the line: a faint relative beside the
+	# line parent, so the child hangs from the couple
+	for e in edges.duplicate():
+		var a := int(e[0])
+		var c := int(e[1])
+		if not by.has(c):
+			continue
+		for pu in by[c]["parents"]:
+			var o := int(pu)
+			if o == a or not by.has(o):
+				continue
+			if not nodes.has(o):
+				nodes[o] = {"uid": o, "name": name_of(o), "depth": int(nodes[a]["depth"]), "crew": false, "commander": false, "line": false}
+			if not edges.has([o, c]):
+				edges.append([o, c])
+	# families: each set of parents with the children drawn under them
+	var fam := {}
+	for e in edges:
+		var c := int(e[1])
+		var ps: Array = []
+		var parents: Array = by[c]["parents"] if by.has(c) else [int(e[0])]
+		for pu in parents:
+			if nodes.has(int(pu)):
+				ps.append(int(pu))
+		ps.sort()
+		var key := str(ps)
+		if not fam.has(key):
+			fam[key] = {"parents": ps, "children": []}
+		if not (fam[key]["children"] as Array).has(c):
+			fam[key]["children"].append(c)
+	for f in fam.values():
+		(f["children"] as Array).sort()
+	return {"nodes": nodes.values(), "edges": edges, "families": fam.values(), "depth": maxd}
 
 # ---------------------------------------------------------------- words
 

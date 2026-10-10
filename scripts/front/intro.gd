@@ -455,7 +455,8 @@ func _flinch() -> void:
 	# a crack of lightning with the reach
 	var lk = world.look
 	if lk != null and &"_flash_t" in lk:
-		lk.set(&"_flash_t", 0.35)
+		# short and dim: a flicker at the edge of the storm, so the night holds
+		lk.set(&"_flash_t", maxf(float(lk.get(&"_flash_t")), 0.1))
 
 ## Plays `state` on each person's villager and turns them toward `face`
 ## (or toward each other while they huddle).

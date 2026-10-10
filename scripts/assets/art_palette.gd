@@ -88,7 +88,7 @@ const NAMED := {
 	"leaf": ["#5d7d34", false],
 	"carrot": ["#d97a2e", false],
 	"bronze": ["#b8843a", false],
-	"verdigris": ["#4f9a7c", false],
+	"verdigris": ["#66806f", false],   # weathered, muted copper green
 	"wool": ["#eee6d4", false],
 	"linen": ["#e8dcc0", true],
 	"cloth_red": ["#a8432e", true],

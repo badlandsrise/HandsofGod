@@ -125,6 +125,7 @@ var _ignited: bool = false
 var _ignite_t: float = 0.0
 var _released: bool = false
 var _flight: float = 0.0                    # seconds since release
+const LIFT_HOLD := 19.5                     # the liftoff camera stops following here
 var _waving: float = 0.0                    # the hand waves while > 0
 var _waved: bool = false
 var _lowered: bool = false
@@ -488,6 +489,9 @@ func _exit(b: int) -> void:
 		B.LIFTOFF:
 			_flight = maxf(_flight, LEN[B.LIFTOFF])
 			_fly()
+			# the weather has cleared by now, even when the liftoff was skipped
+			sky.roll_in = 0.0
+			sky.clear = 1.0
 			if rocket != null and is_instance_valid(rocket):
 				rocket.visible = false
 		B.WAVE:
@@ -846,7 +850,7 @@ func _liftoff(dt: float) -> void:
 	_fly()
 	sky.part = 1.0
 	sky.clear = Valley.ss(9.0, 22.0, bt)
-	sky.stars = lerpf(0.2, 0.75, bt / LEN[B.LIFTOFF])
+	sky.stars = lerpf(0.2, 0.9, Valley.ss(0.0, 18.0, bt))
 	_shake = 0.22 * (1.0 - Valley.ss(0.0, 7.0, bt))
 	if bt > 1.0 and bt - dt <= 1.0:
 		_sfx(&"heavy", 0.28, 2.0)
@@ -855,16 +859,31 @@ func _liftoff(dt: float) -> void:
 	if bt > 9.0 and bt - dt <= 9.0:
 		_pose_crowd(&"wave", 0.5, &"cheer")
 	var far := Valley.ss(12.0, 20.0, bt)
-	sky.set_light(_light_world(), far * 1.4)
+	# the light sits on the rocket's engines until the rocket is only that light
+	var at := _light_world()
+	if rocket != null and is_instance_valid(rocket):
+		at = at.lerp(rocket.global_position, 1.0 - Valley.ss(19.0, 22.0, bt))
+		var smoke := rocket.find_child("ExhaustSmoke", true, false) as GPUParticles3D
+		if smoke != null:
+			smoke.emitting = bt < 12.0
+		rocket.visible = bt < 19.5
+	sky.set_light(at, far * 1.4)
 	var ex := rocket.find_child("ExhaustLight", true, false) as OmniLight3D if rocket != null else null
 	if ex != null:
 		ex.light_energy = lerpf(8.0, 2.0, far)
+
+## After the liftoff the night is clear: no cloud is left in front of the
+## light, the lineage or the credits.
+func _clear_sky() -> void:
+	sky.part = 1.0
+	sky.clear = 1.0
+	sky.roll_in = 0.0
 
 func _wave(dt: float) -> void:
 	_flight += dt
 	_set_time(true, lerpf(0.12, 0.22, bt / LEN[B.WAVE]))
 	sky.clear = 1.0
-	sky.stars = lerpf(0.75, 0.95, bt / LEN[B.WAVE])
+	sky.stars = lerpf(0.9, 0.95, bt / LEN[B.WAVE])
 	sky.set_light(_light_world(), 1.2)
 	if bt > 5.5:
 		if not _waved:
@@ -882,6 +901,7 @@ func _wave(dt: float) -> void:
 	_waving = maxf(_waving - dt, 0.0)
 
 func _words(dt: float) -> void:
+	_clear_sky()
 	_flight += dt
 	_set_time(true, lerpf(0.22, 0.32, clampf(bt / 40.0, 0.0, 1.0)))
 	sky.stars = 1.0
@@ -894,6 +914,7 @@ func _words(dt: float) -> void:
 		_goto(B.LIGHT)
 
 func _light(dt: float) -> void:
+	_clear_sky()
 	_flight += dt * 0.5
 	_set_time(true, 0.33)
 	sky.stars = 1.0
@@ -912,6 +933,7 @@ func _light(dt: float) -> void:
 		_pose_crowd(&"idle")
 
 func _lineage(dt: float) -> void:
+	_clear_sky()
 	_flight += dt * 0.4
 	_set_time(true, 0.34)
 	sky.stars = 1.0
@@ -920,6 +942,7 @@ func _lineage(dt: float) -> void:
 	lineage.dissolve = Valley.ss(26.0, 33.0, bt)
 
 func _rest(dt: float) -> void:
+	_clear_sky()
 	_set_time(true, 0.36)
 	sky.stars = 1.0
 	sky.set_light(_light_world(), 0.7 + _blink_amt * 2.0)
@@ -975,6 +998,7 @@ func _finger_point() -> Vector3:
 	return hand.global_transform * Vector3(-0.16, -0.16, -0.66)
 
 func _credits(dt: float) -> void:
+	_clear_sky()
 	_set_time(true, 0.38)
 	sky.stars = 1.0
 	sky.set_light(_light_world(), 0.6)
@@ -1279,12 +1303,19 @@ func _shot() -> Array:
 			pos = G(6.0, 41.0, 1.7)
 			var target := L(_rocket_local(_flight) + Vector3(0, 9, 0))
 			look = target.lerp(L(Vector3(0, 30, -8)), 0.25)
-			# the camera stays low with the people: it tilts up, but never off them
+			# first the camera stays low with the people: it tilts up, but
+			# keeps the tower and the crowd's horizon in the frame
 			var d := (look - pos).normalized()
 			var maxel := deg_to_rad(34.0)
 			if asin(clampf(d.y, -1.0, 1.0)) > maxel:
 				var hz := Vector3(d.x, 0, d.z).normalized()
-				look = pos + (hz * cos(maxel) + Vector3.UP * sin(maxel)) * 50.0
+				d = hz * cos(maxel) + Vector3.UP * sin(maxel)
+			# then, as it clears the tower, it tilts up and follows the rocket
+			# until it is a bright point among the stars, and holds there
+			var rk := L(_rocket_local(minf(_flight, LIFT_HOLD)) + Vector3(0, 4, 0))
+			var follow := (rk - pos).normalized()
+			d = d.slerp(follow, Valley.ss(4.0, 9.5, bt)).normalized()
+			look = pos + d * 50.0
 			fov = 54.0
 		B.WAVE:
 			if bt < 5.5:

@@ -32,6 +32,17 @@ instance uniform vec4 under_color : source_color = vec4(0.91, 0.86, 0.75, 1.0);
 
 const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
 
+// Cloth that is almost the wearer's skin colour would read as bare skin (a dress
+// as shorts, a sleeve as an arm): push it darker on light skin, lighter on dark
+// skin, just enough to read as cloth. Compared in a rough perceptual (sqrt) space.
+vec3 apart_from_skin(vec3 cloth, vec3 skin) {
+	float d = length(sqrt(cloth) - sqrt(skin));
+	float k = 1.0 - smoothstep(0.1, 0.24, d);
+	bool light_skin = dot(skin, LUMA) > 0.18;
+	vec3 away = light_skin ? cloth * 0.42 : min(cloth * 2.6 + vec3(0.04), vec3(0.85));
+	return mix(cloth, away, k);
+}
+
 void fragment() {
 	vec3 c;
 	if (part == 1) {
@@ -39,6 +50,7 @@ void fragment() {
 	} else if (part == 2) {
 		c = vec3(0.04, 0.03, 0.03);
 	} else {
+		vec3 cloth = apart_from_skin(cloth_color.rgb, skin_color.rgb);
 		float h = COLOR.r;
 		float ax = COLOR.g;
 		c = skin_color.rgb;
@@ -48,12 +60,12 @@ void fragment() {
 			if (covered) {
 				// a little hand-made variation: darker hem and a belt
 				float hem = smoothstep(outfit_cut.x + 0.025, outfit_cut.x, h);
-				c = cloth_color.rgb * (1.0 - 0.25 * hem);
+				c = cloth * (1.0 - 0.25 * hem);
 				if (abs(h - outfit_cut.w) < 0.012) {
-					c = cloth_color.rgb * 0.45;
+					c = cloth * 0.45;
 				}
 			} else if (h < 0.055) {
-				c = cloth_color.rgb * 0.5;   // hide foot wraps
+				c = cloth * 0.5;   // hide foot wraps
 			}
 		} else if (outfit_style.x > 2.5) {
 			// Era 4: the clothes of their trade. outfit_style.y picks the garment:
@@ -75,14 +87,14 @@ void fragment() {
 				if (h < 0.055) {
 					c = vec3(0.24, 0.16, 0.1);                          // work boots
 				} else if (h < outfit_cut.w + 0.01 && ax < 0.26) {
-					c = cloth_color.rgb;                                // trousers
+					c = cloth;                                // trousers
 					if (front && ax > 0.05 && ax < 0.1 && h > 0.36 && h < 0.42) {
-						c = cloth_color.rgb * 0.8;                      // knee patch pocket
+						c = cloth * 0.8;                      // knee patch pocket
 					}
 				} else if (bib || strap) {
-					c = cloth_color.rgb;
+					c = cloth;
 					if (front && ax < 0.05 && h > 0.66 && h < 0.72) {
-						c = cloth_color.rgb * 0.82;                     // bib pocket
+						c = cloth * 0.82;                     // bib pocket
 					}
 					if (front && strap && abs(h - 0.775) < 0.009) {
 						c = vec3(0.82, 0.66, 0.3);                      // brass buckles
@@ -94,13 +106,14 @@ void fragment() {
 					}
 				}
 			} else if (kind == 1) {
-				bool coat = covered;
+				// the coat has long sleeves (the T-pose arm sits above the neckline cut)
+				bool coat = covered || (arm && ax < outfit_cut.z);
 				if (h < 0.055) {
 					c = vec3(0.12, 0.11, 0.12);
 				} else if (coat) {
 					c = vec3(0.95, 0.95, 0.93);                         // the white coat
 					if (front && ax < 0.034 && h > outfit_cut.w + 0.06) {
-						c = cloth_color.rgb;                            // shirt at the open front
+						c = cloth;                            // shirt at the open front
 						if (ax < 0.011 && h < outfit_cut.y - 0.02) {
 							c = trim_color.rgb;                         // tie
 						}
@@ -119,10 +132,11 @@ void fragment() {
 				}
 			} else if (kind == 2) {
 				bool men = outfit_style.z > 0.5;
+				bool sleeve = arm && ax < outfit_cut.z;
 				if (h < 0.055) {
 					c = men ? vec3(0.1, 0.09, 0.1) : trim_color.rgb;    // shoes
-				} else if (covered) {
-					c = cloth_color.rgb;
+				} else if (covered || sleeve) {
+					c = cloth;
 					bool open = front && h > 0.66 && ax < (h - 0.66) * 0.55;
 					if (men && open) {
 						c = under_color.rgb;                            // shirt between the lapels
@@ -131,7 +145,7 @@ void fragment() {
 						}
 					}
 					if (men && front && abs(ax - (h - 0.66) * 0.55) < 0.008 && h > 0.66) {
-						c = cloth_color.rgb * 0.7;                      // lapel edge
+						c = cloth * 0.7;                      // lapel edge
 					}
 					if (!men && outfit_cut.y - h < 0.024 && ax < 0.2) {
 						c = under_color.rgb;                            // white collar
@@ -140,10 +154,18 @@ void fragment() {
 						c = trim_color.rgb;                             // belt
 					}
 					if (!men && h < outfit_cut.w && fract((h + ax) * 26.0) < 0.12 && fract((h - ax) * 26.0) < 0.12) {
-						c = mix(cloth_color.rgb, under_color.rgb, 0.7); // a little print on the skirt
+						c = mix(cloth, under_color.rgb, 0.7); // a little print on the skirt
 					}
+					if (!men && h - outfit_cut.x < 0.022 && ax < 0.26) {
+						c = trim_color.rgb;                             // hem band: a skirt, not shorts
+					}
+					if (sleeve && outfit_cut.z - ax < 0.02) {
+						c = under_color.rgb;                            // white cuff
+					}
+				} else if (!men && h < outfit_cut.x && ax < 0.26) {
+					c = mix(skin_color.rgb, vec3(0.16, 0.12, 0.11), 0.38);   // stockings
 				} else if (men && h < outfit_cut.x && ax < 0.26) {
-					c = cloth_color.rgb * vec3(0.55, 0.55, 0.6);        // trousers
+					c = cloth * vec3(0.55, 0.55, 0.6);        // trousers
 				}
 			} else {
 				vec3 suit = vec3(0.93, 0.93, 0.9);
@@ -194,7 +216,7 @@ void fragment() {
 					c = vec3(0.78, 0.63, 0.3);                        // brass buckles
 				}
 			} else if (covered) {
-				c = cloth_color.rgb;
+				c = cloth;
 				bool cuff = h > 0.70 && ax > 0.26 && outfit_cut.z - ax < 0.045;
 				bool hem = !men && h - outfit_cut.x < 0.03;
 				if (cuff || hem) {
@@ -216,7 +238,7 @@ void fragment() {
 					}
 				}
 				if (men && front && h < outfit_cut.w - 0.03 && ax < 0.045) {
-					c = cloth_color.rgb * vec3(0.42, 0.4, 0.42);      // the coat opens over the breeches
+					c = cloth * vec3(0.42, 0.4, 0.42);      // the coat opens over the breeches
 				}
 				if (outfit_style.z > 1.5 && front && ax < 0.14 && h > max(outfit_cut.x + 0.03, 0.22) && h < outfit_cut.w + 0.02) {
 					c = men ? vec3(0.42, 0.28, 0.18) : vec3(0.95, 0.93, 0.88);   // apron
@@ -227,7 +249,7 @@ void fragment() {
 					c = vec3(1.0, 0.98, 0.94);                         // lace frill
 				}
 			} else if (men && h < outfit_cut.x) {
-				c = h > 0.27 ? cloth_color.rgb * vec3(0.42, 0.4, 0.42)   // breeches
+				c = h > 0.27 ? cloth * vec3(0.42, 0.4, 0.42)   // breeches
 					: vec3(0.9, 0.88, 0.84);                        // stockings
 			}
 		} else {
@@ -238,7 +260,7 @@ void fragment() {
 			if (h < 0.055) {
 				c = vec3(0.29, 0.19, 0.13);                          // leather shoes
 			} else if (covered) {
-				c = cloth_color.rgb;
+				c = cloth;
 				float band = 0.016;
 				bool trim = (h - outfit_cut.x < band) || (outfit_cut.y - h < band)
 					|| (h > 0.70 && outfit_cut.z - ax < band && ax > 0.26);
@@ -246,7 +268,7 @@ void fragment() {
 					c = trim_color.rgb;
 				}
 				if (abs(h - outfit_cut.w) < 0.011) {
-					c = mix(trim_color.rgb, cloth_color.rgb * 0.5, 0.5);   // woven belt
+					c = mix(trim_color.rgb, cloth * 0.5, 0.5);   // woven belt
 				}
 				if (outfit_style.z > 0.5 && COLOR.b > 0.5 && ax < 0.12 && h > max(outfit_cut.x + 0.03, 0.4) && h < outfit_cut.w - 0.011) {
 					c = vec3(0.93, 0.89, 0.8);                       // apron
