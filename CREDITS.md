@@ -29,7 +29,7 @@ shaders and the placeholder animals are made for this project.
 | Universal Animation Library (Standard) | Quaternius | CC0 | https://quaternius.itch.io/universal-animation-library |
 | Farm Animals (Animated) | Quaternius | CC0 | https://quaternius.itch.io/lowpoly-animated-animals (quaternius.com/packs/farmanimal.html) |
 | Survival Kit | Kenney (www.kenney.nl) | CC0 | https://kenney.nl/assets/survival-kit |
-| Pirate Kit (row boats) | Kenney (www.kenney.nl) | CC0 | https://kenney.nl/assets/pirate-kit |
+| Pirate Kit (row boats, ships, crates) | Kenney (www.kenney.nl) | CC0 | https://kenney.nl/assets/pirate-kit |
 | Hand models and hand poses (godot-xr-tools) | Miodrag Sejic (DigitalN8m4r3), GodotVR/godot-xr-tools | CC0 | https://github.com/GodotVR/godot-xr-tools |
 
 The hand is a white cartoon glove modelled for Hands of God on the CC0 godot-xr-tools
@@ -42,6 +42,14 @@ around CC0 pieces from the Medieval Village MegaKit (plaster walls, doors, shutt
 the Survival Kit (workbenches, barrels, crates), the Pirate Kit (row boats), Farm Animals (cow,
 pig) and the Ultimate Nature Pack (rocks). The thatch, plank and daub textures
 (`assets/textures/era2/`) are procedural, painted by `scripts/assets/tools/gen_era2_textures.py`.
+
+The Era 3 (Town) kit was also made for Hands of God. Its townhouses, great hall, civic buildings,
+workshops, harbour, lighthouse, aqueduct, streets, carts, piles and tools are modelled in code
+(`scripts/assets/tools/build_era3.gd`) around CC0 pieces from the Medieval Village MegaKit (brick
+and stone walls, glazed windows, doors, round-tile roof pieces, balconies, dormer, chimney,
+wagon), the Pirate Kit (the two sailing ships and cargo crates) and the Survival Kit (barrels,
+anvil, tools). The slate, cobble, stained-glass, clock-face, flag and book textures
+(`assets/textures/era3/`) are procedural, painted by `scripts/assets/tools/gen_era3_textures.py`.
 
 ## Ground textures
 

@@ -10,6 +10,7 @@
 // hose or a long skirt (outfit_style.y = 1 covers the legs to the ankle), leather shoes,
 // embroidered bands at hem, neck and cuffs (trim_color), a woven belt, and an optional
 // apron (outfit_style.z = 1). outfit_style.w = undershirt sleeve reach (0.72 = wrists).
+// outfit_style.x = 2 is Era 3 town clothes (see the branch below).
 shader_type spatial;
 render_mode diffuse_toon, specular_disabled, cull_back;
 
@@ -52,6 +53,58 @@ void fragment() {
 				}
 			} else if (h < 0.055) {
 				c = cloth_color.rgb * 0.5;   // hide foot wraps
+			}
+		} else if (outfit_style.x > 1.5) {
+			// Era 3: town clothes. Men (outfit_style.y = 1): a coat with turned-back cuffs
+			// over breeches, white stockings and buckled black shoes; women: a bodice and
+			// full skirt with a hem band over a white chemise. outfit_style.z: 1 = waistcoat
+			// (men, brass buttons) or laced stomacher (women) in trim_color, 2 = apron
+			// (leather for men, white for women). A white collar or cravat at the neck.
+			bool men = outfit_style.y > 0.5;
+			bool front = COLOR.b > 0.5;
+			bool arm = h > 0.70 && h < 0.9 && ax > 0.26;
+			bool shirt = (arm && ax < outfit_style.w) || (h > outfit_cut.x - 0.02 && h < outfit_cut.y + 0.012 && ax < 0.26);
+			if (h < 0.055) {
+				c = vec3(0.11, 0.1, 0.11);                            // black shoes
+				if (men && front && h > 0.03 && h < 0.045) {
+					c = vec3(0.78, 0.63, 0.3);                        // brass buckles
+				}
+			} else if (covered) {
+				c = cloth_color.rgb;
+				bool cuff = h > 0.70 && ax > 0.26 && outfit_cut.z - ax < 0.045;
+				bool hem = !men && h - outfit_cut.x < 0.03;
+				if (cuff || hem) {
+					c = trim_color.rgb;
+				}
+				if (outfit_cut.y - h < 0.022 && ax < 0.26) {
+					c = under_color.rgb;                              // collar, cravat
+				}
+				bool panel = front && h > outfit_cut.w - 0.13 && h < outfit_cut.y - 0.022;
+				if (outfit_style.z > 0.5 && outfit_style.z < 1.5 && panel && ax < 0.085) {
+					c = trim_color.rgb;                               // waistcoat / stomacher
+					if (ax < 0.014) {
+						float f = fract(h * 48.0);
+						if (men && f < 0.3) {
+							c = vec3(0.82, 0.66, 0.3);                // brass buttons
+						} else if (!men && f < 0.4) {
+							c = vec3(0.92, 0.88, 0.8);                // lacing
+						}
+					}
+				}
+				if (men && front && h < outfit_cut.w - 0.03 && ax < 0.045) {
+					c = cloth_color.rgb * vec3(0.42, 0.4, 0.42);      // the coat opens over the breeches
+				}
+				if (outfit_style.z > 1.5 && front && ax < 0.14 && h > max(outfit_cut.x + 0.03, 0.22) && h < outfit_cut.w + 0.02) {
+					c = men ? vec3(0.42, 0.28, 0.18) : vec3(0.95, 0.93, 0.88);   // apron
+				}
+			} else if (shirt) {
+				c = under_color.rgb;
+				if (arm && outfit_style.w - ax < 0.03) {
+					c = vec3(1.0, 0.98, 0.94);                         // lace frill
+				}
+			} else if (men && h < outfit_cut.x) {
+				c = h > 0.27 ? cloth_color.rgb * vec3(0.42, 0.4, 0.42)   // breeches
+					: vec3(0.9, 0.88, 0.84);                        // stockings
 			}
 		} else {
 			// Era 2: woven clothes in layers
