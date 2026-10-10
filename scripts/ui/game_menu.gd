@@ -1,7 +1,9 @@
 extends CanvasLayer
 ## The title menu and the Esc pause menu (DESIGN 11.5), on parchment.
-## Title: the valley pans slowly behind; Continue (latest autosave), New Valley,
-## Load, Options, Credits, Quit. Pause: Resume, Save (3 slots, plus the
+## Title: the live valley at dawn behind (TitleStage: camera drift, the glove
+## hovering), the TitleLogo, and Continue (only when a save exists), New Game,
+## Load, Options, Credits, Quit. New Game plays the intro (IntroSequence)
+## unless Options "skip_intros" is on, then the storm night. Pause: Resume, Save (3 slots, plus the
 ## autosaves to load from), Load, Options, Quit to title, Quit.
 ## Instanced by the world from scenes/world/title.tscn; the world calls
 ## open_paused() / close() through _unhandled_input here.
@@ -19,8 +21,11 @@ var _sub: PanelContainer
 var _sub_box: VBoxContainer
 var _continue_btn: Button
 var _title_box: VBoxContainer
-var _yaw: float = 0.4
 var _confirm: String = ""
+var _logo: TitleLogo
+var _stage: TitleStage
+var _fade: ColorRect
+var intro: IntroSequence = null       # the opening, while it plays
 
 func _ready() -> void:
 	layer = 20
@@ -47,6 +52,10 @@ func _build() -> void:
 	var vig := Vignette.new()
 	vig.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_root.add_child(vig)
+	_logo = TitleLogo.new()
+	_logo.position = Vector2(30, 34)
+	_logo.size = Vector2(720, _logo.needed_height())
+	_root.add_child(_logo)
 	_strip = PanelContainer.new()
 	_strip.add_theme_stylebox_override(&"panel", UiTheme.paper_box(40.0, 1))
 	_strip.position = Vector2(64, 70)
@@ -72,12 +81,30 @@ func _build() -> void:
 	_sub_box = VBoxContainer.new()
 	_sub_box.add_theme_constant_override(&"separation", 10)
 	_sub.add_child(_sub_box)
+	_fade = ColorRect.new()
+	_fade.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fade.color = Color(0, 0, 0, 0)
+	_root.add_child(_fade)
+	if world is Node3D and world.has_method(&"frame_camera"):
+		_stage = TitleStage.new()
+		_stage.setup(world)
+		world.add_child(_stage)
 	_rebuild_buttons()
+	if not paused_mode:
+		# coming in from the splash: up out of black, then the logo
+		_fade.color.a = 1.0
+		_logo.reveal = 0.0
+		var tw := create_tween()
+		tw.tween_property(_fade, "color:a", 0.0, 1.4)
+		tw.parallel().tween_property(_logo, "reveal", 1.0, 1.6).set_delay(0.7)
 
 func _rebuild_buttons() -> void:
 	for c in _title_box.get_children():
 		_title_box.remove_child(c)
 		c.queue_free()
+	_title_box.visible = paused_mode          # the title has the big logo instead
+	_main.get_child(1).visible = paused_mode
 	var t := UiTheme.ink_label("Hands of God", 62 if not paused_mode else 50, &"title")
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_title_box.add_child(t)
@@ -94,14 +121,14 @@ func _rebuild_buttons() -> void:
 	if paused_mode:
 		rows = [["Save", _show_save], ["Load", _show_load], ["Options", _show_options], ["Quit to title", _on_quit_to_title], ["Quit", _on_quit]]
 	else:
-		rows = [["New Valley", _on_new], ["Load", _show_load], ["Options", _show_options], ["Credits", _show_credits], ["Quit", _on_quit]]
+		rows = [["New Game", _on_new], ["Load", _show_load], ["Options", _show_options], ["Credits", _show_credits], ["Quit", _on_quit]]
 	for r in rows:
 		_main.add_child(_menu_button(r[0], r[1]))
 
 func _menu_button(text: String, cb: Callable) -> Button:
 	var b := MenuWord.new()
 	b.text = text
-	b.custom_minimum_size = Vector2(MENU_W - 80, 50)
+	b.custom_minimum_size = Vector2(250, 50)
 	b.pressed.connect(func():
 		Audio.sfx("res://assets/audio/sfx/ui_click.ogg", Vector3.INF, 1.0, -6.0)
 		cb.call())
@@ -112,16 +139,38 @@ func _refresh() -> void:
 	if paused_mode:
 		_continue_btn.text = "Resume"
 		_continue_btn.disabled = false
+		_continue_btn.visible = true
 		_info.text = "Day %d, %s" % [Clock.day, ["spring", "summer", "autumn", "winter"][clampi(Clock.season, 0, 3)]]
 		_shade.color = Color(0.03, 0.02, 0.01, 0.45)
 	else:
 		_continue_btn.text = "Continue"
 		_continue_btn.disabled = latest == ""
+		_continue_btn.visible = latest != ""      # only when there is a save
 		var info := Save.slot_info(latest) if latest != "" else {}
 		_info.text = "" if info.is_empty() else "Day %d, Era %d, %d people" % [int(info.get("day", 1)), int(info.get("era", 1)), int(info.get("population", 0))]
 		_shade.color = Color(0, 0, 0, 0.0)
 	_info.visible = _info.text != ""
 	_rebuild_buttons()
+	_layout_mode()
+
+## Title: the logo top left, the menu card under it, the stage running.
+## Pause: the card alone, with its own small title.
+func _layout_mode() -> void:
+	_logo.visible = not paused_mode
+	if paused_mode:
+		_strip.position = Vector2(64, 70)
+		_strip.custom_minimum_size = Vector2(MENU_W, 0)
+		_sub.position = Vector2(64 + MENU_W + 36, 70)
+		if _stage != null:
+			_stage.leave()
+	else:
+		var w := 330.0
+		_strip.custom_minimum_size = Vector2(w, 0)
+		_strip.size = Vector2(w, 0)
+		_strip.position = Vector2(_logo.position.x + (_logo.size.x - w) * 0.5, _logo.position.y + _logo.size.y + 6.0)
+		_sub.position = Vector2(_logo.position.x + _logo.size.x + 10.0, 70)
+		if _stage != null and visible:
+			_stage.enter()
 
 func _clear_sub(title_text: String, min_w: float = 600.0) -> void:
 	for c in _sub_box.get_children():
@@ -157,11 +206,28 @@ func _on_continue() -> void:
 	if latest != "":
 		Save.load_slot(latest)
 	close()
+	FirstNight.watch(world)
 
 func _on_new() -> void:
+	visible = false
+	_sub.visible = false
+	if _stage != null:
+		_stage.leave()
 	if world and world.has_method("new_game"):
 		world.new_game()
+	if world is Node3D and not bool(Options.get_opt("skip_intros")):
+		intro = IntroSequence.new()
+		world.add_child(intro)
+		intro.finished.connect(_on_intro_finished)
+		intro.begin(world)
+		return
 	close()
+	FirstNight.watch(world)
+
+func _on_intro_finished() -> void:
+	intro = null
+	close()
+	FirstNight.watch(world)
 
 func _on_quit() -> void:
 	if paused_mode and Save.enabled:
@@ -246,6 +312,7 @@ func _show_load() -> void:
 func _load(slot: String) -> void:
 	if Save.load_slot(slot):
 		close()
+		FirstNight.watch(world)
 
 # ---------------------------------------------------------------- options
 
@@ -292,6 +359,7 @@ func _show_options() -> void:
 		dl.text = DIFF_TEXT[i]))
 	b.add_child(dl)
 	b.add_child(_check("Subtitles", "subtitles"))
+	b.add_child(_check("Skip intros (studio logo and the opening)", "skip_intros"))
 	b.add_child(_check("Screen shake", "screen_shake"))
 	_back_row()
 
@@ -400,6 +468,8 @@ func open_paused() -> void:
 func close() -> void:
 	visible = false
 	_sub.visible = false
+	if _stage != null:
+		_stage.leave()
 	if world and world.has_method("start_play"):
 		world.start_play()
 	else:
@@ -426,12 +496,6 @@ func _unhandled_input(e: InputEvent) -> void:
 func _process(_delta: float) -> void:
 	if visible:
 		_hide_hand_tip()
-	if not visible or paused_mode or world == null or not ("title_camera" in world) or world.title_camera == null:
-		return
-	# the valley slowly panning behind the menu
-	_yaw += Clock.real_delta * 0.035
-	var focus := Vector3(sin(_yaw * 0.7) * 25.0, 4.0, -8.0 + cos(_yaw * 0.5) * 12.0)
-	world.frame_camera(world.title_camera, focus, 75.0, _yaw, 32.0)
 
 func _hide_hand_tip() -> void:
 	var hand := get_tree().get_first_node_in_group(&"hand")

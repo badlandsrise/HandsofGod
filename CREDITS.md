@@ -6,7 +6,8 @@
 
 - All music (the hand motif, the Era 1 adaptive piece "First Fire", the Era 2
   adaptive piece "Long Furrows", the Era 3 adaptive piece "Market Bells", the
-  stingers including the Era 2 and Era 3 arrivals, and the title theme) was
+  stingers including the Era 2 and Era 3 arrivals, the title theme, the
+  Badlandsrise studio sting and the intro underscore) was
   composed as MIDI by Claude (`tools/music/`) and rendered with FluidSynth.
 - All sound effects and the villager voices were synthesised procedurally
   with numpy by Claude (`tools/music/sfx.py`, `tools/music/voices.py`).
@@ -15,6 +16,12 @@
 
 - **FluidR3_GM** General MIDI soundfont by Frank Wen, released under the
   MIT licence. Used to render the music.
+
+## Studio
+
+**Badlandsrise Game Studio.** The studio splash (emblem, wordmark and sting) was
+designed and built in-engine for Hands of God by Claude (`scripts/front/`,
+`tools/music/front.py`).
 
 ## Art
 

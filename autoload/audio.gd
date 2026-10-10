@@ -31,6 +31,8 @@ var _stinger: AudioStreamPlayer
 var _rain: AudioStreamPlayer
 var _wind: AudioStreamPlayer
 var _duck: float = 0.0            # seconds left of ducking under a stinger
+var _title_gain: float = 1.0      # 0..1, fade_title() eases it down
+var _title_fade: float = 0.0      # seconds of fade, 0 = not fading
 var _threats: Dictionary = {}     # threat id -> true while warned / active
 var _direct_t: float = 0.0
 var _voice_t: float = 0.0
@@ -97,12 +99,18 @@ func play_title() -> void:
 	for s in STEMS:
 		(_players[s] as AudioStreamPlayer).stop()
 		_target[s] = 0.0
+	_title_gain = 1.0
+	_title_fade = 0.0
 	if not _title.playing:
 		var path := "res://assets/audio/music/title.ogg"
 		_title.stream = load(path) if ResourceLoader.exists(path) else null
 		_title.volume_db = music_db
 		if _title.stream:
 			_title.play()
+
+## Fades the title theme out over `seconds` (the intro's own music takes over).
+func fade_title(seconds: float = 1.5) -> void:
+	_title_fade = maxf(seconds, 0.01)
 
 ## The stem set for an era: music/era<N>/ (era1, era2 ...), falling back to era1
 ## for an era whose music isn't made yet.
@@ -149,7 +157,12 @@ func _process(_d: float) -> void:
 		var cur := db_to_linear(p.volume_db - music_db) if p.volume_db > -79.0 else 0.0
 		cur = move_toward(cur, _target[s] * duck, dt / FADE)
 		p.volume_db = linear_to_db(maxf(cur, 0.0001)) + music_db
-	_title.volume_db = music_db
+	if _title_fade > 0.0 and _title.playing:
+		_title_gain = move_toward(_title_gain, 0.0, dt / _title_fade)
+		if _title_gain <= 0.0:
+			_title.stop()
+			_title_fade = 0.0
+	_title.volume_db = music_db + linear_to_db(maxf(_title_gain, 0.0001))
 
 ## Decides the adaptive layers from the state of the world.
 func _direct() -> void:

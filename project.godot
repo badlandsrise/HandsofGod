@@ -3,7 +3,7 @@ config_version=5
 
 [application]
 config/name="Hands of God"
-run/main_scene="res://scenes/world/world.tscn"
+run/main_scene="res://scenes/front/boot.tscn"
 config/features=PackedStringArray("4.6", "Forward Plus")
 
 [autoload]

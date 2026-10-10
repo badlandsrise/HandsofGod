@@ -4,7 +4,8 @@ class_name Options extends RefCounted
 ## window, the renderer and the camera.
 ##   Game.options keys: master, music, sfx, voices (0..1), ui_scale (0.8..1.5),
 ##   edge_pan, invert_rotate, subtitles, screen_shake (bools), camera_speed (0.5..2),
-##   difficulty ("gentle" | "normal" | "harsh"), fullscreen, vsync, quality ("low" | "medium" | "high").
+##   difficulty ("gentle" | "normal" | "harsh"), fullscreen, vsync, quality ("low" | "medium" | "high"),
+##   skip_intros (bool: no studio splash on launch, no opening on New Game).
 
 const PATH := "user://options.cfg"
 const DIFFICULTIES := ["gentle", "normal", "harsh"]
@@ -13,7 +14,7 @@ const DEFAULTS := {
 	"master": 1.0, "music": 0.5, "sfx": 1.0, "voices": 0.63,
 	"ui_scale": 1.0, "edge_pan": true, "invert_rotate": false, "subtitles": true,
 	"screen_shake": true, "camera_speed": 1.0, "difficulty": "normal",
-	"fullscreen": false, "vsync": true, "quality": "high",
+	"fullscreen": false, "vsync": true, "quality": "high", "skip_intros": false,
 }
 
 static var path: String = PATH          # tests point this elsewhere
