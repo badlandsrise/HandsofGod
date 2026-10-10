@@ -227,7 +227,10 @@ func _think() -> void:
 	# 2. powers as they become affordable (cheapest first)
 	var ps: Array = Defs.powers.values()
 	ps.sort_custom(func(a, b): return a.cost < b.cost)
+	var save_for: PowerDef = _power_the_dream_needs()
 	for p in ps:
+		if save_for != null and p != save_for and Faith.available() - p.cost < save_for.cost:
+			continue          # saving for the power the goal checklist names (Strength II for the quarry)
 		if Faith.can_buy(p.id) and Faith.buy(p.id):
 			_bought.append(p.id)
 			print("BOT bought %s for %.0f faith at %s" % [p.id, p.cost, _mmss(Clock.total_t)])
@@ -253,6 +256,22 @@ func _think() -> void:
 				return
 	# 6. staff work
 	_staff()
+
+## The power that opens a region the shown dream needs, once its other
+## requirements are met (Dreams.region_hint names it on the checklist).
+func _power_the_dream_needs() -> PowerDef:
+	var d := Dreams.active_dream()
+	if not Dreams.revealed(d):
+		return null
+	for r in d.needs_regions:
+		if Village.regions.has(r):
+			continue
+		var pd: PowerDef = Dreams.region_power(r)
+		if pd == null or Faith.has(pd.id) or pd.era > Village.era:
+			continue
+		if pd.requires.all(func(q): return Faith.has(q)) and (not pd.has_method(&"prerequisites_met") or pd.prerequisites_met()):
+			return pd
+	return null
 
 func _move_object(o: Node3D, to: Vector3) -> void:
 	var at := Vector3(to.x, Game.world.ground_y(to.x, to.z), to.z)
@@ -362,6 +381,8 @@ func _need(k: StringName) -> int:
 	for s in Village.sites:
 		if is_instance_valid(s) and s.state == Site.State.PLOT and s.building != null:
 			n += maxi(s.remaining(k), 0)
+	if k == &"wood" and Village.era == 2:
+		n += era2.short(&"charcoal") * 2      # the clamp burns wood for the bronze a plot waits on
 	return n
 
 func _food_target() -> int:
@@ -380,6 +401,10 @@ func _wasted(s, p = null) -> bool:
 	if e2 >= 0:
 		return e2 == 1
 	if s.is_plot():
+		# a builder on the way with an armful (or to fetch what the store has)
+		# is building: lifting them drops the claim and the plot never fills
+		if p != null and p.job_site == s and (not p._cargo.is_empty() or (p._reserved != &"" and p._waiting_for == &"")):
+			return false
 		return s.state == Site.State.PLOT and not _plot_can_progress(s)
 	if j == null:
 		return false
@@ -417,6 +442,30 @@ func _plot_can_progress(s) -> bool:
 	if left == 0:
 		return true           # everything is on its way: the builders are busy
 	return have > 0 and have >= mini(left, 3)
+
+## The workshops behind the goods the shown dream still needs, as the goal
+## checklist names them (Dreams.chain), once per think.
+var _chain_t := -1.0
+var _chain_ids: Array = []
+func _dream_chain() -> Array:
+	if _chain_t == Clock.total_t:
+		return _chain_ids
+	_chain_t = Clock.total_t
+	_chain_ids = []
+	var d := Dreams.active_dream()
+	if not Dreams.revealed(d):
+		return _chain_ids
+	for b in d.needs_buildings:
+		var bd: BuildingDef = Defs.building(b)
+		if bd == null or Village.count_buildings(b) >= int(d.needs_buildings[b]):
+			continue
+		var plot = Dreams._plot_of(b)
+		for k in bd.cost:
+			var got: int = int(plot.delivered.get(k, 0)) if plot != null else 0
+			for row in Dreams.chain(k, int(bd.cost[k]) - got):
+				if not _chain_ids.has(row["id"]):         # workshops, and digs (the copper ore)
+					_chain_ids.append(row["id"])
+	return _chain_ids
 
 func _prayers_wanted() -> int:
 	return 1 if Village.population() < 10 else 2
@@ -456,8 +505,8 @@ func _score(s, idle_n: int) -> float:
 		var d := Dreams.active_dream()
 		if d != null and d.needs_buildings.has(b.id):
 			dream = true
-		if b.id == &"footbridge":
-			dream = true          # the way across: the bridge's bronze needs East Bank copper
+		if b.id == &"footbridge" or _dream_chain().has(b.id):
+			dream = true          # the way across, and the workshops the dream's goods come from (the clamp and smelter for the bridge's bronze)
 		var key: float = era3.plot_score(b)
 		if key > 0.0 and ready:
 			return key            # the workshop a waiting chain needs (the forge for iron, ...)

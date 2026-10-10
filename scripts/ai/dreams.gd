@@ -124,7 +124,7 @@ const FLAG_HINTS := {
 ## How a closed region opens, when no power opens it.
 const REGION_HINTS := {
 	&"valley_floor": "Six people together can haul the fallen trunk off the path.",
-	&"western_meadow": "Lift the fallen logs out of the meadow gap (Strength I).",
+	&"western_meadow": "Lift the fallen logs out of the meadow gap.",
 	&"hill_quarry": "Roll the rockfall boulders aside with the hand.",
 }
 
@@ -141,13 +141,19 @@ static func checklist(d: DreamDef) -> Array:
 		var title: String = bd.title if bd != null else str(b).capitalize()
 		var plot := _plot_of(b)
 		var hint := ""
+		var goods: Array = Dreams.made_goods_lines(bd, plot) if have < need and bd != null else []
 		if have < need:
 			if plot != null:
 				hint = "A plot is marked. Set people on it: they fetch the materials and build."
 			else:
 				hint = "They will mark a plot for it soon."
+			for g in goods:
+				if not g["done"]:
+					hint = "It waits for %s. %s" % [str(g["good"]), g["hint"]]   # the missing link of its chain
+					break
 		out.append({"key": "b:" + str(b), "text": title, "have": mini(have, need), "need": need,
 			"done": have >= need, "hint": hint, "at": plot.global_position if plot != null else Vector3.INF})
+		out.append_array(goods)
 	for k in d.needs_stores:
 		var have := Village.food() if k == &"food" else Village.store(k)
 		var need := int(d.needs_stores[k])
@@ -155,9 +161,11 @@ static func checklist(d: DreamDef) -> Array:
 			"done": have >= need, "hint": "", "at": Vector3.INF})
 	if d.needs_population > 0:
 		var have := Village.population()
+		var hint := "Bonded couples with a home and food to spare have children. Wanderers come when new places open."
+		if have < d.needs_population and Dreams.beds() <= have:
+			hint = "Every home is full: build the homes they ask for, and couples will have children."
 		out.append({"key": "people", "text": "People", "have": mini(have, d.needs_population), "need": d.needs_population,
-			"done": have >= d.needs_population,
-			"hint": "Bonded couples with a home and food to spare have children. Wanderers come when new places open.", "at": Vector3.INF})
+			"done": have >= d.needs_population, "hint": hint, "at": Vector3.INF})
 	var wn := Dreams.winters_needed(d)
 	if wn > 0:
 		var have := int(Village.stats.get("winters_survived", 0))
@@ -176,6 +184,167 @@ static func checklist(d: DreamDef) -> Array:
 			"done": open, "hint": Dreams.region_hint(r), "at": Vector3.INF})
 	return out
 
+# ---------------------------------------------------------------- production chains
+# A dream building made of goods the village makes (the bridge's bronze: copper
+# ore and charcoal to the smelter) gets a checklist line per good, whose hint
+# names the most stuck link of the chain: a workshop with no plot yet, then a
+# plot nobody builds, land not open, a workshop nobody works.
+
+static var _producers: Dictionary = {}
+
+## The workshop (or dig) that makes `good`, from Era 2 up to this era (the
+## newest one when there are several): {kind: &"building"|&"job", id, job},
+## or {} for the basics (wood, stone, food: Era 1 work) and anything nobody makes.
+static func producer(good: StringName) -> Dictionary:
+	var key := "%s:%d" % [good, Village.era]
+	if not _producers.has(key):
+		_producers[key] = Dreams._find_producer(good)
+	return _producers[key]
+
+static func _find_producer(good: StringName) -> Dictionary:
+	var era := Village.era
+	var best: Dictionary = {}
+	if era < 2:
+		return best
+	for b: BuildingDef in Defs.buildings.values():
+		if b.era < 2 or b.era > era or (not best.is_empty() and b.era <= int(best["era"])):
+			continue
+		for jid in b.jobs + b.work_jobs:
+			var j: JobDef = Defs.job(jid)
+			if j != null and j.outputs.has(good):
+				best = {"kind": &"building", "id": b.id, "job": j, "era": b.era}
+				break
+	if not best.is_empty():
+		return best
+	for j: JobDef in Defs.jobs.values():
+		if j.era >= 2 and j.era <= era and j.kind == JobDef.Kind.GATHER and j.outputs.has(good):
+			return {"kind": &"job", "id": j.id, "job": j, "era": j.era}
+	return {}
+
+## The links behind `n` more of `good`, inputs first: [{good, need, kind, id,
+## title, state, at}], state one of &"missing" (no workshop or plot), &"plot"
+## (marked, not built), &"idle" (nobody works it), &"closed" (it lies in land
+## not open to the people), &"working". Goods already in the stores stop it.
+static func chain(good: StringName, n: int, depth: int = 0) -> Array:
+	var out: Array = []
+	var p := Dreams.producer(good)
+	var short := n - Village.store(good)
+	if p.is_empty() or short <= 0 or depth > 4:
+		return out
+	var j: JobDef = p["job"]
+	var runs := ceili(float(short) / float(maxi(int(j.outputs[good]), 1)))
+	for k in j.inputs:
+		out.append_array(Dreams.chain(k, runs * int(j.inputs[k]), depth + 1))
+	var row := Dreams.link_state(p)
+	row["good"] = good
+	row["need"] = short
+	out.append(row)
+	return out
+
+## Where a link stands now: {kind, id, title, state, at}.
+static func link_state(p: Dictionary) -> Dictionary:
+	var j: JobDef = p["job"]
+	var row := {"kind": p["kind"], "id": p["id"], "job": j.id, "state": &"missing", "at": Vector3.INF}
+	var w = Game.world if Game.world != null and is_instance_valid(Game.world) else null
+	if p["kind"] == &"building":
+		var bd: BuildingDef = Defs.building(p["id"])
+		row["title"] = bd.title.to_lower() if bd != null else str(p["id"])
+		var plot := _plot_of(p["id"])
+		if plot != null:
+			row["state"] = &"plot"
+			row["at"] = plot.global_position
+		for s in Village.sites:
+			if is_instance_valid(s) and s.is_finished_building(p["id"]):
+				row["at"] = s.global_position
+				if row["state"] != &"working":
+					row["state"] = &"working" if Dreams._worked(s) else &"idle"
+		return row
+	row["title"] = j.title.to_lower()
+	for s in Village.sites:
+		if not is_instance_valid(s) or s.job == null or s.job.id != j.id or s.is_plot():
+			continue
+		var open: bool = w == null or not w.has_method("region_at") or w.drops == null or w.drops.accessible(w.region_at(s.global_position))
+		if not open:
+			if row["state"] == &"missing":
+				row["state"] = &"closed"
+			continue
+		if row["state"] != &"working":
+			row["state"] = &"working" if Dreams._worked(s) else &"idle"
+			row["at"] = s.global_position
+	if row["state"] == &"missing":
+		row["state"] = &"closed"       # its dig sites come with the land they lie in
+	return row
+
+static func _worked(s) -> bool:
+	if s.slots_filled() > 0:
+		return true
+	for c in Village.sites:     # a workplace's crew works its task sites
+		if is_instance_valid(c) and c.parent_uid == s.uid and s.uid != 0 and c.slots_filled() > 0:
+			return true
+	return false
+
+const LINK_RANK := {&"missing": 4, &"plot": 3, &"closed": 2, &"idle": 1}
+
+## What to do about a link that is not working.
+static func link_hint(row: Dictionary) -> String:
+	match row["state"]:
+		&"missing": return "No %s yet: they will mark a plot for one soon." % row["title"]
+		&"plot": return "The %s plot is marked: set people on it to build it." % row["title"]
+		&"idle": return "Nobody works the %s: set someone on it (%s)." % [row["title"], Defs.job(row["job"]).title.to_lower()]
+		&"closed": return "%s: the land where it lies is not open to them yet." % Defs.job(row["job"]).title
+	return ""
+
+## Checklist lines for the made goods a dream building needs (bronze, pots,
+## cloth...), each naming the first link of its chain that is not running.
+static func made_goods_lines(bd: BuildingDef, plot: Node3D) -> Array:
+	var out: Array = []
+	for k in bd.cost:
+		if Dreams.producer(k).is_empty():
+			continue
+		var need := int(bd.cost[k])
+		var got: int = int(plot.delivered.get(k, 0)) if plot != null and "delivered" in plot else 0
+		var have := got + Village.store(k)
+		var hint := ""
+		var at := Vector3.INF
+		var worst := 0
+		for row in Dreams.chain(k, need - got):
+			var rank: int = LINK_RANK.get(row["state"], 0)
+			if rank > worst:       # the most stuck link: no workshop, then an unbuilt plot, ...
+				worst = rank
+				hint = Dreams.link_hint(row)
+				at = row["at"]
+		if hint == "" and have < need:
+			hint = "They are making it: keep the workshops staffed."
+		out.append({"key": "m:%s:%s" % [bd.id, k], "good": str(k), "text": "%s for the %s" % [str(k).capitalize(), bd.title.to_lower().trim_prefix("the ")],
+			"have": mini(have, need), "need": need, "done": have >= need, "hint": hint if have < need else "", "at": at})
+	return out
+
+## The workshops the active dream is waiting on that have no plot yet
+## (VillageEra2 lays them first).
+static func missing_workshops(d: DreamDef) -> Array:
+	var out: Array = []
+	if d == null:
+		return out
+	for b in d.needs_buildings:
+		var bd: BuildingDef = Defs.building(b)
+		if bd == null or Village.count_buildings(b) >= int(d.needs_buildings[b]):
+			continue
+		var plot := _plot_of(b)
+		for k in bd.cost:
+			var got: int = int(plot.delivered.get(k, 0)) if plot != null else 0
+			for row in Dreams.chain(k, int(bd.cost[k]) - got):
+				if row["kind"] == &"building" and row["state"] == &"missing" and not out.has(row["id"]):
+					out.append(row["id"])
+	return out
+
+## Beds in the village's homes (finished shelters that are not far-bank camps).
+static func beds() -> int:
+	var n := 0
+	for s in Village.sites:
+		if is_instance_valid(s) and s.state == Site.State.FINISHED and s.building != null and s.building.shelter > 0 and not s.building.camp:
+			n += s.building.shelter
+	return n
+
 static func checklist_met(d: DreamDef) -> bool:
 	for it in Dreams.checklist(d):
 		if not it["done"]:
@@ -184,10 +353,23 @@ static func checklist_met(d: DreamDef) -> bool:
 
 ## How a region opens: the power that opens it, else what the people must do.
 static func region_hint(r: StringName) -> String:
+	var pd := Dreams.region_power(r)
+	if pd != null and pd.opens_region == r:
+		return "The hand's %s opens it (%d faith)." % [pd.title, int(pd.cost)] if not Faith.has(pd.id) else "Open with %s." % pd.title
+	var how: String = REGION_HINTS.get(r, "")
+	if pd != null and not Faith.has(pd.id):
+		how += " The hand needs %s for that (%d faith)." % [pd.title, int(pd.cost)]
+	return how.strip_edges()
+
+## Regions the hand opens by lifting something heavy: the power that lets it.
+const REGION_LIFT_POWERS := {&"western_meadow": &"strength_1", &"hill_quarry": &"strength_2"}
+
+## The power a region waits on (it opens it, or lets the hand clear its way), or null.
+static func region_power(r: StringName) -> PowerDef:
 	for pd in Defs.powers.values():
 		if pd.opens_region == r:
-			return "The hand's %s opens it (%d faith)." % [pd.title, int(pd.cost)] if not Faith.has(pd.id) else "Open with %s." % pd.title
-	return REGION_HINTS.get(r, "")
+			return pd
+	return Defs.power(REGION_LIFT_POWERS.get(r, &""))
 
 static func _plot_of(bid: StringName) -> Node3D:
 	for s in Village.sites:

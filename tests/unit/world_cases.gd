@@ -197,6 +197,15 @@ func _locked_cases(w) -> void:
 	check(w.ground_y(up.x, up.z) - at.y < 1.2, "a wolf cannot run up the cave cliff")
 	var flat := Vector3(-5, w.ground_y(-5, 0), 0)
 	check(w.animal_step(flat, flat + Vector3(1, 0, 0)).distance_to(flat + Vector3(1, 0, 0)) < 0.01, "but runs on level ground")
+	# just after a load (or a region opening) the live mesh is the old one
+	# until the new bake is in: land it doesn't cover yet is not refused on it
+	check(w.drop_reason(Vector3(0, 0, 70)) != "", "the Valley Floor is shut")
+	w.open_region(&"valley_floor")
+	var rx := 60.0
+	var river := Vector3(rx, 0, Valley.river_z(rx))
+	check(not w.nav.synced() and w.drop_reason(Vector3(0, 0, 70)) == "", "while the new mesh bakes, newly opened land is not refused on the old one ('%s')" % w.drop_reason(Vector3(0, 0, 70)))
+	check(not w.is_water(river) or w.drop_reason(river) != "", "but never into the river")
+	await _wait_bake(w)
 
 # ---------------------------------------------------------------- the Pass Road
 func _pass_cases(w) -> void:

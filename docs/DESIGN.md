@@ -283,7 +283,7 @@ Power costs climb from 10 (Strength I, the first bought power) to about 400 (Par
 | Era | Faith earned (target) | Powers bought | Their total cost |
 | --- | --- | --- | --- |
 | 1 Tribe | about 150 | Strength I 10, Warmth 30, Blessing 60 (Grip II is free) | 100 |
-| 2 Village | about 450 | Reach 80, Grip III 80, Rain 100, Strength II 120 | 380 |
+| 2 Village | about 450 | Strong Arms 40, Grip III 60, Rain 80, Strength II 100 | 280 |
 | 3 Town | about 800 | Grip IV 150, Calm Waters 180, Lift Buildings 200, Guiding Light 200 | 730 |
 | 4 Launch | about 1,400 | Steady Hand 200, Grip V 250, Strength III 300, Part the Clouds 400 | 1,150 |
 

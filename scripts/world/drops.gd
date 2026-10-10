@@ -90,9 +90,15 @@ func check(p: Vector3, off_mesh: float = OFF_MESH) -> String:
 		_cache_it = it
 		_anchor = Vector3.INF
 	var key := Vector3i(floori(p.x / CELL), floori(p.z / CELL), int(off_mesh * 10.0))
-	if _cache.has(key):
+	# While a new mesh bakes (just after a load, or a region opening) the live
+	# mesh is the old one: a refusal from it isn't trusted or cached, only the
+	# region rule above and open water (for a drop on bare ground) still hold.
+	var stale := not nav.synced()
+	if _cache.has(key) and not (stale and _cache[key] != ""):
 		return _cache[key]
 	var r := _reach(map, Vector3((key.x + 0.5) * CELL, p.y, (key.y + 0.5) * CELL), off_mesh)
+	if stale and r != "":
+		return CANT_GET_BACK if off_mesh <= OFF_MESH and world.valley.is_water(p.x, p.z) else ""
 	_cache[key] = r
 	return r
 

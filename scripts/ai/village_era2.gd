@@ -24,6 +24,7 @@ class_name VillageEra2 extends Node
 const CHECK := 2.0
 const FAR_BANK_AFTER := 200.0       # game seconds into the era
 const MAX_COTTAGES := 14
+const BIG_VILLAGE := 30            # people enough to raise two cottages at once
 const POTS_FOR_POTTERY := 4
 const POTTERY_CAP := 30
 const CLOTH_FOR_CLOTHES := 4
@@ -50,6 +51,20 @@ const MORE_FIELDS := 4             # fields a farmhouse grows to (2 at first)
 ## Suggestions a dream waits on skip the one-at-a-time queue (the great
 ## bridge needs bronze: the charcoal clamp and the smelter).
 const URGENT: Array[String] = ["charcoal", "smelter"]
+## The craft chains' workshops by building: [wish key, line]. When the dream
+## shown is waiting on one with no plot (Dreams.missing_workshops: the clamp
+## for the bridge's bronze, the kiln and the loom for the temple), it is laid
+## at once, and laid again if its plot is ever lost.
+const CHAIN_ROWS := {
+	&"charcoal_clamp": ["charcoal", "They want a charcoal clamp: copper needs a hotter fire than wood"],
+	&"smelter": ["smelter", "Green stone from the far bank. They want a furnace to melt it"],
+	&"smithy": ["smithy", "Bronze! They want a smithy to make tools"],
+	&"kiln": ["kiln", "Clay from the far bank. They want a kiln to fire pots"],
+	&"sheep_pen": ["sheep", "Wild sheep graze the Valley Floor. They want a pen for them"],
+	&"weaver": ["weaver", "Wool to spin. They want a loom"],
+	&"mill": ["mill", "Grain to grind. They want a mill"],
+	&"bakery": ["bakery", "Flour and fire: they want an oven for bread"],
+}
 
 var _acc: float = 0.0
 var _offer_t: float = 0.0
@@ -185,12 +200,21 @@ func _low_river() -> void:
 ## long enough) and SUGGEST_GAP has passed. Returns it (or null).
 func _suggest() -> Site:
 	var now := Clock.total_t
+	_forget_lost()
 	# what the dream is waiting on (the bridge's bronze) jumps the queue
 	for row in suggestions():
 		if URGENT.has(row[0]):
 			var u: Site = _lay(row)
 			if u != null:
 				return u
+	var d := Dreams.active_dream()
+	if Dreams.revealed(d):
+		for bid in Dreams.missing_workshops(d):
+			if CHAIN_ROWS.has(bid):
+				var row: Array = CHAIN_ROWS[bid]
+				var c: Site = _lay([row[0], bid, row[1]])
+				if c != null:
+					return c
 	if now - float(Village.stats.get("suggest_t", -1.0e9)) < SUGGEST_GAP:
 		return null
 	for s in Village.sites:
@@ -263,15 +287,34 @@ func _lay(row: Array) -> Site:
 		s = VillageEra2._newest(&"field")
 	else:
 		s = w.add_plot(row[1])
-	Village.stats["wish_" + key] = true
 	if s == null:
-		return null
+		return null           # no room now: asked again on a later check
+	Village.stats["wish_" + key] = true
+	if s.uid != 0:
+		Village.stats["wish_uid_" + key] = s.uid
 	s.set_meta(&"suggested", Clock.total_t)
 	Village.stats["suggest_t"] = Clock.total_t
 	Village.stats["suggestions"] = int(Village.stats.get("suggestions", 0)) + 1
 	if str(row[2]) != "":
 		Events.alert.emit(str(row[2]), s.global_position)
 	return s
+
+## A suggestion whose plot or building is gone (taken down, lost, cleared)
+## and that nothing else of its kind stands in for is asked for again: a
+## chain is never left without its workshop.
+func _forget_lost() -> void:
+	for row in suggestions():
+		var key: String = row[0]
+		if key.begins_with("more_fields") or not Village.stats.get("wish_" + key, false):
+			continue
+		var uid := int(Village.stats.get("wish_uid_" + key, 0))
+		if uid != 0 and Site.by_uid(uid) != null:
+			continue
+		var keep := 2 if key == "plains_farm" else 1      # the Plains farmhouse is the second
+		if VillageEra2._count(row[1]) >= keep:
+			continue
+		Village.stats.erase("wish_" + key)
+		Village.stats.erase("wish_uid_" + key)
 
 ## A plot for `bid` at the world's authored spot for it (when it has one) or
 ## the first free spot of `spots`.
@@ -306,14 +349,18 @@ static func _newest(bid: StringName) -> Site:
 func _maybe_cottage() -> void:
 	var room := 0
 	var finished := 0
+	var plots := 0
 	for s in Village.sites:
 		if not is_instance_valid(s) or s.building == null or s.building.id != &"cottage":
 			continue
 		if s.state != Site.State.FINISHED:
-			return              # one cottage plot at a time
+			plots += 1
+			continue
 		finished += 1
 		room += s.building.shelter
-	if finished >= MAX_COTTAGES:
+	# one cottage plot at a time; a village big enough to build two at once
+	# (BIG_VILLAGE) gets a second when people are homeless or couples cramped
+	if plots >= 2 or (plots == 1 and Village.population() < BIG_VILLAGE) or finished + plots >= MAX_COTTAGES:
 		return
 	var homeless := 0
 	var cramped := false
@@ -326,6 +373,8 @@ func _maybe_cottage() -> void:
 				cramped = true
 	if Village.population() + 2 <= room and not cramped and homeless == 0:
 		return
+	if plots == 1 and Village.population() + 2 <= room + 4 and not cramped:
+		return              # the plot under way will do
 	var w = VillageEra2._w()
 	if w == null:
 		return

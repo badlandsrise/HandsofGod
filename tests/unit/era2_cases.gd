@@ -31,6 +31,7 @@ func run() -> void:
 	await _economy()
 	await _raising()
 	await _regions()
+	await _chain()
 	await _bridge()
 	await _threats()
 	await _trust()
@@ -222,6 +223,12 @@ func _regions() -> void:
 	check(Vector2(fb.global_position.x, fb.global_position.z).distance_to(VillageEra2.FOOTBRIDGE) < 0.5 and w.is_water(fb.global_position) and w.region_at(fb.global_position + Vector3(0, 0, 10)) == &"east_bank", "it spans the shallows to the East Bank")
 	check(e2.timbers().size() == 2, "two timbers lie by the bridge yard")
 	check(not w.is_region_open(&"east_bank"), "the East Bank waits for the bridge")
+	check(w.site_drop_reason(fb) == "", "its builders are set down on the near bank ('%s')" % w.site_drop_reason(fb))
+	var far_slot := false
+	for i in fb.max_slots():
+		if not w.drops.accessible(w.region_at(fb.slot_position(i))):
+			far_slot = true
+	check(not far_slot and w.drop_reason(fb.global_position + Vector3(0, 0, 10)) != "", "every builder's slot is on the near bank, and the far bank stays shut")
 	for k in fb.building.cost:
 		fb.deliver(k, int(fb.building.cost[k]))
 	check(fb.state == Site.State.PLOT and fb.raise_site() == null, "wood alone is not enough: it waits for its timbers")
@@ -250,6 +257,7 @@ func _regions() -> void:
 	check(Village.alive().all(func(p): return p.home == null or not p.home.building.camp), "nobody makes the camp their home")
 	# the rockfall
 	check(not w.is_region_open(&"hill_quarry"), "the rockfall closes the Hill Quarry")
+	check(Faith.has(&"strength_2") or Dreams.region_hint(&"hill_quarry").contains("Strength II"), "the temple's checklist says the quarry needs Strength II ('%s')" % Dreams.region_hint(&"hill_quarry"))
 	var b0: Liftable = w.era2.boulders[0]
 	check(b0.lift_weight() > Faith.strength, "a boulder is too heavy before Strength II")
 	for i in w.era2.boulders.size():
@@ -260,6 +268,51 @@ func _regions() -> void:
 	await get_tree().process_frame
 
 # ---------------------------------------------------------------- bridge
+
+## The bridge's bronze chain: the checklist names the missing workshop, the
+## dream's workshops are laid at once, and a lost one is laid again.
+func _chain() -> void:
+	var e2: VillageEra2 = w.village_ai.era2
+	var d: DreamDef = Defs.dream(&"great_bridge")
+	var done0: Array = (Village.stats.get("dreams_done", []) as Array).duplicate()
+	var act0: String = str(Village.stats.get("dream_active", ""))
+	Village.stats["dreams_done"] = done0 + (["granary"] if not done0.has("granary") else [])
+	Village.stats["dream_active"] = "great_bridge"
+	if _sites(&"bridge").is_empty():
+		w.ensure_plots_for_dream(&"great_bridge")
+	for s in _sites(&"charcoal_clamp") + _sites(&"smelter"):
+		s.remove_site()
+	for k in ["wish_charcoal", "wish_smelter", "wish_uid_charcoal", "wish_uid_smelter"]:
+		Village.stats.erase(k)
+	for k in [&"bronze", &"charcoal", &"ore"]:
+		Village.take_store(k, Village.store(k))
+	Village.add_store(&"ore", 10)
+	var line := _line(d, "m:bridge:bronze")
+	check(not line.is_empty() and not line["done"] and str(line["hint"]).contains("charcoal clamp"), "the checklist names the bridge's missing link ('%s')" % line.get("hint", ""))
+	check(str(_line(d, "b:bridge").get("hint", "")).begins_with("It waits for bronze"), "and the bridge's own line says what it waits for")
+	var miss := Dreams.missing_workshops(d)
+	check(miss.has(&"charcoal_clamp") and miss.has(&"smelter"), "the dream waits on a clamp and a smelter (%s)" % [miss])
+	Village.stats["suggest_t"] = Clock.total_t       # the queue is busy: the dream's workshops jump it
+	e2._suggest()
+	e2._suggest()
+	check(_sites(&"charcoal_clamp").size() == 1 and _sites(&"smelter").size() == 1, "the dream's workshops are laid at once")
+	check(str(_line(d, "m:bridge:bronze").get("hint", "")).contains("plot is marked"), "then the line points at their plots")
+	_sites(&"charcoal_clamp")[0].remove_site()
+	await get_tree().process_frame
+	check(_sites(&"charcoal_clamp").is_empty() and Dreams.missing_workshops(d).has(&"charcoal_clamp"), "a lost clamp plot shows as missing again")
+	e2._suggest()
+	check(_sites(&"charcoal_clamp").size() == 1, "and it is laid again")
+	check(Dreams.checklist_met(d) == Dreams.met(d), "the checklist still agrees with the dream")
+	Village.take_store(&"ore", Village.store(&"ore"))
+	Village.stats["dreams_done"] = done0
+	Village.stats["dream_active"] = act0
+	await get_tree().process_frame
+
+func _line(d: DreamDef, key: String) -> Dictionary:
+	for it in Dreams.checklist(d):
+		if it["key"] == key:
+			return it
+	return {}
 
 func _bridge() -> void:
 	var c: Vector2 = LayoutEra2.PLOT_SPOTS[&"bridge"][0]

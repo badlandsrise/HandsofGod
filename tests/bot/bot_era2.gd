@@ -27,17 +27,17 @@ static func _has(k: StringName, n: int) -> bool:
 ## to make the goods they wait for (bronze needs ore and charcoal, pots need
 ## clay, cloth needs wool). Above zero, the chain job outranks foraging.
 func short(k: StringName) -> int:
-	var own: int = maxi(bot._need(k) - Village.store(k), 0)
+	var want: int = bot._need(k)
 	match k:
 		&"charcoal":
-			return own + short(&"bronze")
+			want += short(&"bronze")
 		&"ore":
-			return own + short(&"bronze") * 2
+			want += short(&"bronze") * 2
 		&"clay":
-			return own + short(&"pots") * 2 + (4 if Village.count_buildings(&"smelter") == 0 and short(&"bronze") > 0 else 0)
+			want += short(&"pots") * 2 + (4 if Village.count_buildings(&"smelter") == 0 and short(&"bronze") > 0 else 0)
 		&"wool":
-			return own + short(&"cloth") * 2
-	return own
+			want += short(&"cloth") * 2
+	return maxi(want - Village.store(k), 0)      # what the stores already hold counts
 
 func _flood_on() -> bool:
 	var w = Game.world
@@ -59,6 +59,19 @@ func site_blocked(s) -> bool:
 
 ## Score for an Era 2 job, or -1.0 to let bot.gd decide.
 func score(s, idle_n: int) -> float:
+	var v := _base_score(s, idle_n)
+	# work on the chain the shown dream waits on (the bridge's bronze, the
+	# temple's cloth and pots), as its goal checklist names it, comes first
+	var j: JobDef = s.job
+	if v > 0.5 and j != null and not s.is_plot() and not s.is_group():
+		var chain: Array = bot._dream_chain()
+		if (s.building != null and chain.has(s.building.id)) or chain.has(j.id):
+			for k in j.outputs:
+				if short(k) > 0:
+					return maxf(v, 7.6)
+	return v
+
+func _base_score(s, idle_n: int) -> float:
 	var j: JobDef = s.job
 	if j == null or s.is_plot():
 		return -1.0
@@ -68,7 +81,9 @@ func score(s, idle_n: int) -> float:
 		&"mill_grain":
 			return (6.7 if Village.store(&"flour") < 12 else 1.0) if _has(&"grain", 2) else 0.0
 		&"bake_bread":
-			return ((8.0 if food_low else 5.0) if _has(&"flour", 2) and _has(&"wood", 1) else 0.0)
+			# bread burns wood: only while the stores want food
+			if not (_has(&"flour", 2) and _has(&"wood", 1)): return 0.0
+			return 8.0 if food_low else (2.0 if Village.food() < bot._food_target() + 20 else 0.0)
 		&"fire_kiln":
 			if short(&"pots") > 0 and _has(&"clay", 2) and _has(&"wood", 1): return 6.6
 			return (5.2 if Village.store(&"pots") < bot._need(&"pots") + 6 else 0.8) if _has(&"clay", 2) and _has(&"wood", 1) else 0.0
@@ -121,7 +136,7 @@ func wasted(s, p = null) -> int:
 		return -1
 	match j.id:
 		&"mill_grain": return 0 if _has(&"grain", 2) else 1
-		&"bake_bread": return 0 if _has(&"flour", 2) and _has(&"wood", 1) else 1
+		&"bake_bread": return 0 if _has(&"flour", 2) and _has(&"wood", 1) and Village.food() < bot._food_target() + 10 else 1
 		&"fire_kiln": return 0 if _has(&"clay", 2) and _has(&"wood", 1) else 1
 		&"burn_charcoal": return 0 if _has(&"wood", 4) and (Village.store(&"charcoal") < 12 or short(&"charcoal") > 0) else 1
 		&"smelt_bronze": return 0 if _has(&"ore", 2) and _has(&"charcoal", 1) else 1

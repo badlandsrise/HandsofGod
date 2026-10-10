@@ -744,9 +744,18 @@ func drop_reason(p: Vector3) -> String:
 func site_drop_reason(s: Node3D) -> String:
 	if drops == null or not is_instance_valid(s):
 		return ""
-	# a bridge plot stands over the river: its builders work from the near bank
+	# a bridge plot stands over the river: its builders work from the near bank.
+	# Its first slot must pass the full check (open, reachable land), and every
+	# other slot people could be set at must at least lie in land open to them,
+	# so the near-bank rule never lets anyone onto the locked far bank.
 	if s is Site and s.building != null and Site.BRIDGES.has(s.building.id) and s.state != Site.State.FINISHED:
-		return drops.check(s.slot_position(0), 6.0)
+		var why: String = drops.check(s.slot_position(0), 6.0)
+		if why != "":
+			return why
+		for i in range(1, maxi(s.max_slots(), 1)):
+			if not drops.accessible(region_at(s.slot_position(i))):
+				return Drops.NOT_YET
+		return ""
 	return drops.check(s.global_position, 6.0)
 
 ## The nearest spot to `p` where people may be set down (the green when none is).
