@@ -5,6 +5,7 @@ extends Node
 var world: Node3D = null           # scripts/world/world.gd sets itself here
 var rng := RandomNumberGenerator.new()
 var flags: Dictionary = {}          # from user args after "--": --test, --shot=..., --seed=N
+var options: Dictionary = {"edge_pan": true, "ui_scale": 1.0}   # player options (title menu writes, camera/HUD read)
 
 const ACTIONS := {
 	&"hand_lift": [MOUSE_BUTTON_LEFT],
