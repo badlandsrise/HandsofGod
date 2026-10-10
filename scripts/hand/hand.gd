@@ -184,6 +184,10 @@ func collect_gift(g: Node3D) -> bool:
 	var v: float = float(g.get(&"faith_value")) if &"faith_value" in g else 3.0
 	var at := g.global_position
 	Faith.add(v, at)
+	var gp = g.get(&"grants_power") if &"grants_power" in g else &""
+	if gp != null and StringName(str(gp)) != &"":
+		Faith.grant(StringName(str(gp)))
+	Village.stats["gifts"] = int(Village.stats.get("gifts", 0)) + 1
 	var vis := _visual()
 	if vis and vis.has_method(&"sparkle"):
 		vis.sparkle(at)
