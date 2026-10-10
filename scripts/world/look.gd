@@ -34,10 +34,16 @@ var _snow: float = 0.0
 var _wet: float = 0.0
 var _snowfall: bool = false
 
+static var _registered := false
+
+## Adds the hog_* global shader parameters once per run (unless the project
+## settings already declare them).
 static func register_globals() -> void:
-	var have := RenderingServer.global_shader_parameter_get_list()
+	if _registered:
+		return
+	_registered = true
 	var add := func(n: StringName, t: int, v) -> void:
-		if not have.has(n):
+		if not ProjectSettings.has_setting("shader_globals/" + str(n)):
 			RenderingServer.global_shader_parameter_add(n, t, v)
 	for i in 4:
 		add.call(StringName("hog_pal_%d" % i), RenderingServer.GLOBAL_VAR_TYPE_COLOR, ERA1_PALETTE[i])
@@ -48,7 +54,7 @@ static func register_globals() -> void:
 	add.call(&"hog_wet", RenderingServer.GLOBAL_VAR_TYPE_FLOAT, 0.0)
 	add.call(&"hog_wind", RenderingServer.GLOBAL_VAR_TYPE_FLOAT, 0.6)
 	add.call(&"hog_map_rect", RenderingServer.GLOBAL_VAR_TYPE_VEC4, Vector4(-Valley.HALF, -Valley.HALF, Valley.HALF * 2.0, Valley.HALF * 2.0))
-	if not have.has(&"hog_region_mask"):
+	if not ProjectSettings.has_setting("shader_globals/hog_region_mask"):
 		var img := Image.create(4, 4, false, Image.FORMAT_L8)
 		img.fill(Color.WHITE)
 		RenderingServer.global_shader_parameter_add(&"hog_region_mask", RenderingServer.GLOBAL_VAR_TYPE_SAMPLER2D, ImageTexture.create_from_image(img))
@@ -232,7 +238,7 @@ func _update(delta: float, snap: bool = false) -> void:
 	env.ambient_light_color = Color(0.2, 0.26, 0.42).lerp(Color(0.72, 0.74, 0.8).lerp(Color(0.9, 0.72, 0.6), warm * 0.5), light)
 	env.ambient_light_energy = lerpf(0.55, 0.55, light) * (1.0 - stormy * 0.25)
 	env.fog_light_color = hor
-	env.fog_density = lerpf(0.0014, 0.0045, stormy) + (0.0008 if light < 0.2 else 0.0)
+	env.fog_density = lerpf(0.0006, 0.0035, stormy) + (0.0005 if light < 0.2 else 0.0)
 	env.fog_light_energy = lerpf(0.35, 1.0, light)
 	env.background_energy_multiplier = lerpf(0.6, 1.0, light)
 	# ---- lightning
@@ -256,7 +262,7 @@ func _update(delta: float, snap: bool = false) -> void:
 		var fwd := -cam.global_transform.basis.z
 		fwd.y = 0.0
 		var at := cam.global_position + fwd.normalized() * 18.0
-		var gy := Game.world.ground_y(at.x, at.z) if Game.world != null and Game.world.has_method("ground_y") else 0.0
+		var gy: float = Game.world.ground_y(at.x, at.z) if Game.world != null and Game.world.has_method("ground_y") else 0.0
 		rain.global_position = Vector3(at.x, maxf(gy + 22.0, cam.global_position.y - 6.0), at.z)
 	# ---- season
 	var season := Clock.season
@@ -268,7 +274,7 @@ func _update(delta: float, snap: bool = false) -> void:
 	var snow := 0.0
 	if season == Clock.Season.WINTER:
 		snow = Valley.ss(0.0, 0.25, sf) * 0.9
-	elif season == Clock.Season.SPRING:
+	elif season == Clock.Season.SPRING and Clock.year > 1:   # meltwater after a winter
 		snow = (1.0 - Valley.ss(0.0, 0.2, sf)) * 0.9
 	_snow = snow
 	set_global(&"hog_snow", snow)

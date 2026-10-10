@@ -30,13 +30,19 @@ float hog_noise(vec2 p) {
 
 float hog_region_light(vec3 wpos) {
 	vec2 uv = (wpos.xz - hog_map_rect.xy) / hog_map_rect.zw;
-	return texture(hog_region_mask, uv).r;
+	vec2 o = 1.25 / vec2(textureSize(hog_region_mask, 0));   // soft edges between regions
+	float l = texture(hog_region_mask, uv).r * 0.4;
+	l += texture(hog_region_mask, uv + vec2(o.x, o.y)).r * 0.15;
+	l += texture(hog_region_mask, uv + vec2(-o.x, o.y)).r * 0.15;
+	l += texture(hog_region_mask, uv + vec2(o.x, -o.y)).r * 0.15;
+	l += texture(hog_region_mask, uv + vec2(-o.x, -o.y)).r * 0.15;
+	return smoothstep(0.0, 1.0, l);
 }
 
 // Locked regions read as dim, cool and a little desaturated.
 vec3 hog_dim(vec3 c, float lit) {
 	float g = dot(c, vec3(0.3, 0.55, 0.15));
-	vec3 locked = mix(vec3(g), c, 0.45) * vec3(0.42, 0.45, 0.58);
+	vec3 locked = mix(vec3(g), c, 0.65) * vec3(0.6, 0.62, 0.72);
 	return mix(locked, c, lit);
 }
 

@@ -58,6 +58,8 @@ func _ready() -> void:
 	Events.region_opened.connect(func(id): _regions[id] = Clock.total_t; print("BOT region opened: %s at %.0fs" % [id, Clock.total_t]))
 	Events.person_died.connect(func(_p): _deaths += 1)
 	Events.day_started.connect(func(_d): _report())
+	if Game.flags.has("verbose"):
+		Events.night_started.connect(func(_d): _last_day = -1; _report())
 	Events.power_unlocked.connect(func(id): print("BOT power unlocked: %s at %.0fs" % [id, Clock.total_t]))
 	Events.threat_warned.connect(func(id, _at): print("BOT threat warned: %s at %.0fs" % [id, Clock.total_t]))
 	Events.alert.connect(func(t, _at): print("BOT alert: %s" % t))
@@ -73,6 +75,9 @@ func _process(delta: float) -> void:
 	var t := Clock.total_t
 	if not shots.is_empty() and t >= float(shots[0][0]):
 		var s: Array = shots.pop_front()
+		if Game.flags.has("light-fire") and Clock.is_night and Game.world.get("fire") != null:
+			Game.world.fire.add_fuel(1.0)     # test aid: show the firelight in the night shot
+			await get_tree().create_timer(0.5).timeout
 		await _shot(str(s[1]))
 	if t >= quit_after:
 		_finish()
@@ -102,7 +107,7 @@ func _think() -> void:
 			_bought.append(p.id)
 			print("BOT bought %s for %.0f faith" % [p.id, p.cost])
 	# 3. gifts
-	for g in get_tree().get_nodes_in_group("gifts"):
+	for g in get_tree().get_nodes_in_group("gift") + get_tree().get_nodes_in_group("gifts"):
 		if is_instance_valid(g) and not g.is_queued_for_deletion():
 			_pick_gift(g)
 	# 4. the meadow logs, once the hand is strong enough
@@ -125,6 +130,17 @@ func _move_object(o: Node3D, to: Vector3) -> void:
 	print("BOT moved %s to (%.0f, %.0f) at %.0fs" % [o.name, at.x, at.z, Clock.total_t])
 
 func _pick_gift(g: Node) -> void:
+	var hand = Game.world.get("hand") if Game.world else null
+	if hand != null and is_instance_valid(hand) and hand.has_method("collect_gift"):
+		var grants: StringName = g.get("grants_power") if g.get("grants_power") != null else &""
+		if hand.collect_gift(g):
+			_gifts += 1
+			# the gift's power (Grip II on the first gift): grant it if the hand did not
+			if grants != &"" and not Faith.has(grants):
+				Faith.grant(grants)
+				print("BOT granted %s from the gift (hand did not)" % grants)
+			print("BOT picked up a gift at %.0fs" % Clock.total_t)
+		return
 	for m in ["collect", "pick_up", "on_picked", "take"]:
 		if g.has_method(m):
 			g.call(m)
@@ -143,12 +159,22 @@ func _idle_people() -> Array:
 		if p.has_method("pickable") and not p.pickable():
 			continue
 		var js = p.get("job_site")
-		if js != null and is_instance_valid(js):
+		if js != null and is_instance_valid(js) and not _wasted(js):
 			continue
 		if "stage" in p and p.stage != Person.Stage.ADULT and p.stage != Person.Stage.ELDER:
 			continue
 		out.append(p)
 	return out
+
+## Working a gather job whose store is full is wasted: re-place that person.
+func _wasted(s) -> bool:
+	var j: JobDef = s.get("job")
+	if j == null or j.kind != JobDef.Kind.GATHER or j.outputs.is_empty():
+		return false
+	for k in j.outputs:
+		if Village.store(k) < Village.store_cap - 2:
+			return false
+	return true
 
 func _site_ok(s) -> bool:
 	if not is_instance_valid(s) or s.is_queued_for_deletion():
@@ -164,8 +190,15 @@ func _score(s, idle_n: int) -> float:
 	var j: JobDef = s.get("job")
 	var food := Village.food()
 	var pop := maxi(Village.population(), 1)
-	if s.get("state") == Site.State.PLOT:
-		return 2.0
+	if s.get("state") == Site.State.PLOT or s.get("state") == Site.State.BUILDING:
+		# builders fetch materials from the stores: worth it once some are in
+		var b: BuildingDef = s.get("building")
+		var ready := true
+		if b != null and s.has_method("remaining"):
+			for k in b.cost:
+				if s.remaining(k) > 0 and Village.store(k) <= 0:
+					ready = false
+		return 6.5 if ready else 0.8
 	if j == null:
 		return 0.5
 	var id := j.id
@@ -174,11 +207,15 @@ func _score(s, idle_n: int) -> float:
 		sc = 6.0 if food < pop * 4 else 2.5
 	elif id == &"tend_fire":
 		sc = 5.0 if (Clock.is_night or Clock.phase_t > Clock.day_seconds * 0.7) else 1.5
-	elif id == &"haul_log_small":
+	elif id == &"carry_log":
 		sc = 7.0
-	elif id == &"gather_firewood":
-		sc = 3.0
-	elif id == &"gather_water":
+	elif id in [&"collect_sticks", &"fell_tree"]:
+		sc = 3.0 if Village.store(&"wood") < 12 else 1.0
+	elif id == &"knap_flint":
+		sc = 4.0 if Village.store(&"stone") < 20 else 0.5
+	elif id == &"pray":
+		sc = 2.0
+	elif id == &"fetch_water":
 		sc = 2.5 if Village.store(&"water") < pop * 3 else 1.0
 	if s.group_needs() > 0 or j.min_people > 1:
 		var need := maxi(j.min_people - s.workers.size(), 1)
@@ -192,7 +229,7 @@ func _staff() -> void:
 	var best = null
 	var best_sc := 0.0
 	for s in Village.sites:
-		if not _site_ok(s) or not s.can_accept(1):
+		if not _site_ok(s) or not s.can_accept(1) or _wasted(s):
 			continue
 		var sc := _score(s, idle.size())
 		if sc > best_sc:
@@ -234,7 +271,14 @@ func _report() -> void:
 	var fps := _fps_sum / maxf(_fps_n, 1)
 	print("BOT day %d | pop %d | stores %s | faith %.0f (avail %.0f) | dreams %d %s | deaths %d | fps %.0f | regions %s | actions %d" % [
 		Clock.day, Village.population(), _stores_text(), Faith.total, Faith.available(), _dreams.size(), str(_dreams),
-		_deaths + int(Village.stats.get("deaths", 0)) * 0, fps, str(_regions), _actions])
+		_deaths, fps, str(_regions), _actions])
+	if Game.flags.has("verbose"):
+		for p in Village.alive():
+			var js = p.get("job_site")
+			var st = p.get("state")
+			print("BOT   %s: %s at (%.0f, %.0f) job %s | %s" % [p.get("given_name"), Person.STATE_NAMES[st] if st is int and st < Person.STATE_NAMES.size() else "?",
+				p.global_position.x, p.global_position.z, js.job.id if js != null and is_instance_valid(js) and js.job else "-", p.status_text() if p.has_method("status_text") else ""])
+			print("BOT     phase %s target %s timer %s" % [p.get("_phase"), str(p.get("_target")), str(p.get("_timer"))])
 
 func _shot(path: String) -> void:
 	if DisplayServer.get_name() == "headless":
@@ -249,6 +293,14 @@ func _shot(path: String) -> void:
 
 func _finish() -> void:
 	_quitting = true
+	if Game.flags.has("overview") and DisplayServer.get_name() != "headless":
+		# dev aid: a wide shot of the whole valley from the title camera
+		var w = Game.world
+		w.title_camera.far = 2000.0
+		w.title_camera.current = true
+		w.frame_camera(w.title_camera, Vector3(-20, 0, 20), 520.0, 0.35, 50.0)
+		await get_tree().create_timer(0.3).timeout
+		await _shot(str(Game.flags["overview"]))
 	_report()
 	var real_s := (Time.get_ticks_msec() - _start_ms) / 1000.0
 	print("BOT summary: game %.0fs in %.1fs real | day %d | pop %d | faith %.0f | dreams %s | regions %s | powers %s | placed %d | gifts %d | deaths %d" % [

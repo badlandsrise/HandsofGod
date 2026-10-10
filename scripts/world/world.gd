@@ -11,7 +11,7 @@ const PERSON_SCENE := "res://scenes/people/person.tscn"
 const SITE_SCENE := "res://scenes/sites/site.tscn"
 const PERSON_SCRIPT := "res://scripts/person/person.gd"
 const SITE_SCRIPT := "res://scripts/sites/site.gd"
-const CAMERA_CANDIDATES := ["res://scenes/hand/camera_rig.tscn", "res://scenes/world/camera_rig.tscn", "res://scenes/camera/camera_rig.tscn", "res://scripts/world/camera_rig.gd"]
+const CAMERA_CANDIDATES := ["res://scenes/world/camera_rig.tscn", "res://scenes/hand/camera_rig.tscn"]
 const HAND_CANDIDATES := ["res://scenes/hand/hand.tscn"]
 const HUD_CANDIDATES := ["res://scenes/ui/hud.tscn"]
 const TITLE_SCENE := "res://scenes/world/title.tscn"
@@ -41,6 +41,10 @@ var title_camera: Camera3D = null
 var hand: Node = null
 var hud: Node = null
 var title: Node = null
+var village_ai: Node = null
+var stash: Node3D = null          # the cave's store (group "stockpile")
+var trunk_site: Site = null       # the haul_log group job at the fallen trunk
+var _trunk_offset := Vector3.ZERO
 var built: bool = false
 var build_ms: int = 0
 var opened_at: Dictionary = {}    # region id -> Clock.total_t when it opened
@@ -54,6 +58,9 @@ func _exit_tree() -> void:
 		Game.world = null
 
 func _ready() -> void:
+	# Test worlds that extend this script (tests/hand/mock_world.gd) stay bare.
+	if get_script() == null or get_script().resource_path != "res://scripts/world/world.gd":
+		return
 	build()
 	if Game.testing():
 		new_game()
@@ -105,6 +112,8 @@ func build() -> void:
 	Events.region_opened.connect(_on_region_opened)
 	Events.job_completed.connect(_on_job_completed)
 	Events.building_finished.connect(_on_building_finished)
+	Events.job_started.connect(_on_job_started)
+	Events.dream_started.connect(ensure_plots_for_dream)
 	built = true
 	build_ms = Time.get_ticks_msec() - t0
 	print("world: built in %d ms" % build_ms)
@@ -113,8 +122,9 @@ func _keep_out_zones() -> Array:
 	var z: Array = [[Valley.FIRE, 8.0], [Valley.CAVE_MOUTH, 6.0], [Valley.EAST_GAP, 9.0], [Valley.WEST_GAP, 10.0]]
 	for row in LayoutEra1.JOBS:
 		z.append([Vector2(row[1], row[2]), 3.0])
-	for row in LayoutEra1.PLOTS:
-		z.append([Vector2(row[1], row[2]), 4.0])
+	for id in LayoutEra1.PLOT_SPOTS:
+		for spot in LayoutEra1.PLOT_SPOTS[id]:
+			z.append([spot, 5.0 if id == &"stone_circle" else 3.5])
 	return z
 
 func _v3(p: Vector2, lift: float = 0.0) -> Vector3:
@@ -141,6 +151,11 @@ func _build_props() -> void:
 	lintel.scale = Vector3(2.4, 0.8, 1.4)
 	var roof := Props.add_mesh(cv, Props.box(Vector3(7.0, 1.2, 7.0)), rock.darkened(0.2), Vector3(0, 6.4, -6.5))
 	roof.rotation.x = 0.05
+	stash = Node3D.new()
+	stash.name = "Stash"
+	stash.add_to_group("stockpile")
+	props.add_child(stash)
+	stash.position = _v3(Vector2(Valley.CAVE.x, Valley.CAVE.y + 1.5))
 	# ---- the fire pit
 	fire = FirePit.new()
 	props.add_child(fire)
@@ -296,6 +311,10 @@ func set_title_mode(on: bool) -> void:
 	if hud and "visible" in hud:
 		hud.visible = not on
 
+func _frame_play_camera() -> void:
+	if camera_rig != null and camera_rig.has_method("snap_to"):
+		camera_rig.snap_to(_v3(Vector2(0.0, -14.0)), 34.0)
+
 func _activate_play_camera() -> void:
 	var cam: Camera3D = null
 	if camera_rig is Camera3D:
@@ -383,6 +402,12 @@ func site_near(p: Vector3, r: float, filter: Callable = Callable()) -> Site:
 	return best
 
 func spawn_person(at: Vector3, name_hint: String = "") -> Person:
+	var at_g := Vector3(at.x, ground_y(at.x, at.z), at.z)
+	if ResourceLoader.exists(PERSON_SCENE):
+		var opts := {}
+		if name_hint != "":
+			opts["name"] = name_hint
+		return Person.spawn(dynamic, at_g, opts)
 	var p: Node = _new_from(PERSON_SCENE, PERSON_SCRIPT)
 	if p == null:
 		return null
@@ -397,7 +422,7 @@ func spawn_person(at: Vector3, name_hint: String = "") -> Person:
 ## data has no such job. haul_trunk falls back to a code-made group JobDef.
 func spawn_site(job_id: StringName, at: Vector3) -> Site:
 	var j: JobDef = Defs.job(job_id)
-	if j == null and job_id == &"haul_trunk":
+	if j == null and job_id == &"haul_log":
 		j = _placeholder_trunk_job()
 	if j == null:
 		LayoutEra1.warn_missing("job", job_id)
@@ -432,7 +457,7 @@ func spawn_plot(building_id: StringName, at: Vector3) -> Site:
 func _placeholder_trunk_job() -> JobDef:
 	# Not in the data yet: a group job for three, BuildingDef-free.
 	var j := JobDef.new()
-	j.id = &"haul_trunk"
+	j.id = &"haul_log"
 	j.title = "Haul the fallen trunk"
 	j.kind = JobDef.Kind.GROUP
 	j.skill = &"haul"
@@ -532,15 +557,43 @@ func _on_log_placed(_at: Vector3) -> void:
 func _on_job_completed(site) -> void:
 	if not is_instance_valid(site) or not ("job" in site) or site.job == null:
 		return
-	match site.job.id:
-		&"haul_trunk":
-			if not is_region_open(&"valley_floor"):
-				open_region(&"valley_floor")
-		&"haul_log_small":
-			fire.add_fuel(1.0)      # the 2-carrier log lights the first fire
-		&"tend_fire", &"gather_firewood":
-			if site.job.id == &"tend_fire" or fire.is_lit():
-				fire.add_fuel(0.35)
+	if _is_trunk_site(site) and not is_region_open(&"valley_floor"):
+		open_region(&"valley_floor")
+
+func _is_trunk_site(site) -> bool:
+	if not is_instance_valid(site) or not ("job" in site) or site.job == null or site.job.id != &"haul_log":
+		return false
+	if site == trunk_site:
+		return true
+	var o: Vector3 = site.origin if "origin" in site and site.origin is Vector3 and site.origin.is_finite() else site.global_position
+	return Vector2(o.x, o.z).distance_to(Valley.EAST_GAP) < 8.0
+
+func _on_job_started(site, _people) -> void:
+	if _is_trunk_site(site):
+		trunk_site = site
+		_trunk_offset = trunk.position - site.global_position
+
+## The fallen trunk rolls along with the group hauling it.
+func _process(_delta: float) -> void:
+	if trunk_site != null and is_instance_valid(trunk_site) and not trunk.cleared:
+		if "progress" in trunk_site and trunk_site.progress > 0.0:
+			trunk.position = trunk_site.global_position + _trunk_offset
+	elif trunk_site != null and not is_instance_valid(trunk_site):
+		trunk_site = null
+
+## The hand asks this to choose the Calm Waters gesture over water.
+func is_water(p: Vector3) -> bool:
+	return valley != null and valley.is_water(p.x, p.z)
+
+## Where wanderers appear (scripts/ai/wanderers.gd): at the far edge of the
+## newest open region, else over the meadow logs into the Clearing.
+func edge_point(region: StringName) -> Vector3:
+	var r := Valley.canon(region)
+	if r == &"western_meadow" or (r == &"" and is_region_open(&"western_meadow")):
+		return _v3(Vector2(-185.0, 8.0))
+	if r == &"valley_floor" or (r == &"" and is_region_open(&"valley_floor")):
+		return _v3(Vector2(180.0, 15.0))
+	return _v3(Vector2(Valley.WEST_GAP.x + 7.0, Valley.WEST_GAP.y + 4.0))
 
 func _on_building_finished(site) -> void:
 	if not is_instance_valid(site) or not (site is Node3D):
@@ -551,6 +604,38 @@ func _on_building_finished(site) -> void:
 	nav.set_box_obstacle("bld_%d" % site.get_instance_id(), site.global_position, size * 0.9, site.global_rotation.y)
 	nav.rebake()
 
+## Makes sure every building a dream needs has a plot (or is built), using
+## the authored spots in LayoutEra1.PLOT_SPOTS. Returns the plots added.
+func ensure_plots_for_dream(id: StringName) -> int:
+	var d: DreamDef = Defs.dream(id)
+	if d == null:
+		return 0
+	var added := 0
+	for bid in d.needs_buildings:
+		var want := int(d.needs_buildings[bid])
+		var have := 0
+		for s in Village.sites:
+			if is_instance_valid(s) and not s.is_queued_for_deletion() and s.building != null and s.building.id == bid:
+				have += 1
+		var spots: Array = LayoutEra1.PLOT_SPOTS.get(bid, [])
+		for spot in spots:
+			if have >= want:
+				break
+			var at := Vector3(spot.x, 0, spot.y)
+			if site_near(at, 2.5) != null:
+				continue
+			if spawn_plot(bid, at) != null:
+				have += 1
+				added += 1
+		if have < want:
+			push_warning("world: no free build spot for %s (dream %s)" % [bid, id])
+	return added
+
+func _ensure_active_dream_plots() -> void:
+	var active := str(Village.stats.get("dream_active", ""))
+	if active != "":
+		ensure_plots_for_dream(StringName(active))
+
 ## Safety net (section 8): the evergreen bushes by the cave never run dry.
 func apply_safety_net() -> void:
 	var cave := Vector2(Valley.CAVE_MOUTH.x, Valley.CAVE_MOUTH.y)
@@ -558,13 +643,15 @@ func apply_safety_net() -> void:
 		if not is_instance_valid(s) or not ("job" in s) or s.job == null or s.job.id != &"gather_berries":
 			continue
 		var sp: Vector3 = s.global_position
-		if Vector2(sp.x, sp.z).distance_to(cave) > 14.0:
+		if Vector2(sp.x, sp.z).distance_to(cave) > 17.0 and str(s.get_meta("layout_tag", "")) != "evergreen":
 			continue
 		if s.job.node_amount >= 0 or s.job.winter_stops:
 			var j: JobDef = s.job.duplicate()
 			j.node_amount = -1
 			j.winter_stops = false
 			s.job = j
+		if "amount" in s:
+			s.amount = -1
 		s.set_meta("evergreen", true)
 		if "evergreen" in s:
 			s.evergreen = true
@@ -579,6 +666,10 @@ func clear_dynamic() -> void:
 	for n in get_tree().get_nodes_in_group("persist"):
 		if is_instance_valid(n) and is_ancestor_of(n):
 			doomed.append(n)
+	for g in ["gift", "memorial", "people", "sites"]:
+		for n in get_tree().get_nodes_in_group(g):
+			if is_instance_valid(n) and is_ancestor_of(n) and not doomed.has(n):
+				doomed.append(n)
 	for c in dynamic.get_children():
 		if not doomed.has(c):
 			doomed.append(c)
@@ -588,6 +679,19 @@ func clear_dynamic() -> void:
 			n.queue_free()
 	if threats:
 		threats.reset()
+	trunk_site = null
+	_restart_village_ai()
+
+## The village AI (dreams, births, wanderers, gifts) keeps a little state of
+## its own, so it is made fresh for every new game or load.
+func _restart_village_ai() -> void:
+	if village_ai != null and is_instance_valid(village_ai):
+		remove_child(village_ai)
+		village_ai.queue_free()
+	village_ai = null
+	if ClassDB.class_exists("VillageAI") or ResourceLoader.exists("res://scripts/ai/village_ai.gd"):
+		village_ai = load("res://scripts/ai/village_ai.gd").new()
+		add_child(village_ai)
 
 ## A fresh valley: the storm-night opening of section 11.4.
 func new_game() -> void:
@@ -596,11 +700,17 @@ func new_game() -> void:
 	Faith.load_state({})
 	Village.load_state({"stats": {"births": 0, "deaths": 0, "joined": 0, "winters_survived": 0, "gifts": 0}})
 	Clock.set_speed(1)
+	Clock.apply_era(Defs.era(1))
 	opened_at = {&"clearing": 0.0}
 	_reset_props()
 	regions.sync_instant()
 	var huddled := LayoutEra1.spawn(self)
+	for s in Village.sites:
+		if _is_trunk_site(s):
+			trunk_site = s
 	apply_safety_net()
+	_ensure_active_dream_plots()
+	_frame_play_camera()
 	storm.begin(branch, huddled)
 	look.update_now()
 	nav.rebake()
@@ -646,6 +756,7 @@ func load_state(d: Dictionary, nodes: Array) -> void:
 	Save.restore_nodes(dynamic, nodes)
 	threats.load_state(d.get("threats", {}))
 	apply_safety_net()
+	_ensure_active_dream_plots()
 	var st := int(d.get("storm", StormOpening.S.DONE))
 	if st == StormOpening.S.STORM and branch.global_position.distance_to(_v3(Valley.CAVE_MOUTH)) < StormOpening.CLEAR_DIST:
 		var huddled := Village.alive().slice(0, 2)

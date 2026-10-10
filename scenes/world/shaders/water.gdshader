@@ -24,12 +24,13 @@ void fragment() {
 	vec3 c = mix(deep.rgb, shallow.rgb, 0.4 + 0.3 * n1);
 	c = mix(c, vec3(0.75, 0.82, 0.86), fres * 0.5);
 	// foam flecks and rain rings
-	c += vec3(smoothstep(0.82, 0.95, n1 * n2 * 1.8)) * 0.25;
+	float fl = hog_noise(wpos.xz * 1.7 - flow_dir * TIME * flow_speed * 3.0);
+	c += vec3(smoothstep(0.86, 0.97, fl * n2 * 1.6)) * 0.12;
 	c = mix(c, vec3(0.86, 0.9, 0.95), hog_frost * 0.15);
 	c = hog_dim(c, hog_region_light(wpos));
 	ALBEDO = c;
-	ROUGHNESS = 0.08 + hog_wet * 0.2;
+	ROUGHNESS = 0.18 + hog_wet * 0.2;
 	METALLIC = 0.0;
-	SPECULAR = 0.6;
+	SPECULAR = 0.35;
 	ALPHA = 0.82;
 }

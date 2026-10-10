@@ -55,7 +55,7 @@ static func merge(parts: Array, jitter: float = 0.0, seed_v: int = 1) -> ArrayMe
 		var m: Mesh = part[0]
 		var xf: Transform3D = part[1]
 		var col: Color = part[2]
-		var arr := m.get_mesh_arrays()
+		var arr: Array = m.get_mesh_arrays()
 		var verts: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
 		var idx: PackedInt32Array = arr[Mesh.ARRAY_INDEX]
 		var moved := PackedVector3Array()

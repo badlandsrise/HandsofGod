@@ -84,8 +84,10 @@ func _on_branch_placed(at: Vector3) -> void:
 			p.walk_to(dest)
 		elif p.has_method("go_to"):
 			p.go_to(dest)
+		elif p.has_method("_walk"):
+			p._walk(dest)
 		else:
-			var tw := p.create_tween()
+			var tw: Tween = p.create_tween()
 			tw.tween_property(p, "global_position", dest, 1.6).set_trans(Tween.TRANS_SINE)
 	if w != null and w.nav:
 		w.nav.remove_obstacle("storm_branch")

@@ -120,11 +120,11 @@ func splat(x: float, z: float, y: float, nrm: Vector3) -> Color:
 	var rock := Valley.ss(0.18, 0.36, slope + n * 0.05)
 	rock = maxf(rock, Valley.ss(45.0, 70.0, y + n * 8.0) * 0.8)
 	var p := Vector2(x, z)
-	var dirt := 1.0 - Valley.ss(5.0, 11.0, p.distance_to(Valley.FIRE) + n * 2.0)
+	var dirt := 1.0 - Valley.ss(4.0, 8.5, p.distance_to(Valley.FIRE) + n * 2.0)
 	dirt = maxf(dirt, 1.0 - Valley.ss(3.0, 8.0, p.distance_to(Valley.CAVE_MOUTH) + n * 2.0))
-	dirt = maxf(dirt, (1.0 - Valley.ss(0.6, 2.0, path_dist(x, z) + n * 1.2)) * 0.85)
+	dirt = maxf(dirt, (1.0 - Valley.ss(0.5, 1.6, path_dist(x, z) + n * 1.0)) * 0.75)
 	if Rect2(-205, -85, 405, 195).has_point(p):
-		dirt = maxf(dirt, Valley.ss(0.45, 0.6, valley.noise.get_noise_2d(x * 1.7 + 50.0, z * 1.7)) * 0.7)
+		dirt = maxf(dirt, Valley.ss(0.55, 0.7, valley.noise.get_noise_2d(x * 1.7 + 50.0, z * 1.7)) * 0.45)
 	# dry Southern Plains read dusty
 	if z > 160.0 and x < 150.0:
 		dirt = maxf(dirt, 0.35 + 0.2 * n)

@@ -7,11 +7,12 @@ class_name Nav extends NavigationRegion3D
 signal baked
 
 const CELL_SIZE := 0.5
-const CELL_HEIGHT := 0.25
+const CELL_HEIGHT := 0.1
 
 var valley: Valley
 var obstacles: Dictionary = {}       # key -> PackedVector3Array outline (y ignored)
 var tree_points: Array = []
+var use_tree_obstacles := true    # small holes so people walk round trunks
 var _baking := false
 var _again := false
 var bake_count := 0
@@ -27,7 +28,7 @@ func setup(v: Valley, trees: Array) -> void:
 		NavigationServer3D.map_set_cell_size(map, CELL_SIZE)
 		NavigationServer3D.map_set_cell_height(map, CELL_HEIGHT)
 
-func is_baking() -> bool:
+func baking_now() -> bool:
 	return _baking
 
 func ready_for_paths() -> bool:
@@ -58,13 +59,14 @@ func rebake() -> void:
 	var nm := NavigationMesh.new()
 	nm.cell_size = CELL_SIZE
 	nm.cell_height = CELL_HEIGHT
-	nm.agent_radius = 0.4
-	nm.agent_height = 1.6
-	nm.agent_max_climb = 0.6
+	nm.agent_radius = 0.5
+	nm.agent_height = 1.5
+	nm.agent_max_climb = 0.5
 	nm.agent_max_slope = 38.0
 	nm.region_min_size = 4.0
 	nm.edge_max_error = 1.5
-	nm.detail_sample_distance = 4.0
+	nm.detail_sample_distance = 2.0
+	nm.detail_sample_max_error = 0.3
 	var src := NavigationMeshSourceGeometryData3D.new()
 	var bounds := _open_rect()
 	nm.filter_baking_aabb = AABB(Vector3(bounds.position.x, -20.0, bounds.position.y), Vector3(bounds.size.x, 200.0, bounds.size.y))
@@ -76,7 +78,7 @@ func rebake() -> void:
 			c += p
 		c /= maxf(pts.size(), 1)
 		src.add_projected_obstruction(pts, valley.ground_y(c.x, c.z) - 2.0, 8.0, true)
-	for t in tree_points:
+	for t in (tree_points if use_tree_obstacles else []):
 		var tp: Vector3 = t
 		if bounds.has_point(Vector2(tp.x, tp.z)) and _open_at(tp.x, tp.z):
 			var r := 0.35

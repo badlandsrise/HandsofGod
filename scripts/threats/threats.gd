@@ -1,19 +1,18 @@
 class_name Threats extends Node3D
-## Era 1 threat director: wolves at night, cold snaps, the first winter, and
-## the safety net (section 8). Every threat is telegraphed first with
+## Era 1 threat director: wolves at night, cold snaps and the first winter
+## (section 8). Every threat is telegraphed first with
 ## Events.threat_warned and Events.alert. Never more than one major threat at
 ## once in Eras 1 and 2. Strength scales with era and population, not time.
 ## Tuning comes from ThreatDef resources (ids wolves, cold_snap) when present.
 
 const COLD_ID := &"cold_snap"
-const WINTER_ID := &"winter"
+const WINTER_ID := &"first_winter"
 
 var wolves: Wolves
 var cold_warned: bool = false
 var cold_active: bool = false
 var cold_warn_t: float = -1.0
 var winter_warned_year: int = 0
-var wanderers_sent: int = 0
 var enabled: bool = true          # false during the onboarding storm
 
 func _ready() -> void:
@@ -79,7 +78,6 @@ func _on_dawn(_day: int) -> void:
 		Events.threat_ended.emit(COLD_ID)
 	elif enabled:
 		_maybe_cold_snap()
-	_safety_net()
 
 func _maybe_cold_snap() -> void:
 	var cd := _def(COLD_ID)
@@ -104,26 +102,9 @@ func _on_season(s: int) -> void:
 	if s == Clock.Season.WINTER:
 		Events.threat_started.emit(WINTER_ID, _fire())
 	elif s == Clock.Season.SPRING and Clock.year > 1:
-		Village.stats["winters_survived"] = int(Village.stats.get("winters_survived", 0)) + 1
-		Events.threat_ended.emit(WINTER_ID)
+		Events.threat_ended.emit(WINTER_ID)   # VillageAI counts winters survived
 
-## Safety net [CORE]: if the population ever falls to 1, wanderers arrive.
-func _safety_net() -> void:
-	if Game.world == null or not Game.world.has_method("spawn_person"):
-		return
-	var pop := Village.population()
-	if pop > 1 or (Village.people.is_empty() and int(Village.stats.get("deaths", 0)) == 0):
-		return
-	for i in 2:
-		var at := Vector3(Valley.WEST_GAP.x + 6.0, 0, Valley.WEST_GAP.y + i * 1.5)
-		if Village.regions.has(&"valley_floor"):
-			at = Vector3(Valley.EAST_GAP.x - 6.0, 0, Valley.EAST_GAP.y + i * 1.5)
-		var p = Game.world.spawn_person(at, "")
-		if p != null:
-			wanderers_sent += 1
-			Village.stats["joined"] = int(Village.stats.get("joined", 0)) + 1
-			Events.person_joined.emit(p)
-	Events.alert.emit("Wanderers have come to the clearing.", Vector3(Valley.WEST_GAP.x, 0, Valley.WEST_GAP.y))
+## The population safety net (wanderers at 1 person) lives in scripts/ai/wanderers.gd.
 
 func _set_frost(v: float) -> void:
 	if Game.world != null and "look" in Game.world and Game.world.look != null:

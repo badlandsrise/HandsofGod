@@ -22,6 +22,25 @@ func _ready() -> void:
 	Events.hand_placed_object.connect(func(_o, at: Vector3): scare(at, 9.0))
 	Events.hand_gesture.connect(func(_id, at: Vector3): scare(at, 10.0))
 
+const FLICK_SPEED := 22.0        # m/s of hand motion that counts as a flick
+const FLICK_RADIUS := 7.0
+var _hand_last := Vector3.INF
+
+## A fast hand sweep near a wolf scares it (the hand's flick).
+func _process(_delta: float) -> void:
+	var w: Node = Game.world
+	var hand: Node = w.get("hand") if w != null else null
+	if hand == null or not is_instance_valid(hand) or not (hand is Node3D) or get_child_count() == 0:
+		_hand_last = Vector3.INF
+		return
+	var hp: Vector3 = hand.get("ground") if hand.get("ground") is Vector3 else (hand as Node3D).global_position
+	var dt := maxf(Clock.real_delta, 0.001)
+	if _hand_last.is_finite():
+		var v := Vector2(hp.x - _hand_last.x, hp.z - _hand_last.z).length() / dt
+		if v > FLICK_SPEED:
+			scare(hp, FLICK_RADIUS)
+	_hand_last = hp
+
 func count() -> int:
 	return get_tree().get_nodes_in_group("wolves").size() if is_inside_tree() else 0
 
