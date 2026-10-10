@@ -8,6 +8,7 @@ id = &"footbridge_raising"
 title = "Raise the footbridge"
 era = 2
 kind = 3
+anim = &"rope"
 skill = &"building"
 min_people = 3
 max_people = 3

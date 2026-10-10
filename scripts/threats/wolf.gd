@@ -18,6 +18,7 @@ var flee_t: float = 0.0
 var _retarget: float = 0.0
 var _visual: Node3D = null
 var bites: int = 0
+var _prowl_t: float = 0.0
 
 func _ready() -> void:
 	add_to_group("wolves")
@@ -77,7 +78,8 @@ func _process(delta: float) -> void:
 			elif leash > 0.0:
 				state = S.APPROACH
 				# prowl round the den
-				var a := _anim * 0.25 + float(get_instance_id() % 7)
+				_prowl_t += delta
+				var a := _prowl_t * 0.25 + float(get_instance_id() % 7)
 				goal = home + Vector3(cos(a), 0, sin(a)) * leash * 0.4
 			else:
 				state = S.APPROACH

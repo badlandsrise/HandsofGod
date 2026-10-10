@@ -740,6 +740,9 @@ func drop_reason(p: Vector3) -> String:
 func site_drop_reason(s: Node3D) -> String:
 	if drops == null or not is_instance_valid(s):
 		return ""
+	# a bridge plot stands over the river: its builders work from the near bank
+	if s is Site and s.building != null and Site.BRIDGES.has(s.building.id) and s.state != Site.State.FINISHED:
+		return drops.check(s.slot_position(0), 6.0)
 	return drops.check(s.global_position, 6.0)
 
 ## The nearest spot to `p` where people may be set down (the green when none is).

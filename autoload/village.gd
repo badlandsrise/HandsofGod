@@ -90,15 +90,14 @@ func idle_people() -> Array:
 ## up in one go. Returns how many answered. The hand binds it to C
 ## (Game.ACTIONS hand_call); the HUD's call button calls it too.
 func call_idle(to: Vector3) -> int:
+	var w = Game.world
+	if w != null and is_instance_valid(w) and w.has_method("walkable_point"):
+		to = w.walkable_point(to)
 	var n := 0
 	for p in idle_people():
 		if p.answer_call(to):
 			n += 1
 	stats["calls"] = int(stats.get("calls", 0)) + 1
-	if n > 0:
-		Events.toast.emit("%d idle %s coming to the hand" % [n, "person is" if n == 1 else "people are"])
-	else:
-		Events.toast.emit("Nobody is idle")
 	return n
 
 func new_person_id() -> int:

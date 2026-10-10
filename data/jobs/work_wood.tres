@@ -8,6 +8,7 @@ id = &"work_wood"
 title = "Fell trees for the camp"
 era = 1
 kind = 8
+anim = &"chop"
 skill = &"woodcraft"
 max_people = 3
 outputs = {&"wood": 1}

@@ -8,6 +8,7 @@ id = &"work_farm"
 title = "Farm the fields"
 era = 2
 kind = 8
+anim = &"harvest"
 skill = &"farming"
 max_people = 6
 outputs = {&"grain": 1}

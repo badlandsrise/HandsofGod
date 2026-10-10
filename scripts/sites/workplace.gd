@@ -329,6 +329,14 @@ static func _drop(p, w: Site) -> void:
 	p._phase = "pick"
 	p._timer = 0.0
 
+## The person's work clip and tools follow the task (a field's sowing and
+## reaping, a tree's axe, the hunt's spear), else the workplace's own.
+static func _show_task(p, w: Site, t: Site) -> void:
+	if p.visual == null:
+		return
+	var jd = t.job if t != null and t.job != null and not t.is_plot() else w.job
+	p.visual.set_task(jd)
+
 ## Where person `p` stands to work task `t`.
 static func task_spot(w: Site, t: Site, p) -> Vector3:
 	var i := maxi(_claimed(w, t).find(p), 0)
@@ -379,6 +387,7 @@ static func step(p, w: Site, dt: float) -> void:
 			p._waiting_for = &""
 			claim(w, t3, p)
 			p.task_site = t3
+			_show_task(p, w, t3)
 			p._phase = "to_task"
 			p._go(task_spot(w, t3, p), Person.WALK_SPEED)
 

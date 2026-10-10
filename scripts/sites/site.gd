@@ -110,7 +110,7 @@ func _init_from_defs() -> void:
 		for k in building.cost:
 			delivered[k] = 0
 			incoming[k] = 0
-		if building.cost.is_empty():
+		if building.cost.is_empty() and building.timbers <= 0:
 			state = State.BUILDING      # a field to clear: work, no materials
 	elif building != null and start_finished:
 		_finish(true)

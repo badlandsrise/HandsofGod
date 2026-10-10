@@ -62,9 +62,12 @@ func call_idle_to_hand() -> int:
 	var at: Vector3 = h.get("ground") if h != null and is_instance_valid(h) and h.get("ground") is Vector3 else Vector3.INF
 	if not at.is_finite():
 		return 0
-	if world.has_method("walkable_point"):
-		at = world.walkable_point(at)
-	return Village.call_idle(at)
+	var n: int = Village.call_idle(at)
+	if n > 0:
+		Events.toast.emit("%d idle %s coming to the hand" % [n, "person is" if n == 1 else "people are"])
+	else:
+		Events.toast.emit("Everyone is busy.")
+	return n
 
 func testing() -> bool:
 	return flags.has("test")

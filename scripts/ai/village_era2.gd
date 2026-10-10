@@ -523,8 +523,7 @@ func _on_region(id: StringName) -> void:
 		return
 	match Valley.canon(id):
 		&"southern_plains":
-			if Flags.has(&"footbridge"):
-				VillageEra2.allow(w, &"southern_plains")
+			VillageEra2.allow(w, &"southern_plains")
 		&"hill_quarry":
 			if w.has_method("open_pass"):
 				w.open_pass()          # the rockfall also blocked the Pass Road

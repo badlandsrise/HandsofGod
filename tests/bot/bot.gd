@@ -434,7 +434,17 @@ func _site_ok(s) -> bool:
 		return false
 	if era2.site_blocked(s) or era3.site_blocked(s):
 		return false
+	# the hand refuses to set people down where they couldn't walk home from
+	if w.has_method("site_drop_reason"):
+		var why: String = w.site_drop_reason(s)
+		if why != "":
+			if not _drop_refused.has(s.get_instance_id()):
+				_drop_refused[s.get_instance_id()] = true
+				print("BOT drop refused: %s at %s (%s)" % [s.job.id if s.job != null else s.building.id, str(s.global_position.snapped(Vector3.ONE)), why])
+			return false
 	return true
+
+var _drop_refused: Dictionary = {}
 
 func _score(s, idle_n: int) -> float:
 	var j: JobDef = s.job

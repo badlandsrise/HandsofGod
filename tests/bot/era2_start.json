@@ -2,15 +2,15 @@
  "clock": {
   "day": 24,
   "is_night": false,
-  "phase_t": 27.4692506666728,
+  "phase_t": 27.8430266666668,
   "season": 0,
   "season_t": 1.0,
-  "total_t": 2452.22473866716,
+  "total_t": 2452.60425166768,
   "year": 3
  },
  "faith": {
-  "spent": 100.0,
-  "total": 179.672967286345,
+  "spent": 80.0,
+  "total": 121.394386291504,
   "unlocked": [
    "grip_2",
    "strength_1",
@@ -20,7 +20,7 @@
  },
  "nodes": [
   {
-   "amount": 8,
+   "amount": 0,
    "bin": {
 
    },
@@ -42,18 +42,18 @@
    },
    "origin": [
     -9.5,
-    3.79878997802734,
+    3.82418489456177,
     -22.0
    ],
    "parent_uid": 0,
    "pos": [
     -9.5,
-    3.79878997802734,
+    3.82418489456177,
     -22.0
    ],
    "progress": 0.0,
    "raise_parent": 0,
-   "regrow_t": 0.0,
+   "regrow_t": 17.0,
    "rot_y": 0.0,
    "scene": "res://scenes/sites/site.tscn",
    "state": 0,
@@ -61,7 +61,7 @@
    "uid": 1
   },
   {
-   "amount": 8,
+   "amount": 3,
    "bin": {
 
    },
@@ -94,7 +94,7 @@
    ],
    "progress": 0.0,
    "raise_parent": 0,
-   "regrow_t": 0.0,
+   "regrow_t": 7.59999999999999,
    "rot_y": 0.0,
    "scene": "res://scenes/sites/site.tscn",
    "state": 0,
@@ -102,7 +102,7 @@
    "uid": 2
   },
   {
-   "amount": 8,
+   "amount": 4,
    "bin": {
 
    },
@@ -124,18 +124,18 @@
    },
    "origin": [
     -7.0,
-    3.84565210342407,
+    3.8533616065979,
     -25.0
    ],
    "parent_uid": 0,
    "pos": [
     -7.0,
-    3.84565210342407,
+    3.8533616065979,
     -25.0
    ],
    "progress": 0.0,
    "raise_parent": 0,
-   "regrow_t": 0.0,
+   "regrow_t": 0.3,
    "rot_y": 0.0,
    "scene": "res://scenes/sites/site.tscn",
    "state": 0,
@@ -143,7 +143,7 @@
    "uid": 3
   },
   {
-   "amount": 8,
+   "amount": 7,
    "bin": {
 
    },
@@ -175,7 +175,7 @@
    ],
    "progress": 0.0,
    "raise_parent": 0,
-   "regrow_t": 0.0,
+   "regrow_t": 2.9,
    "rot_y": 0.0,
    "scene": "res://scenes/sites/site.tscn",
    "state": 0,
@@ -284,13 +284,13 @@
    },
    "origin": [
     -21.0,
-    3.73915100097656,
+    3.73737931251526,
     5.0
    ],
    "parent_uid": 0,
    "pos": [
     -21.0,
-    3.73915100097656,
+    3.73737931251526,
     5.0
    ],
    "progress": 0.0,
@@ -324,13 +324,13 @@
    },
    "origin": [
     -27.0,
-    3.73848795890808,
+    3.7628927230835,
     -9.0
    ],
    "parent_uid": 0,
    "pos": [
     -27.0,
-    3.73848795890808,
+    3.7628927230835,
     -9.0
    ],
    "progress": 0.0,
@@ -358,20 +358,20 @@
    },
    "evergreen": false,
    "field": [],
-   "fuel_t": 66.2000000000157,
+   "fuel_t": 29.5000000000197,
    "job": "tend_fire",
    "meta": {
 
    },
    "origin": [
     0.0,
-    3.98669338226318,
+    3.98983287811279,
     -13.0
    ],
    "parent_uid": 0,
    "pos": [
     0.0,
-    3.98669338226318,
+    3.98983287811279,
     -13.0
    ],
    "progress": 0.0,
@@ -405,13 +405,13 @@
    },
    "origin": [
     -17.0,
-    3.79132962226868,
+    3.79172563552856,
     -25.0
    ],
    "parent_uid": 0,
    "pos": [
     -17.0,
-    3.79132962226868,
+    3.79172563552856,
     -25.0
    ],
    "progress": 0.0,
@@ -464,7 +464,7 @@
    "uid": 11
   },
   {
-   "amount": 2,
+   "amount": 1,
    "bin": {
 
    },
@@ -494,9 +494,9 @@
     4.89829635620117,
     10.0
    ],
-   "progress": 0.967810743110794,
+   "progress": 0.0,
    "raise_parent": 0,
-   "regrow_t": 28.1000000000001,
+   "regrow_t": 110.299999999998,
    "rot_y": 0.0,
    "scene": "res://scenes/sites/site.tscn",
    "state": 0,
@@ -565,13 +565,13 @@
    },
    "origin": [
     66.0,
-    4.34854173660278,
+    4.34997320175171,
     28.0
    ],
    "parent_uid": 0,
    "pos": [
     66.0,
-    4.34854173660278,
+    4.34997320175171,
     28.0
    ],
    "progress": 0.0,
@@ -744,7 +744,7 @@
    "uid": 19
   },
   {
-   "amount": 8,
+   "amount": 4,
    "bin": {
 
    },
@@ -776,7 +776,7 @@
    ],
    "progress": 0.0,
    "raise_parent": 0,
-   "regrow_t": 0.0,
+   "regrow_t": 26.6000000000001,
    "rot_y": 0.0,
    "scene": "res://scenes/sites/site.tscn",
    "state": 0,
@@ -824,21 +824,20 @@
    "uid": 21
   },
   {
-   "age": 3442.10000000068,
+   "age": 3442.40000000068,
    "blessed_t": 0.0,
    "bonds": {
     "23": 90.0
    },
    "children": [
-    36,
-    51
+    48
    ],
    "death_age": 5400.0,
    "first_two": true,
    "home": 26,
    "hurt_t": 0.0,
-   "job": 38,
-   "last_birth_age": 2514.80000000012,
+   "job": 2,
+   "last_birth_age": 2810.6000000003,
    "look": {
     "hair": 4,
     "height": 0.965907454490662,
@@ -848,61 +847,60 @@
    "name": "Ona",
    "named_by_hand": false,
    "needs": {
-    "food": 0.832816000000005,
-    "joy": 1.0,
+    "food": 0.940708000000002,
+    "joy": 0.905799999999962,
     "warmth": 1.0,
-    "water": 0.777088000000006
+    "water": 0.920944000000002
    },
    "parents": [],
    "partner": 23,
    "placed_by_hand": true,
    "pos": [
-    8.31227111816406,
-    3.9849693775177,
-    -21.5063762664795
+    -11.1397476196289,
+    3.78978967666626,
+    -16.7568912506104
    ],
-   "rot_y": 2.44674944877625,
+   "rot_y": -0.252817273139954,
    "scene": "res://scenes/people/person.tscn",
    "sex": "f",
    "shelter": 0,
    "sick_t": 0.0,
    "skills": {
-    "building": 1.51361300792693,
-    "crafting": 1.10847216278315,
+    "building": 1.63871300792692,
+    "crafting": 1.06847216278315,
     "engineering": 1.04469500333071,
     "farming": 1.314322245121,
-    "gathering": 1.88595690846443,
+    "gathering": 1.52595690846443,
     "metalwork": 1.40385921001434,
-    "scholarship": 1.94740653190612,
-    "woodcraft": 1.78588576793671
+    "scholarship": 1.52080653190613,
+    "woodcraft": 1.62588576793671
    },
    "stage": 3,
    "state": 4,
    "traits": [
     "quick"
    ],
-   "trust_f": 5.0525,
+   "trust_f": 4.115,
    "uid": 22,
    "wanderer": false,
    "wish": "",
-   "wish_t": 271.044726562497
+   "wish_t": 938.464355468856
   },
   {
-   "age": 3502.00000000072,
+   "age": 3502.60000000073,
    "blessed_t": 0.0,
    "bonds": {
     "22": 90.0
    },
    "children": [
-    36,
-    51
+    48
    ],
    "death_age": 5400.0,
    "first_two": true,
    "home": 26,
    "hurt_t": 0.0,
-   "job": 38,
-   "last_birth_age": 2574.70000000017,
+   "job": 11,
+   "last_birth_age": 2870.50000000035,
    "look": {
     "hair": 3,
     "height": 0.949407398700714,
@@ -912,33 +910,33 @@
    "name": "Tuk",
    "named_by_hand": false,
    "needs": {
-    "food": 0.605368000000011,
-    "joy": 1.0,
+    "food": 0.618976000000011,
+    "joy": 0.894399999999965,
     "warmth": 1.0,
-    "water": 0.773200000000006
+    "water": 0.937792000000002
    },
    "parents": [],
    "partner": 22,
    "placed_by_hand": true,
    "pos": [
-    5.51717758178711,
-    3.99021172523499,
-    -20.7009563446045
+    6.58309507369995,
+    4.10533857345581,
+    5.74713706970215
    ],
-   "rot_y": 0.865363478660583,
+   "rot_y": 0.574976146221161,
    "scene": "res://scenes/people/person.tscn",
    "sex": "m",
    "shelter": 0,
    "sick_t": 0.0,
    "skills": {
-    "building": 1.63636212539671,
-    "crafting": 1.26181534171104,
+    "building": 1.55896212539672,
+    "crafting": 1.22181534171104,
     "engineering": 1.35339033603668,
     "farming": 1.31066653728485,
-    "gathering": 2.10346974372864,
+    "gathering": 2.02346974372864,
     "metalwork": 1.15193549990654,
-    "scholarship": 1.77891002292631,
-    "woodcraft": 1.7390794634819
+    "scholarship": 1.54271002292633,
+    "woodcraft": 1.6190794634819
    },
    "stage": 3,
    "state": 4,
@@ -950,7 +948,7 @@
    "uid": 23,
    "wanderer": false,
    "wish": "",
-   "wish_t": 152.960534667961
+   "wish_t": 1420.95661621096
   },
   {
    "amount": -1,
@@ -974,20 +972,20 @@
 
    },
    "origin": [
-    -11.0,
-    3.82044649124146,
-    -7.0
+    -10.0,
+    3.83287811279297,
+    4.0
    ],
    "parent_uid": 0,
    "pos": [
-    -11.0,
-    3.82044649124146,
-    -7.0
+    -10.0,
+    3.83287811279297,
+    4.0
    ],
    "progress": 0.0,
    "raise_parent": 0,
    "regrow_t": 0.0,
-   "rot_y": 0.0,
+   "rot_y": 3.11987042427063,
    "scene": "res://scenes/sites/site.tscn",
    "state": 3,
    "timbers_in": 0,
@@ -1015,130 +1013,24 @@
 
    },
    "origin": [
-    10.0,
-    4.17715930938721,
-    -3.5
+    -24.0,
+    3.79522705078125,
+    13.0
    ],
    "parent_uid": 0,
    "pos": [
-    10.0,
-    4.17715930938721,
-    -3.5
+    -24.0,
+    3.79522705078125,
+    13.0
    ],
    "progress": 0.0,
    "raise_parent": 0,
    "regrow_t": 0.0,
-   "rot_y": 0.0,
+   "rot_y": 3.12510013580322,
    "scene": "res://scenes/sites/site.tscn",
    "state": 3,
    "timbers_in": 0,
    "uid": 30
-  },
-  {
-   "amount": -1,
-   "bin": {
-
-   },
-   "build_done": 24.0,
-   "building": "hunting_lodge",
-   "burn": 0.0,
-   "children_spawned": true,
-   "damage": 0.0,
-   "delivered": {
-    "stone": 2,
-    "wood": 6
-   },
-   "evergreen": false,
-   "field": [],
-   "fuel_t": 0.0,
-   "job": "work_lodge",
-   "meta": {
-
-   },
-   "origin": [
-    52.0,
-    7.4369945526123,
-    18.0
-   ],
-   "parent_uid": 0,
-   "pos": [
-    52.0,
-    7.4369945526123,
-    18.0
-   ],
-   "progress": 0.0,
-   "raise_parent": 0,
-   "regrow_t": 0.0,
-   "rot_y": 0.0,
-   "scene": "res://scenes/sites/site.tscn",
-   "state": 3,
-   "timbers_in": 0,
-   "uid": 31
-  },
-  {
-   "age": 1865.69999999981,
-   "blessed_t": 0.0,
-   "bonds": {
-    "27": 30.0,
-    "35": 36.0,
-    "43": 36.0
-   },
-   "children": [],
-   "death_age": 3893.86866760254,
-   "first_two": false,
-   "home": 42,
-   "hurt_t": 0.0,
-   "job": 6,
-   "last_birth_age": -1000.0,
-   "look": {
-    "hair": 4,
-    "height": 0.937178641557693,
-    "skin": 0
-   },
-   "name": "Yara",
-   "named_by_hand": false,
-   "needs": {
-    "food": 0.597592000000011,
-    "joy": 0.975999999999996,
-    "warmth": 1.0,
-    "water": 0.790048000000006
-   },
-   "parents": [
-    22,
-    23
-   ],
-   "partner": 0,
-   "placed_by_hand": false,
-   "pos": [
-    7.35292768478394,
-    4.05323553085327,
-    -14.6743593215942
-   ],
-   "rot_y": 0.689583301544189,
-   "scene": "res://scenes/people/person.tscn",
-   "sex": "f",
-   "shelter": 0,
-   "sick_t": 0.0,
-   "skills": {
-    "building": 1.33466386795044,
-    "crafting": 1.59187927246094,
-    "engineering": 1.12047202587128,
-    "farming": 1.57195907831192,
-    "gathering": 2.23635009288788,
-    "metalwork": 1.09825858771801,
-    "scholarship": 1.38155342340469,
-    "woodcraft": 1.03941677361727
-   },
-   "stage": 2,
-   "state": 4,
-   "traits": [
-    "devout"
-   ],
-   "trust_f": 4.11124999999999,
-   "uid": 36,
-   "wanderer": false,
-   "wish": "",
-   "wish_t": 156.222851562492
   },
   {
    "amount": -1,
@@ -1179,7 +1071,48 @@
    "scene": "res://scenes/sites/site.tscn",
    "state": 3,
    "timbers_in": 0,
-   "uid": 37
+   "uid": 31
+  },
+  {
+   "amount": -1,
+   "bin": {
+
+   },
+   "build_done": 24.0,
+   "building": "hunting_lodge",
+   "burn": 0.0,
+   "children_spawned": true,
+   "damage": 0.0,
+   "delivered": {
+    "stone": 2,
+    "wood": 6
+   },
+   "evergreen": false,
+   "field": [],
+   "fuel_t": 0.0,
+   "job": "work_lodge",
+   "meta": {
+
+   },
+   "origin": [
+    52.0,
+    7.4369945526123,
+    18.0
+   ],
+   "parent_uid": 0,
+   "pos": [
+    52.0,
+    7.4369945526123,
+    18.0
+   ],
+   "progress": 0.0,
+   "raise_parent": 0,
+   "regrow_t": 0.0,
+   "rot_y": 0.0,
+   "scene": "res://scenes/sites/site.tscn",
+   "state": 3,
+   "timbers_in": 0,
+   "uid": 32
   },
   {
    "amount": -1,
@@ -1204,13 +1137,13 @@
    },
    "origin": [
     6.5,
-    3.99071311950684,
+    3.99079489707947,
     -22.5
    ],
    "parent_uid": 0,
    "pos": [
     6.5,
-    3.99071311950684,
+    3.99079489707947,
     -22.5
    ],
    "progress": 0.0,
@@ -1220,171 +1153,48 @@
    "scene": "res://scenes/sites/site.tscn",
    "state": 3,
    "timbers_in": 0,
+   "uid": 37
+  },
+  {
+   "amount": -1,
+   "bin": {
+
+   },
+   "build_done": 30.0,
+   "building": "cottage",
+   "burn": 0.0,
+   "children_spawned": true,
+   "damage": 0.0,
+   "delivered": {
+    "stone": 2,
+    "wood": 8
+   },
+   "evergreen": false,
+   "field": [],
+   "fuel_t": 0.0,
+   "job": "",
+   "meta": {
+
+   },
+   "origin": [
+    4.0,
+    4.11176538467407,
+    22.0
+   ],
+   "parent_uid": 0,
+   "pos": [
+    4.0,
+    4.11176538467407,
+    22.0
+   ],
+   "progress": 0.0,
+   "raise_parent": 0,
+   "regrow_t": 0.0,
+   "rot_y": 3.05895376205444,
+   "scene": "res://scenes/sites/site.tscn",
+   "state": 3,
+   "timbers_in": 0,
    "uid": 38
-  },
-  {
-   "amount": -1,
-   "bin": {
-
-   },
-   "build_done": 30.0,
-   "building": "cottage",
-   "burn": 0.0,
-   "children_spawned": true,
-   "damage": 0.0,
-   "delivered": {
-    "stone": 2,
-    "wood": 8
-   },
-   "evergreen": false,
-   "field": [],
-   "fuel_t": 0.0,
-   "job": "",
-   "meta": {
-
-   },
-   "origin": [
-    -5.0,
-    3.89740514755249,
-    3.0
-   ],
-   "parent_uid": 0,
-   "pos": [
-    -5.0,
-    3.89740514755249,
-    3.0
-   ],
-   "progress": 0.0,
-   "raise_parent": 0,
-   "regrow_t": 0.0,
-   "rot_y": 0.0,
-   "scene": "res://scenes/sites/site.tscn",
-   "state": 3,
-   "timbers_in": 0,
-   "uid": 39
-  },
-  {
-   "amount": -1,
-   "bin": {
-
-   },
-   "build_done": 30.0,
-   "building": "cottage",
-   "burn": 0.0,
-   "children_spawned": true,
-   "damage": 0.0,
-   "delivered": {
-    "stone": 2,
-    "wood": 8
-   },
-   "evergreen": false,
-   "field": [],
-   "fuel_t": 0.0,
-   "job": "",
-   "meta": {
-
-   },
-   "origin": [
-    -17.0,
-    3.76280069351196,
-    -11.0
-   ],
-   "parent_uid": 0,
-   "pos": [
-    -17.0,
-    3.76280069351196,
-    -11.0
-   ],
-   "progress": 0.0,
-   "raise_parent": 0,
-   "regrow_t": 0.0,
-   "rot_y": 0.0,
-   "scene": "res://scenes/sites/site.tscn",
-   "state": 3,
-   "timbers_in": 0,
-   "uid": 40
-  },
-  {
-   "amount": -1,
-   "bin": {
-
-   },
-   "build_done": 12.0,
-   "building": "fire_circle",
-   "burn": 0.0,
-   "children_spawned": true,
-   "damage": 0.0,
-   "delivered": {
-    "stone": 2,
-    "wood": 3
-   },
-   "evergreen": false,
-   "field": [],
-   "fuel_t": 135.30000000002,
-   "job": "tend_fire",
-   "meta": {
-
-   },
-   "origin": [
-    -1.5,
-    3.99028944969177,
-    -4.5
-   ],
-   "parent_uid": 0,
-   "pos": [
-    -1.5,
-    3.99028944969177,
-    -4.5
-   ],
-   "progress": 0.0,
-   "raise_parent": 0,
-   "regrow_t": 0.0,
-   "rot_y": 0.0,
-   "scene": "res://scenes/sites/site.tscn",
-   "state": 3,
-   "timbers_in": 0,
-   "uid": 41
-  },
-  {
-   "amount": -1,
-   "bin": {
-
-   },
-   "build_done": 30.0,
-   "building": "cottage",
-   "burn": 0.0,
-   "children_spawned": true,
-   "damage": 0.0,
-   "delivered": {
-    "stone": 2,
-    "wood": 8
-   },
-   "evergreen": false,
-   "field": [],
-   "fuel_t": 0.0,
-   "job": "",
-   "meta": {
-
-   },
-   "origin": [
-    6.0,
-    4.0954122543335,
-    7.0
-   ],
-   "parent_uid": 0,
-   "pos": [
-    6.0,
-    4.0954122543335,
-    7.0
-   ],
-   "progress": 0.0,
-   "raise_parent": 0,
-   "regrow_t": 0.0,
-   "rot_y": 0.0,
-   "scene": "res://scenes/sites/site.tscn",
-   "state": 3,
-   "timbers_in": 0,
-   "uid": 42
   },
   {
    "amount": 3,
@@ -1408,13 +1218,13 @@
    },
    "origin": [
     68.0,
-    4.49842309951782,
+    4.43783664703369,
     16.0
    ],
    "parent_uid": 0,
    "pos": [
     68.0,
-    4.49842309951782,
+    4.43783664703369,
     16.0
    ],
    "progress": 0.0,
@@ -1424,48 +1234,7 @@
    "scene": "res://scenes/sites/site.tscn",
    "state": 0,
    "timbers_in": 0,
-   "uid": 44
-  },
-  {
-   "amount": -1,
-   "bin": {
-
-   },
-   "build_done": 30.0,
-   "building": "cottage",
-   "burn": 0.0,
-   "children_spawned": true,
-   "damage": 0.0,
-   "delivered": {
-    "stone": 2,
-    "wood": 8
-   },
-   "evergreen": false,
-   "field": [],
-   "fuel_t": 0.0,
-   "job": "",
-   "meta": {
-
-   },
-   "origin": [
-    -12.0,
-    3.85384035110474,
-    9.0
-   ],
-   "parent_uid": 0,
-   "pos": [
-    -12.0,
-    3.85384035110474,
-    9.0
-   ],
-   "progress": 0.0,
-   "raise_parent": 0,
-   "regrow_t": 0.0,
-   "rot_y": 0.0,
-   "scene": "res://scenes/sites/site.tscn",
-   "state": 3,
-   "timbers_in": 0,
-   "uid": 45
+   "uid": 39
   },
   {
    "amount": -1,
@@ -1489,13 +1258,13 @@
    },
    "origin": [
     4.0,
-    4.00033664703369,
+    3.99977493286133,
     -17.0
    ],
    "parent_uid": 0,
    "pos": [
     4.0,
-    4.00033664703369,
+    3.99977493286133,
     -17.0
    ],
    "progress": 0.0,
@@ -1505,7 +1274,7 @@
    "scene": "res://scenes/sites/site.tscn",
    "state": 3,
    "timbers_in": 0,
-   "uid": 46
+   "uid": 40
   },
   {
    "amount": -1,
@@ -1546,7 +1315,7 @@
    "scene": "res://scenes/sites/site.tscn",
    "state": 3,
    "timbers_in": 0,
-   "uid": 48
+   "uid": 41
   },
   {
    "amount": -1,
@@ -1587,72 +1356,193 @@
    "scene": "res://scenes/sites/site.tscn",
    "state": 3,
    "timbers_in": 0,
-   "uid": 49
+   "uid": 42
   },
   {
-   "age": 927.299999999951,
+   "amount": -1,
+   "bin": {
+
+   },
+   "build_done": 30.0,
+   "building": "cottage",
+   "burn": 0.0,
+   "children_spawned": true,
+   "damage": 0.0,
+   "delivered": {
+    "stone": 2,
+    "wood": 8
+   },
+   "evergreen": false,
+   "field": [],
+   "fuel_t": 0.0,
+   "job": "",
+   "meta": {
+
+   },
+   "origin": [
+    31.0,
+    4.4428129196167,
+    -8.0
+   ],
+   "parent_uid": 0,
+   "pos": [
+    31.0,
+    4.4428129196167,
+    -8.0
+   ],
+   "progress": 0.0,
+   "raise_parent": 0,
+   "regrow_t": 0.0,
+   "rot_y": 0.033513356000185,
+   "scene": "res://scenes/sites/site.tscn",
+   "state": 3,
+   "timbers_in": 0,
+   "uid": 43
+  },
+  {
+   "amount": -1,
+   "bin": {
+
+   },
+   "build_done": 12.0,
+   "building": "fire_circle",
+   "burn": 0.0,
+   "children_spawned": true,
+   "damage": 0.0,
+   "delivered": {
+    "stone": 2,
+    "wood": 3
+   },
+   "evergreen": false,
+   "field": [],
+   "fuel_t": 59.4000000000032,
+   "job": "tend_fire",
+   "meta": {
+
+   },
+   "origin": [
+    -1.5,
+    3.99028944969177,
+    -4.5
+   ],
+   "parent_uid": 0,
+   "pos": [
+    -1.5,
+    3.99028944969177,
+    -4.5
+   ],
+   "progress": 0.0,
+   "raise_parent": 0,
+   "regrow_t": 0.0,
+   "rot_y": 0.0,
+   "scene": "res://scenes/sites/site.tscn",
+   "state": 3,
+   "timbers_in": 0,
+   "uid": 44
+  },
+  {
+   "amount": -1,
+   "bin": {
+
+   },
+   "build_done": 30.0,
+   "building": "cottage",
+   "burn": 0.0,
+   "children_spawned": true,
+   "damage": 0.0,
+   "delivered": {
+    "stone": 2,
+    "wood": 8
+   },
+   "evergreen": false,
+   "field": [],
+   "fuel_t": 0.0,
+   "job": "",
+   "meta": {
+
+   },
+   "origin": [
+    -24.0,
+    3.84688186645508,
+    23.0
+   ],
+   "parent_uid": 0,
+   "pos": [
+    -24.0,
+    3.84688186645508,
+    23.0
+   ],
+   "progress": 0.0,
+   "raise_parent": 0,
+   "regrow_t": 0.0,
+   "rot_y": 3.11552548408508,
+   "scene": "res://scenes/sites/site.tscn",
+   "state": 3,
+   "timbers_in": 0,
+   "uid": 47
+  },
+  {
+   "age": 631.799999999996,
    "blessed_t": 0.0,
    "bonds": {
-    "43": 36.0,
-    "47": 24.0
+
    },
    "children": [],
-   "death_age": 3762.70185852051,
+   "death_age": 3962.88569641113,
    "first_two": false,
    "home": 26,
    "hurt_t": 0.0,
-   "job": 31,
+   "job": 0,
    "last_birth_age": -1000.0,
    "look": {
     "hair": 4,
-    "height": 0.969956947490573,
-    "skin": 0
+    "height": 0.956329448148608,
+    "skin": 2
    },
-   "name": "Wen",
+   "name": "Fia",
    "named_by_hand": false,
    "needs": {
-    "food": 0.829900000000005,
-    "joy": 0.923799999999993,
+    "food": 0.600508000000011,
+    "joy": 0.945999999999993,
     "warmth": 1.0,
-    "water": 0.773200000000006
+    "water": 0.783568000000006
    },
    "parents": [
     22,
     23
    ],
    "partner": 0,
-   "placed_by_hand": true,
+   "placed_by_hand": false,
    "pos": [
-    63.0570755004883,
-    4.66223096847534,
-    10.9456644058228
+    -8.11683750152588,
+    3.83873677253723,
+    -14.394115447998
    ],
-   "rot_y": 2.28221678733826,
+   "rot_y": 0.025683730840683,
    "scene": "res://scenes/people/person.tscn",
    "sex": "f",
    "shelter": 0,
    "sick_t": 0.0,
    "skills": {
-    "building": 1.13624168038368,
-    "crafting": 1.10506316423416,
-    "engineering": 1.07735278904438,
-    "farming": 1.59144271612167,
-    "gathering": 1.37228546142578,
-    "metalwork": 1.18778365254402,
-    "scholarship": 1.47245913743973,
-    "woodcraft": 1.56650317907333
+    "building": 1.14469419717789,
+    "crafting": 1.23035082817078,
+    "engineering": 1.54093078374863,
+    "farming": 1.48404660224915,
+    "gathering": 1.0490525200963,
+    "metalwork": 1.26460199356079,
+    "scholarship": 1.40289454460144,
+    "woodcraft": 1.11625269651413
    },
-   "stage": 2,
-   "state": 4,
+   "stage": 1,
+   "state": 0,
    "traits": [
-    "quick",
-    "devout"
+    "quick"
    ],
-   "trust_f": 5.30418749999999,
-   "uid": 51,
+   "trust_f": 4.76843749999999,
+   "uid": 48,
    "wanderer": false,
-   "wish": "knap_flint",
-   "wish_t": 63.0000000000003
+   "wish": "",
+   "wish_t": -200.688233947755
   },
   {
    "amount": 8,
@@ -1676,13 +1566,13 @@
    },
    "origin": [
     76.0,
-    4.87420606613159,
+    4.89124488830566,
     -16.0
    ],
    "parent_uid": 0,
    "pos": [
     76.0,
-    4.87420606613159,
+    4.89124488830566,
     -16.0
    ],
    "progress": 0.0,
@@ -1695,7 +1585,7 @@
    "uid": 52
   },
   {
-   "amount": 1,
+   "amount": 5,
    "bin": {
 
    },
@@ -1727,7 +1617,7 @@
    ],
    "progress": 0.0,
    "raise_parent": 0,
-   "regrow_t": 65.3000000000006,
+   "regrow_t": 44.7000000000004,
    "rot_y": 0.0,
    "scene": "res://scenes/sites/site.tscn",
    "state": 0,
@@ -1735,802 +1625,760 @@
    "uid": 53
   },
   {
-   "age": 3077.1414550786,
+   "amount": -1,
+   "bin": {
+
+   },
+   "build_done": 30.0,
+   "building": "cottage",
+   "burn": 0.0,
+   "children_spawned": true,
+   "damage": 0.0,
+   "delivered": {
+    "stone": 2,
+    "wood": 8
+   },
+   "evergreen": false,
+   "field": [],
+   "fuel_t": 0.0,
+   "job": "",
+   "meta": {
+
+   },
+   "origin": [
+    -35.0,
+    3.80205202102661,
+    8.0
+   ],
+   "parent_uid": 0,
+   "pos": [
+    -35.0,
+    3.80205202102661,
+    8.0
+   ],
+   "progress": 0.0,
+   "raise_parent": 0,
+   "regrow_t": 0.0,
+   "rot_y": 3.08026313781738,
+   "scene": "res://scenes/sites/site.tscn",
+   "state": 3,
+   "timbers_in": 0,
+   "uid": 54
+  },
+  {
+   "age": 2906.13737793003,
    "blessed_t": 0.0,
    "bonds": {
-    "28": 24.0,
-    "32": 30.0,
-    "34": 36.0,
-    "36": 30.0
+    "34": 90.0,
+    "36": 12.0
    },
-   "children": [],
-   "death_age": 3961.8662109375,
+   "children": [
+    45,
+    55
+   ],
+   "death_age": 3979.49130249023,
    "first_two": false,
-   "home": 42,
+   "home": 38,
    "hurt_t": 0.0,
-   "job": 38,
-   "last_birth_age": -1000.0,
+   "job": 3,
+   "last_birth_age": 2896.23737793003,
    "look": {
-    "hair": 2,
-    "height": 1.03438711166382,
+    "hair": 1,
+    "height": 1.04345345497131,
     "outfit": 4,
     "skin": 0
-   },
-   "name": "Brin",
-   "named_by_hand": false,
-   "needs": {
-    "food": 0.946540000000001,
-    "joy": 1.0,
-    "warmth": 1.0,
-    "water": 0.773200000000006
-   },
-   "parents": [],
-   "partner": 0,
-   "placed_by_hand": true,
-   "pos": [
-    4.70095586776733,
-    3.98005414009094,
-    -23.4828224182129
-   ],
-   "rot_y": 2.07122540473938,
-   "scene": "res://scenes/people/person.tscn",
-   "sex": "m",
-   "shelter": 0,
-   "sick_t": 0.0,
-   "skills": {
-    "building": 1.25319988577364,
-    "crafting": 1.50674231529236,
-    "engineering": 1.27818377017975,
-    "farming": 1.31165945529938,
-    "gathering": 1.80378966093063,
-    "metalwork": 1.40528131723404,
-    "scholarship": 2.25564879689219,
-    "woodcraft": 1.31766270726919
-   },
-   "stage": 3,
-   "state": 4,
-   "traits": [
-    "devout"
-   ],
-   "trust_f": 5.79445558071136,
-   "uid": 27,
-   "wanderer": true,
-   "wish": "",
-   "wish_t": 456.670825195343
-  },
-  {
-   "age": 3022.69946289106,
-   "blessed_t": 0.0,
-   "bonds": {
-    "27": 24.0,
-    "29": 78.0,
-    "33": 90.0,
-    "35": 18.0
-   },
-   "children": [
-    43,
-    56
-   ],
-   "death_age": 3970.35797119141,
-   "first_two": false,
-   "home": 30,
-   "hurt_t": 0.0,
-   "job": 6,
-   "last_birth_age": 2600.2994628908,
-   "look": {
-    "hair": 0,
-    "height": 1.034348487854,
-    "outfit": 5,
-    "skin": 3
-   },
-   "name": "Asha",
-   "named_by_hand": false,
-   "needs": {
-    "food": 0.605368000000011,
-    "joy": 0.975999999999998,
-    "warmth": 1.0,
-    "water": 0.930016000000002
-   },
-   "parents": [],
-   "partner": 33,
-   "placed_by_hand": false,
-   "pos": [
-    11.9445476531982,
-    3.03099775314331,
-    -10.3493461608887
-   ],
-   "rot_y": 0.474314004182816,
-   "scene": "res://scenes/people/person.tscn",
-   "sex": "f",
-   "shelter": 0,
-   "sick_t": 0.0,
-   "skills": {
-    "building": 1.55268118095397,
-    "crafting": 1.17688299655914,
-    "engineering": 1.15631835460663,
-    "farming": 1.50230869054794,
-    "gathering": 2.41554938793182,
-    "metalwork": 1.03438954949379,
-    "scholarship": 1.28688356876373,
-    "woodcraft": 1.45593207716942
-   },
-   "stage": 3,
-   "state": 4,
-   "traits": [
-    "strong",
-    "timid"
-   ],
-   "trust_f": 3.10503584098815,
-   "uid": 28,
-   "wanderer": true,
-   "wish": "",
-   "wish_t": 283.388195800778
-  },
-  {
-   "age": 3009.42978515668,
-   "blessed_t": 0.0,
-   "bonds": {
-    "28": 78.0,
-    "34": 90.0
-   },
-   "children": [
-    47,
-    57
-   ],
-   "death_age": 3946.68980407715,
-   "first_two": false,
-   "home": 39,
-   "hurt_t": 0.0,
-   "job": 9,
-   "last_birth_age": 2775.72978515654,
-   "look": {
-    "hair": 3,
-    "height": 1.05088496208191,
-    "outfit": 4,
-    "skin": 1
    },
    "name": "Oren",
    "named_by_hand": false,
    "needs": {
-    "food": 0.826984000000005,
-    "joy": 1.0,
+    "food": 0.823096000000005,
+    "joy": 0.959799999999994,
     "warmth": 1.0,
-    "water": 0.769312000000006
+    "water": 0.764128000000007
    },
    "parents": [],
    "partner": 34,
    "placed_by_hand": false,
    "pos": [
-    1.79904425144196,
-    4.02031707763672,
-    -12.0171775817871
+    -5.63974714279175,
+    3.8670928478241,
+    -24.2568912506104
    ],
-   "rot_y": 2.94466543197632,
+   "rot_y": 2.44685363769531,
    "scene": "res://scenes/people/person.tscn",
    "sex": "m",
    "shelter": 0,
    "sick_t": 0.0,
    "skills": {
-    "building": 1.41402807278631,
-    "crafting": 1.15106162965298,
-    "engineering": 1.32664102315903,
-    "farming": 1.34259587526321,
-    "gathering": 1.57853614449501,
-    "metalwork": 1.45382994413376,
-    "scholarship": 1.56811744899749,
-    "woodcraft": 1.88852645874023
-   },
-   "stage": 3,
-   "state": 4,
-   "traits": [
-    "stubborn"
-   ],
-   "trust_f": 1.872661921978,
-   "uid": 29,
-   "wanderer": true,
-   "wish": "",
-   "wish_t": 202.543591308589
-  },
-  {
-   "age": 2933.33847656289,
-   "blessed_t": 0.0,
-   "bonds": {
-    "27": 30.0,
-    "33": 60.0,
-    "35": 90.0
-   },
-   "children": [
-    50
-   ],
-   "death_age": 3946.08662414551,
-   "first_two": false,
-   "home": 40,
-   "hurt_t": 0.0,
-   "job": 48,
-   "last_birth_age": 2000.93847656236,
-   "look": {
-    "hair": 1,
-    "height": 0.987545251846313,
-    "outfit": 7,
-    "skin": 0
-   },
-   "name": "Rin",
-   "named_by_hand": false,
-   "needs": {
-    "food": 0.591760000000011,
-    "joy": 1.0,
-    "warmth": 1.0,
-    "water": 0.905392000000003
-   },
-   "parents": [],
-   "partner": 35,
-   "placed_by_hand": true,
-   "pos": [
-    -28.1813869476318,
-    3.76657390594482,
-    -12.0069990158081
-   ],
-   "rot_y": -1.49164152145386,
-   "scene": "res://scenes/people/person.tscn",
-   "sex": "f",
-   "shelter": 0,
-   "sick_t": 0.0,
-   "skills": {
-    "building": 1.39229476127624,
-    "crafting": 1.44144614934921,
-    "engineering": 1.09843192100525,
-    "farming": 1.54622714519501,
-    "gathering": 2.28851439237595,
-    "metalwork": 1.48922122716904,
-    "scholarship": 2.44452049465183,
-    "woodcraft": 1.18180188208818
+    "building": 1.21214879689216,
+    "crafting": 1.35848424434662,
+    "engineering": 1.31826019287109,
+    "farming": 1.27818377017975,
+    "gathering": 1.90674231529236,
+    "metalwork": 1.21953828930855,
+    "scholarship": 1.56882529735565,
+    "woodcraft": 1.60528131723404
    },
    "stage": 2,
    "state": 4,
    "traits": [
-    "curious"
+    "quick"
    ],
-   "trust_f": 4.84916372394562,
-   "uid": 32,
+   "trust_f": 2.62739978313446,
+   "uid": 27,
    "wanderer": true,
    "wish": "",
-   "wish_t": 105.09786376952
+   "wish_t": 252.580322265821
   },
   {
-   "age": 2827.8413330081,
+   "age": 2951.87398681679,
    "blessed_t": 0.0,
    "bonds": {
-    "28": 90.0,
-    "32": 60.0,
-    "34": 6.0
+    "29": 96.0
    },
    "children": [
-    43,
-    56
+    51
    ],
-   "death_age": 3961.14137268066,
+   "death_age": 3780.06167602539,
    "first_two": false,
    "home": 30,
    "hurt_t": 0.0,
-   "job": 41,
-   "last_birth_age": 2405.14133300786,
+   "job": 4,
+   "last_birth_age": 2340.47398681642,
    "look": {
-    "hair": 1,
-    "height": 1.0774290561676,
-    "outfit": 2,
-    "skin": 1
+    "hair": 4,
+    "height": 1.00400149822235,
+    "outfit": 4,
+    "skin": 0
    },
-   "name": "Pim",
+   "name": "Gor",
    "named_by_hand": false,
    "needs": {
-    "food": 0.940708000000002,
-    "joy": 1.0,
+    "food": 0.978616000000001,
+    "joy": 0.557199999999922,
     "warmth": 1.0,
-    "water": 0.783568000000006
+    "water": 0.774496000000006
+   },
+   "parents": [],
+   "partner": 29,
+   "placed_by_hand": true,
+   "pos": [
+    10.3602523803711,
+    4.17553901672363,
+    9.74310970306396
+   ],
+   "rot_y": 2.56845235824585,
+   "scene": "res://scenes/people/person.tscn",
+   "sex": "m",
+   "shelter": 0,
+   "sick_t": 0.0,
+   "skills": {
+    "building": 1.38498356876373,
+    "crafting": 1.26440558433533,
+    "engineering": 1.42880654335022,
+    "farming": 1.15631835460663,
+    "gathering": 1.41688299655914,
+    "metalwork": 1.18326132297516,
+    "scholarship": 1.56619855165482,
+    "woodcraft": 1.19438954949379
+   },
+   "stage": 2,
+   "state": 4,
+   "traits": [
+    "quick"
+   ],
+   "trust_f": 3.04224883174896,
+   "uid": 28,
+   "wanderer": true,
+   "wish": "",
+   "wish_t": 959.000195312584
+  },
+  {
+   "age": 2899.74207763706,
+   "blessed_t": 0.0,
+   "bonds": {
+    "28": 96.0
+   },
+   "children": [
+    51
+   ],
+   "death_age": 3860.77517700195,
+   "first_two": false,
+   "home": 30,
+   "hurt_t": 0.0,
+   "job": 11,
+   "last_birth_age": 2288.0420776367,
+   "look": {
+    "hair": 2,
+    "height": 1.02166032791138,
+    "outfit": 5,
+    "skin": 2
+   },
+   "name": "Oda",
+   "named_by_hand": false,
+   "needs": {
+    "food": 0.618976000000011,
+    "joy": 0.996399999999999,
+    "warmth": 1.0,
+    "water": 0.941680000000002
    },
    "parents": [],
    "partner": 28,
    "placed_by_hand": false,
    "pos": [
-    0.305459141731262,
-    4.02235794067383,
-    -3.55944085121155
+    10.0336217880249,
+    4.18075466156006,
+    11.8532676696777
    ],
-   "rot_y": -0.150638252496719,
-   "scene": "res://scenes/people/person.tscn",
-   "sex": "m",
-   "shelter": 0,
-   "sick_t": 0.0,
-   "skills": {
-    "building": 1.42266932840347,
-    "crafting": 1.03528144881129,
-    "engineering": 1.02908396571875,
-    "farming": 1.32992018461227,
-    "gathering": 2.31319077253342,
-    "metalwork": 1.34547860622406,
-    "scholarship": 1.16729179024696,
-    "woodcraft": 1.61868077754974
-   },
-   "stage": 2,
-   "state": 4,
-   "traits": [
-    "curious"
-   ],
-   "trust_f": 5.72981235694885,
-   "uid": 33,
-   "wanderer": true,
-   "wish": "fell_tree",
-   "wish_t": 54.0000000000003
-  },
-  {
-   "age": 2998.0328369145,
-   "blessed_t": 0.0,
-   "bonds": {
-    "27": 36.0,
-    "29": 90.0,
-    "33": 6.0,
-    "35": 78.0
-   },
-   "children": [
-    47,
-    57
-   ],
-   "death_age": 3988.85514831543,
-   "first_two": false,
-   "home": 39,
-   "hurt_t": 0.0,
-   "job": 6,
-   "last_birth_age": 2764.33283691436,
-   "look": {
-    "hair": 1,
-    "height": 1.03122866153717,
-    "outfit": 7,
-    "skin": 2
-   },
-   "name": "Juna",
-   "named_by_hand": false,
-   "needs": {
-    "food": 0.837676000000005,
-    "joy": 1.0,
-    "warmth": 1.0,
-    "water": 0.918352000000002
-   },
-   "parents": [],
-   "partner": 29,
-   "placed_by_hand": false,
-   "pos": [
-    -0.250876426696777,
-    3.95513343811035,
-    -16.8975944519043
-   ],
-   "rot_y": -2.35011887550354,
+   "rot_y": 0.461107909679413,
    "scene": "res://scenes/people/person.tscn",
    "sex": "f",
    "shelter": 0,
    "sick_t": 0.0,
    "skills": {
-    "building": 1.6169588643074,
-    "crafting": 1.57429678440094,
-    "engineering": 1.53317211866379,
-    "farming": 1.09860098063946,
-    "gathering": 1.81087085217238,
-    "metalwork": 1.03389944285154,
-    "scholarship": 1.15887698531151,
-    "woodcraft": 1.11649508580565
+    "building": 1.40276494584082,
+    "crafting": 1.0302377268672,
+    "engineering": 1.49081828594208,
+    "farming": 1.48100776672363,
+    "gathering": 1.41147733986378,
+    "metalwork": 1.12617484033108,
+    "scholarship": 1.63147315263748,
+    "woodcraft": 1.29039818644524
    },
    "stage": 2,
    "state": 4,
    "traits": [
-    "timid"
+    "sociable"
    ],
-   "trust_f": 2.00385810852051,
+   "trust_f": 2.71020529747009,
+   "uid": 29,
+   "wanderer": true,
+   "wish": "",
+   "wish_t": 309.426513672063
+  },
+  {
+   "age": 2879.42258300817,
+   "blessed_t": 0.0,
+   "bonds": {
+    "34": 36.0
+   },
+   "children": [],
+   "death_age": 3948.50909423828,
+   "first_two": false,
+   "home": 47,
+   "hurt_t": 0.0,
+   "job": 3,
+   "last_birth_age": -1000.0,
+   "look": {
+    "hair": 3,
+    "height": 1.06113636493683,
+    "outfit": 4,
+    "skin": 4
+   },
+   "name": "Fen",
+   "named_by_hand": false,
+   "needs": {
+    "food": 0.963064000000001,
+    "joy": 0.97299999999999,
+    "warmth": 1.0,
+    "water": 0.753760000000007
+   },
+   "parents": [],
+   "partner": 0,
+   "placed_by_hand": true,
+   "pos": [
+    -8.36025238037109,
+    3.83071184158325,
+    -25.7431087493896
+   ],
+   "rot_y": 0.963887870311737,
+   "scene": "res://scenes/people/person.tscn",
+   "sex": "m",
+   "shelter": 0,
+   "sick_t": 0.0,
+   "skills": {
+    "building": 1.55507325448988,
+    "crafting": 1.01214050278068,
+    "engineering": 1.59934368133545,
+    "farming": 1.43713887929916,
+    "gathering": 2.26954757452011,
+    "metalwork": 1.13938659727573,
+    "scholarship": 1.49062170267105,
+    "woodcraft": 1.59874538183212
+   },
+   "stage": 2,
+   "state": 4,
+   "traits": [
+    "devout"
+   ],
+   "trust_f": 3.84283358573913,
+   "uid": 33,
+   "wanderer": true,
+   "wish": "",
+   "wish_t": 145.282324218844
+  },
+  {
+   "age": 2890.72419433631,
+   "blessed_t": 0.0,
+   "bonds": {
+    "27": 90.0,
+    "33": 36.0
+   },
+   "children": [
+    45,
+    55
+   ],
+   "death_age": 3911.32284545898,
+   "first_two": false,
+   "home": 38,
+   "hurt_t": 0.0,
+   "job": 2,
+   "last_birth_age": 2881.1241943363,
+   "look": {
+    "hair": 3,
+    "height": 0.944924831390381,
+    "outfit": 7,
+    "skin": 2
+   },
+   "name": "Lema",
+   "named_by_hand": false,
+   "needs": {
+    "food": 0.666604000000009,
+    "joy": 0.977199999999994,
+    "warmth": 1.0,
+    "water": 0.773200000000006
+   },
+   "parents": [],
+   "partner": 27,
+   "placed_by_hand": true,
+   "pos": [
+    -13.8602523803711,
+    3.76117849349976,
+    -18.2431087493896
+   ],
+   "rot_y": 1.82500159740448,
+   "scene": "res://scenes/people/person.tscn",
+   "sex": "f",
+   "shelter": 0,
+   "sick_t": 0.0,
+   "skills": {
+    "building": 1.51948273153304,
+    "crafting": 1.19971429944038,
+    "engineering": 1.16265126466751,
+    "farming": 1.3112496137619,
+    "gathering": 1.3624365401268,
+    "metalwork": 1.13588502705097,
+    "scholarship": 1.50383641004562,
+    "woodcraft": 1.67681843519211
+   },
+   "stage": 2,
+   "state": 4,
+   "traits": [
+    "quick"
+   ],
+   "trust_f": 3.48431727218628,
    "uid": 34,
    "wanderer": true,
    "wish": "",
-   "wish_t": 125.313653564446
+   "wish_t": 159.089404296997
   },
   {
-   "age": 2920.88376464881,
+   "age": 2899.22961425819,
    "blessed_t": 0.0,
    "bonds": {
-    "28": 18.0,
-    "32": 90.0,
-    "34": 78.0,
-    "36": 36.0
+    "36": 90.0
    },
    "children": [
-    50
+    49
    ],
-   "death_age": 3771.44850158691,
+   "death_age": 4033.3717956543,
    "first_two": false,
-   "home": 40,
+   "home": 43,
    "hurt_t": 0.0,
-   "job": 48,
-   "last_birth_age": 1988.48376464829,
-   "look": {
-    "hair": 2,
-    "height": 0.929240763187408,
-    "outfit": 0,
-    "skin": 3
-   },
-   "name": "Hal",
-   "named_by_hand": false,
-   "needs": {
-    "food": 0.835732000000005,
-    "joy": 1.0,
-    "warmth": 1.0,
-    "water": 0.780976000000006
-   },
-   "parents": [],
-   "partner": 32,
-   "placed_by_hand": true,
-   "pos": [
-    -22.0069999694824,
-    3.76227259635925,
-    -13.8186140060425
-   ],
-   "rot_y": -2.34729051589966,
-   "scene": "res://scenes/people/person.tscn",
-   "sex": "m",
-   "shelter": 0,
-   "sick_t": 0.0,
-   "skills": {
-    "building": 1.31202983131408,
-    "crafting": 1.09017640829086,
-    "engineering": 1.39257576465607,
-    "farming": 1.01448063403368,
-    "gathering": 1.97727898836136,
-    "metalwork": 1.16990512013435,
-    "scholarship": 2.29742395896906,
-    "woodcraft": 1.72674357652664
-   },
-   "stage": 2,
-   "state": 4,
-   "traits": [
-    "timid"
-   ],
-   "trust_f": 3.80518017005921,
-   "uid": 35,
-   "wanderer": true,
-   "wish": "pray",
-   "wish_t": 60.0000000000003
-  },
-  {
-   "age": 1442.29999999987,
-   "blessed_t": 0.0,
-   "bonds": {
-    "36": 36.0,
-    "51": 36.0
-   },
-   "children": [],
-   "death_age": 3926.89340209961,
-   "first_two": false,
-   "home": 42,
-   "hurt_t": 0.0,
-   "job": 31,
-   "last_birth_age": -1000.0,
+   "job": 32,
+   "last_birth_age": 2277.32961425781,
    "look": {
     "hair": 0,
-    "height": 1.04781122505665,
-    "skin": 1
+    "height": 0.975791156291962,
+    "outfit": 6,
+    "skin": 0
    },
-   "name": "Bo",
+   "name": "Daro",
    "named_by_hand": false,
    "needs": {
-    "food": 0.612172000000011,
-    "joy": 0.982599999999999,
+    "food": 0.866836000000004,
+    "joy": 0.910799999999923,
     "warmth": 1.0,
-    "water": 0.928720000000002
+    "water": 0.945568000000002
    },
-   "parents": [
-    28,
-    33
-   ],
-   "partner": 0,
+   "parents": [],
+   "partner": 36,
    "placed_by_hand": false,
    "pos": [
-    38.6093521118164,
-    5.27739095687866,
-    -0.484677076339722
+    17.1690921783447,
+    3.46402287483215,
+    -0.882828772068024
    ],
-   "rot_y": 1.42358720302582,
+   "rot_y": 0.930559635162354,
    "scene": "res://scenes/people/person.tscn",
    "sex": "m",
    "shelter": 0,
    "sick_t": 0.0,
    "skills": {
-    "building": 1.31581437587738,
-    "crafting": 1.56692124605179,
-    "engineering": 1.06240654587746,
-    "farming": 1.46725912094116,
-    "gathering": 2.15691635608673,
-    "metalwork": 1.2311662197113,
-    "scholarship": 1.32375021623372,
-    "woodcraft": 1.211476572752
+    "building": 1.5353102947235,
+    "crafting": 1.4240567111969,
+    "engineering": 1.37780394554138,
+    "farming": 1.11333870887756,
+    "gathering": 2.13325885057449,
+    "metalwork": 1.55843917131424,
+    "scholarship": 1.10994248718023,
+    "woodcraft": 1.54982184648514
    },
    "stage": 2,
    "state": 4,
    "traits": [
     "strong",
-    "sociable"
+    "devout"
    ],
-   "trust_f": 3.6324240989685,
-   "uid": 43,
-   "wanderer": false,
+   "trust_f": 3.72833751678467,
+   "uid": 35,
+   "wanderer": true,
    "wish": "",
-   "wish_t": 400.166247558614
+   "wish_t": 494.528051757955
   },
   {
-   "age": 1182.09999999991,
+   "age": 2830.97238769564,
    "blessed_t": 0.0,
    "bonds": {
-    "51": 24.0
+    "27": 12.0,
+    "35": 90.0
    },
-   "children": [],
-   "death_age": 4042.47497558594,
+   "children": [
+    49
+   ],
+   "death_age": 3992.60766601562,
    "first_two": false,
-   "home": 45,
+   "home": 43,
    "hurt_t": 0.0,
-   "job": 31,
-   "last_birth_age": -1000.0,
+   "job": 32,
+   "last_birth_age": 2209.07238769526,
    "look": {
     "hair": 3,
-    "height": 1.05363395251334,
-    "skin": 2
+    "height": 0.947790324687958,
+    "outfit": 3,
+    "skin": 1
    },
-   "name": "Kai",
+   "name": "Ama",
    "named_by_hand": false,
    "needs": {
-    "food": 0.847396000000004,
-    "joy": 0.669399999999959,
+    "food": 0.875584000000003,
+    "joy": 0.937399999999975,
     "warmth": 1.0,
-    "water": 0.891136000000003
+    "water": 0.834112000000005
    },
-   "parents": [
-    34,
-    29
-   ],
-   "partner": 0,
-   "placed_by_hand": true,
+   "parents": [],
+   "partner": 35,
+   "placed_by_hand": false,
    "pos": [
-    60.0453071594238,
-    4.94185400009155,
-    13.1996793746948
+    63.0588340759277,
+    4.61691284179688,
+    10.9437198638916
    ],
-   "rot_y": 1.82970023155212,
+   "rot_y": 0.837292194366455,
    "scene": "res://scenes/people/person.tscn",
-   "sex": "m",
+   "sex": "f",
    "shelter": 0,
    "sick_t": 0.0,
    "skills": {
-    "building": 1.22190065383911,
-    "crafting": 1.30255099534988,
-    "engineering": 1.5841867685318,
-    "farming": 1.44569301605225,
-    "gathering": 1.27415115833282,
-    "metalwork": 1.20079286694527,
-    "scholarship": 1.51136683225632,
-    "woodcraft": 1.51925088167191
+    "building": 1.24214973284005,
+    "crafting": 1.40897311449051,
+    "engineering": 1.31110845804214,
+    "farming": 1.10170389413834,
+    "gathering": 1.99376992702484,
+    "metalwork": 1.19730942845345,
+    "scholarship": 1.51898681402206,
+    "woodcraft": 1.3933216714859
    },
    "stage": 2,
    "state": 4,
    "traits": [
     "timid",
-    "stubborn"
+    "brave"
    ],
-   "trust_f": 2.03326001524925,
-   "uid": 47,
-   "wanderer": false,
+   "trust_f": 1.80617599487305,
+   "uid": 36,
+   "wanderer": true,
    "wish": "",
-   "wish_t": 262.771405029289
+   "wish_t": 30.0683593751202
   },
   {
-   "age": 932.19999999995,
+   "age": 825.599999999966,
    "blessed_t": 0.0,
    "bonds": {
 
    },
    "children": [],
-   "death_age": 3968.35917663574,
+   "death_age": 3763.56416320801,
    "first_two": false,
-   "home": 45,
+   "home": 38,
    "hurt_t": 0.0,
-   "job": 49,
+   "job": 0,
    "last_birth_age": -1000.0,
    "look": {
     "hair": 1,
-    "height": 0.943245623260736,
+    "height": 1.00674716942012,
     "skin": 0
    },
-   "name": "Wim",
+   "name": "Ulf",
    "named_by_hand": false,
    "needs": {
-    "food": 0.847396000000004,
-    "joy": 0.937599999999994,
+    "food": 0.63550000000001,
+    "joy": 0.944799999999995,
     "warmth": 1.0,
-    "water": 0.930016000000002
+    "water": 0.786160000000006
    },
    "parents": [
-    32,
-    35
+    34,
+    27
    ],
    "partner": 0,
-   "placed_by_hand": true,
+   "placed_by_hand": false,
    "pos": [
-    63.3602523803711,
-    5.45359563827515,
-    -11.256890296936
+    17.6493263244629,
+    3.38115549087524,
+    17.9511299133301
    ],
-   "rot_y": -0.300146013498306,
+   "rot_y": 1.6857795715332,
    "scene": "res://scenes/people/person.tscn",
    "sex": "m",
    "shelter": 0,
    "sick_t": 0.0,
    "skills": {
-    "building": 1.26151602268219,
-    "crafting": 1.13059732019901,
-    "engineering": 1.155588722229,
-    "farming": 1.2869157910347,
-    "gathering": 1.3871195435524,
-    "metalwork": 1.13160661756992,
-    "scholarship": 1.17902933359146,
-    "woodcraft": 1.29534207582474
+    "building": 1.47153677940369,
+    "crafting": 1.42378115653992,
+    "engineering": 1.42823505401611,
+    "farming": 1.07420255243778,
+    "gathering": 1.07697052061558,
+    "metalwork": 1.36074767112732,
+    "scholarship": 1.09222536087036,
+    "woodcraft": 1.21592748165131
    },
-   "stage": 2,
-   "state": 4,
+   "stage": 1,
+   "state": 0,
    "traits": [
-    "curious",
     "quick"
    ],
-   "trust_f": 3.97117194700241,
-   "uid": 50,
+   "trust_f": 2.39310852766037,
+   "uid": 45,
    "wanderer": false,
-   "wish": "fetch_water",
-   "wish_t": 57.9000000000003
+   "wish": "",
+   "wish_t": -266.570318603522
   },
   {
-   "age": 422.20000000001,
+   "age": 621.499999999997,
    "blessed_t": 0.0,
    "bonds": {
 
    },
    "children": [],
-   "death_age": 3781.12293243408,
+   "death_age": 3949.57933044434,
+   "first_two": false,
+   "home": 43,
+   "hurt_t": 0.0,
+   "job": 0,
+   "last_birth_age": -1000.0,
+   "look": {
+    "hair": 3,
+    "height": 0.968939473852515,
+    "skin": 0
+   },
+   "name": "Kai",
+   "named_by_hand": false,
+   "needs": {
+    "food": 0.62772400000001,
+    "joy": 0.719199999999966,
+    "warmth": 1.0,
+    "water": 0.948160000000001
+   },
+   "parents": [
+    36,
+    35
+   ],
+   "partner": 0,
+   "placed_by_hand": false,
+   "pos": [
+    26.2675704956055,
+    4.31231594085693,
+    -14.8897171020508
+   ],
+   "rot_y": 0.838455080986023,
+   "scene": "res://scenes/people/person.tscn",
+   "sex": "m",
+   "shelter": 0,
+   "sick_t": 0.0,
+   "skills": {
+    "building": 1.05678578019142,
+    "crafting": 1.0124253064394,
+    "engineering": 1.53334445953369,
+    "farming": 1.55185978412628,
+    "gathering": 1.52981556653976,
+    "metalwork": 1.38184056282043,
+    "scholarship": 1.21538204550743,
+    "woodcraft": 1.01601122878492
+   },
+   "stage": 1,
+   "state": 0,
+   "traits": [
+    "strong"
+   ],
+   "trust_f": 2.73631925582886,
+   "uid": 49,
+   "wanderer": false,
+   "wish": "",
+   "wish_t": -134.113076782225
+  },
+  {
+   "age": 611.399999999999,
+   "blessed_t": 0.0,
+   "bonds": {
+
+   },
+   "children": [],
+   "death_age": 3760.02236938477,
    "first_two": false,
    "home": 30,
    "hurt_t": 0.0,
    "job": 0,
    "last_birth_age": -1000.0,
    "look": {
-    "hair": 0,
-    "height": 1.06813601963222,
-    "skin": 3
-   },
-   "name": "Sela",
-   "named_by_hand": false,
-   "needs": {
-    "food": 0.605368000000011,
-    "joy": 0.971199999999998,
-    "warmth": 1.0,
-    "water": 0.920944000000002
-   },
-   "parents": [
-    28,
-    33
-   ],
-   "partner": 0,
-   "placed_by_hand": false,
-   "pos": [
-    8.46106052398682,
-    4.06015157699585,
-    -12.9267139434814
-   ],
-   "rot_y": 0.647859513759613,
-   "scene": "res://scenes/people/person.tscn",
-   "sex": "f",
-   "shelter": 0,
-   "sick_t": 0.0,
-   "skills": {
-    "building": 1.44272563457489,
-    "crafting": 1.13307729065418,
-    "engineering": 1.41542711257935,
-    "farming": 1.0750610023737,
-    "gathering": 1.20944595932961,
-    "metalwork": 1.08865516185761,
-    "scholarship": 1.53055685758591,
-    "woodcraft": 1.4762433052063
-   },
-   "stage": 1,
-   "state": 0,
-   "traits": [
-    "strong",
-    "curious"
-   ],
-   "trust_f": 3.4554240989685,
-   "uid": 56,
-   "wanderer": false,
-   "wish": "",
-   "wish_t": 83.6413360595701
-  },
-  {
-   "age": 233.700000000003,
-   "blessed_t": 0.0,
-   "bonds": {
-
-   },
-   "children": [],
-   "death_age": 3756.80877685547,
-   "first_two": false,
-   "home": 39,
-   "hurt_t": 0.0,
-   "job": 0,
-   "last_birth_age": -1000.0,
-   "look": {
-    "hair": 3,
-    "height": 1.01377456635237,
+    "hair": 2,
+    "height": 1.01944491453469,
     "skin": 2
    },
-   "name": "Nuk",
+   "name": "Mo",
    "named_by_hand": false,
    "needs": {
-    "food": 0.836704000000005,
-    "joy": 1.0,
+    "food": 0.615088000000011,
+    "joy": 0.960399999999996,
     "warmth": 1.0,
-    "water": 0.917056000000002
+    "water": 0.773200000000006
    },
    "parents": [
-    34,
-    29
+    29,
+    28
    ],
    "partner": 0,
    "placed_by_hand": false,
    "pos": [
-    -0.499426662921906,
-    4.77513360977173,
-    -17.0728588104248
+    -4.12186098098755,
+    3.89745616912842,
+    -14.704532623291
    ],
-   "rot_y": -2.35011887550354,
+   "rot_y": 2.52427244186401,
    "scene": "res://scenes/people/person.tscn",
    "sex": "m",
    "shelter": 0,
    "sick_t": 0.0,
    "skills": {
-    "building": 1.06332170218229,
-    "crafting": 1.39951374530792,
-    "engineering": 1.04562141150236,
-    "farming": 1.29475029110909,
-    "gathering": 1.58187899589539,
-    "metalwork": 1.24526378512383,
-    "scholarship": 1.59446152448654,
-    "woodcraft": 1.11444016695023
+    "building": 1.04255737662315,
+    "crafting": 1.55107636451721,
+    "engineering": 1.33944063186646,
+    "farming": 1.25207312703133,
+    "gathering": 1.49122394323349,
+    "metalwork": 1.42766184806824,
+    "scholarship": 1.4479952454567,
+    "woodcraft": 1.1812547981739
+   },
+   "stage": 1,
+   "state": 0,
+   "traits": [
+    "sociable"
+   ],
+   "trust_f": 2.37572706460953,
+   "uid": 51,
+   "wanderer": false,
+   "wish": "",
+   "wish_t": -114.393023681639
+  },
+  {
+   "age": 9.5,
+   "blessed_t": 0.0,
+   "bonds": {
+
+   },
+   "children": [],
+   "death_age": 3878.89250183105,
+   "first_two": false,
+   "home": 38,
+   "hurt_t": 0.0,
+   "job": 0,
+   "last_birth_age": -1000.0,
+   "look": {
+    "hair": 3,
+    "height": 1.00863846205175,
+    "skin": 0
+   },
+   "name": "Hana",
+   "named_by_hand": false,
+   "needs": {
+    "food": 0.969220000000001,
+    "joy": 0.718999999999998,
+    "warmth": 1.0,
+    "water": 0.958960000000001
+   },
+   "parents": [
+    34,
+    27
+   ],
+   "partner": 0,
+   "placed_by_hand": false,
+   "pos": [
+    -13.5824756622314,
+    4.58117866516113,
+    -18.3669414520264
+   ],
+   "rot_y": 1.82500159740448,
+   "scene": "res://scenes/people/person.tscn",
+   "sex": "f",
+   "shelter": 0,
+   "sick_t": 0.0,
+   "skills": {
+    "building": 1.24048019051552,
+    "crafting": 1.34728008508682,
+    "engineering": 1.00603950154036,
+    "farming": 1.22208434939384,
+    "gathering": 1.08427630364895,
+    "metalwork": 1.50659836530685,
+    "scholarship": 1.29486585855484,
+    "woodcraft": 1.27557076215744
    },
    "stage": 0,
    "state": 0,
    "traits": [
-    "timid",
-    "stubborn"
+    "quick",
+    "devout"
    ],
-   "trust_f": 1.98326001524925,
-   "uid": 57,
+   "trust_f": 3.03660852766037,
+   "uid": 55,
    "wanderer": false,
    "wish": "",
-   "wish_t": 62.5799026489258
+   "wish_t": 103.084579467773
   }
  ],
- "saved_at": "2026-10-10T18:22:01",
- "saved_unix": 1791656521.5866,
+ "saved_at": "2026-10-10T19:34:39",
+ "saved_unix": 1791660879.02652,
  "summary": {
   "day": 24,
   "era": 2,
-  "faith": 179.672967286345,
-  "population": 16,
+  "faith": 121.394386291504,
+  "population": 14,
   "season": 0,
   "year": 3
  },
  "version": 1,
  "village": {
   "era": 2,
-  "next_person_id": 60,
+  "next_person_id": 56,
   "regions": [
    "clearing",
    "valley_floor",
@@ -2538,35 +2386,41 @@
   ],
   "stats": {
    "baby_prayer_done": true,
-   "baby_prayers": 2,
+   "baby_prayers": 1,
    "beat_times": {
-    "berries": 9.83602577777775,
-    "dawn": 9.83602577777775,
-    "done": 471.055221333296,
-    "dream": 470.044444444407,
-    "fire_lit": 185.836522666669,
-    "fire_log": 170.011626666671,
-    "gift": 193.909912000002,
+    "berries": 9.82124366666665,
+    "dawn": 9.82124366666665,
+    "done": 471.058702333276,
+    "dream": 470.010510333276,
+    "fire_lit": 187.051982333338,
+    "fire_log": 170.005070333336,
+    "gift": 195.106510333339,
     "storm": 0.0
    },
-   "births": 7,
-   "blessed": 153,
+   "births": 5,
+   "blessed": 63,
    "book": {
     "dreams": {
      "shelter_of_our_own": {
-      "done": 6,
+      "done": 7,
       "era": 1,
-      "start": 5
+      "start": 5,
+      "told": true,
+      "voice": "The cave is cold and it is not ours. We dream of a roof we built, and a fire we can sit around together."
      },
      "shrine_to_the_hand": {
       "done": 12,
       "era": 1,
-      "start": 7
+      "start": 8,
+      "told": true,
+      "voice": "We have lived through a winter because of you. We want a place where we can thank the hand, and ask it things."
      },
      "stone_circle": {
       "done": 23,
       "era": 1,
-      "start": 13
+      "start": 13,
+      "told": true,
+      "voice": "We are many now. We want a circle of great stones, and a feast under it, so the sky knows we are here."
      }
     },
     "entries": [
@@ -2603,8 +2457,14 @@
      {
       "day": 5,
       "era": 1,
+      "kind": "dreamt",
+      "text": "On the fifth day we dreamed of something new: \"A shelter of our own, and a ring of stones for our fire.\""
+     },
+     {
+      "day": 5,
+      "era": 1,
       "kind": "first",
-      "text": "On the fifth day Brin walked into the valley and stayed with us. We were no longer alone."
+      "text": "On the fifth day Oren walked into the valley and stayed with us. We were no longer alone."
      },
      {
       "day": 5,
@@ -2616,13 +2476,13 @@
       "day": 5,
       "era": 1,
       "kind": "joined",
-      "text": "On the fifth day Asha came to live with us."
+      "text": "On the fifth day Gor came to live with us."
      },
      {
       "day": 5,
       "era": 1,
       "kind": "joined",
-      "text": "On the fifth day Oren came to live with us."
+      "text": "On the fifth day Oda came to live with us."
      },
      {
       "day": 6,
@@ -2631,88 +2491,76 @@
       "text": "On the sixth day we set stones in a ring around the fire, and sat together inside it."
      },
      {
-      "day": 6,
+      "day": 7,
       "era": 1,
       "kind": "first",
-      "text": "On the sixth day we finished our first hut. That night we slept dry."
+      "text": "On the seventh day we finished our first hut. That night we slept dry."
      },
      {
-      "day": 6,
+      "day": 7,
       "era": 1,
       "kind": "dream",
-      "text": "On the sixth day our dream came true: \"A shelter of our own, and a ring of stones for our fire.\""
+      "text": "On the seventh day our dream came true: \"A shelter of our own, and a ring of stones for our fire.\""
      },
      {
-      "day": 6,
+      "day": 7,
       "era": 1,
       "kind": "power",
-      "text": "On the sixth day the hand grew: Strength I. Lift weight 4 (fallen logs)."
+      "text": "On the seventh day the hand grew: Strength I. Lift weight 4 (fallen logs)."
      },
      {
-      "day": 6,
+      "day": 7,
       "era": 1,
       "kind": "region",
-      "text": "On the sixth day the way to the western meadow opened, and we went to look."
+      "text": "On the seventh day the way to the western meadow opened, and we went to look."
      },
      {
-      "day": 6,
+      "day": 7,
       "era": 1,
       "kind": "joined",
-      "text": "On the sixth day Rin came to live with us."
+      "text": "On the seventh day Fen came to live with us."
      },
      {
-      "day": 6,
+      "day": 7,
       "era": 1,
       "kind": "joined",
-      "text": "On the sixth day Pim came to live with us."
+      "text": "On the seventh day Lema came to live with us."
      },
      {
-      "day": 6,
+      "day": 7,
       "era": 1,
       "kind": "joined",
-      "text": "On the sixth day Juna came to live with us."
+      "text": "On the seventh day Daro came to live with us."
      },
      {
-      "day": 6,
+      "day": 7,
       "era": 1,
       "kind": "joined",
-      "text": "On the sixth day Hal came to live with us."
-     },
-     {
-      "day": 6,
-      "era": 1,
-      "kind": "first",
-      "text": "On the sixth day Yara was born to Ona and Tuk, the first child of the valley."
+      "text": "On the seventh day Ama came to live with us."
      },
      {
       "day": 8,
       "era": 1,
-      "kind": "building",
-      "text": "On the eighth day we raised a shrine to the hand, and knelt there."
+      "kind": "dreamt",
+      "text": "On the eighth day we dreamed of something new: \"A shrine to the hand, so we can speak to you.\""
      },
      {
       "day": 9,
       "era": 1,
-      "kind": "power",
-      "text": "On the ninth day the hand grew: Warmth. Hold over people or a fire to warm them."
+      "kind": "building",
+      "text": "On the ninth day we raised a shrine to the hand, and knelt there."
      },
      {
       "day": 10,
       "era": 1,
-      "kind": "birth",
-      "text": "On the tenth day Bo was born to Asha and Pim."
-     },
-     {
-      "day": 11,
-      "era": 1,
       "kind": "building",
-      "text": "On the eleventh day we finished the hunting lodge."
+      "text": "On the tenth day we built a store for our food."
      },
      {
       "day": 12,
       "era": 1,
       "kind": "first",
-      "text": "We lived through our first winter. Eleven of us saw the spring."
+      "text": "We lived through our first winter. Nine of us saw the spring."
      },
      {
       "day": 12,
@@ -2721,28 +2569,34 @@
       "text": "On the twelfth day our dream came true: \"A shrine to the hand, so we can speak to you.\""
      },
      {
+      "day": 12,
+      "era": 1,
+      "kind": "power",
+      "text": "On the twelfth day the hand grew: Warmth. Hold over people or a fire to warm them."
+     },
+     {
+      "day": 12,
+      "era": 1,
+      "kind": "building",
+      "text": "On the twelfth day we finished the hunting lodge."
+     },
+     {
       "day": 13,
       "era": 1,
-      "kind": "birth",
-      "text": "On the thirteenth day Kai was born to Juna and Oren."
+      "kind": "dreamt",
+      "text": "On the thirteenth day we dreamed of something new: \"A circle of stones that points at the sky, where all of us can stand.\""
      },
      {
       "day": 13,
       "era": 1,
       "kind": "building",
-      "text": "On the thirteenth day we built a store for our food."
+      "text": "On the thirteenth day we built a rack to dry meat and berries."
      },
      {
-      "day": 15,
+      "day": 16,
       "era": 1,
-      "kind": "birth",
-      "text": "On the fifteenth day Wim was born to Rin and Hal."
-     },
-     {
-      "day": 15,
-      "era": 1,
-      "kind": "birth",
-      "text": "On the fifteenth day Wen was born to Ona and Tuk."
+      "kind": "first",
+      "text": "On the sixteenth day Ulf was born to Lema and Oren, the first child of the valley."
      },
      {
       "day": 17,
@@ -2751,40 +2605,46 @@
       "text": "On the seventeenth day the great stones stood in their circle at last."
      },
      {
-      "day": 17,
+      "day": 18,
       "era": 1,
-      "kind": "building",
-      "text": "On the seventeenth day we finished the woodcutters' camp."
+      "kind": "power",
+      "text": "On the eighteenth day the hand grew: Blessing. People you set down work 2x for 30 s."
      },
      {
       "day": 18,
       "era": 1,
-      "kind": "building",
-      "text": "On the eighteenth day we built a rack to dry meat and berries."
+      "kind": "birth",
+      "text": "On the eighteenth day Fia was born to Ona and Tuk."
      },
      {
-      "day": 19,
+      "day": 18,
       "era": 1,
-      "kind": "power",
-      "text": "On the nineteenth day the hand grew: Blessing. People you set down work 2x for 30 s."
+      "kind": "birth",
+      "text": "On the eighteenth day Kai was born to Ama and Daro."
+     },
+     {
+      "day": 18,
+      "era": 1,
+      "kind": "birth",
+      "text": "On the eighteenth day Mo was born to Oda and Gor."
      },
      {
       "day": 20,
       "era": 1,
-      "kind": "birth",
-      "text": "On the twentieth day Sela was born to Asha and Pim."
-     },
-     {
-      "day": 22,
-      "era": 1,
-      "kind": "birth",
-      "text": "On the twenty-second day Nuk was born to Juna and Oren."
+      "kind": "building",
+      "text": "On the twentieth day we finished the woodcutters' camp."
      },
      {
       "day": 23,
       "era": 1,
       "kind": "dream",
       "text": "On the twenty-third day our dream came true: \"A circle of stones that points at the sky, where all of us can stand.\""
+     },
+     {
+      "day": 24,
+      "era": 1,
+      "kind": "birth",
+      "text": "On the twenty-fourth day Hana was born to Lema and Oren."
      },
      {
       "day": 24,
@@ -2801,10 +2661,10 @@
       "t": 0.0
      },
      "2": {
-      "births": 7,
+      "births": 5,
       "day": 24,
       "deaths": 0,
-      "t": 2452.22473866716
+      "t": 2452.60425166768
      }
     },
     "eras_shown": [
@@ -2812,18 +2672,18 @@
     ],
     "first_two_set": true,
     "firsts": {
-     "birth": 6,
+     "birth": 16,
      "branch": 0,
-     "building_drying_rack": 18,
+     "building_drying_rack": 13,
      "building_fire_circle": 6,
-     "building_food_store": 13,
-     "building_hunting_lodge": 11,
-     "building_hut": 6,
-     "building_shrine": 8,
+     "building_food_store": 10,
+     "building_hunting_lodge": 12,
+     "building_hut": 7,
+     "building_shrine": 9,
      "building_stone_circle": 17,
-     "building_woodcutter_camp": 17,
+     "building_woodcutter_camp": 20,
      "fire": 2,
-     "hut": 6,
+     "hut": 7,
      "lifted": 0,
      "names": 1,
      "wanderer": 5,
@@ -2835,8 +2695,7 @@
      "22": {
       "alive": true,
       "children": [
-       36,
-       51
+       48
       ],
       "first_two": true,
       "hand_named": false,
@@ -2854,7 +2713,7 @@
       "traits": [
        "quick"
       ],
-      "trust": 5,
+      "trust": 4,
       "uid": 22,
       "wanderer": false,
       "years": 57
@@ -2862,8 +2721,7 @@
      "23": {
       "alive": true,
       "children": [
-       36,
-       51
+       48
       ],
       "first_two": true,
       "hand_named": false,
@@ -2889,132 +2747,103 @@
      },
      "27": {
       "alive": true,
-      "children": [],
+      "children": [
+       45,
+       55
+      ],
       "hand_named": false,
       "joined_day": 5,
       "look": {
-       "hair": 2,
-       "height": 1.03438711166382,
+       "hair": 1,
+       "height": 1.04345345497131,
        "outfit": 4,
        "skin": 0
-      },
-      "name": "Brin",
-      "parents": [],
-      "partner": 0,
-      "sex": "m",
-      "stage": 3,
-      "traits": [
-       "devout"
-      ],
-      "trust": 5,
-      "uid": 27,
-      "wanderer": true,
-      "years": 51
-     },
-     "28": {
-      "alive": true,
-      "children": [
-       43,
-       56
-      ],
-      "hand_named": false,
-      "joined_day": 5,
-      "look": {
-       "hair": 0,
-       "height": 1.034348487854,
-       "outfit": 5,
-       "skin": 3
-      },
-      "name": "Asha",
-      "parents": [],
-      "partner": 33,
-      "sex": "f",
-      "stage": 3,
-      "traits": [
-       "strong",
-       "timid"
-      ],
-      "trust": 3,
-      "uid": 28,
-      "wanderer": true,
-      "years": 50
-     },
-     "29": {
-      "alive": true,
-      "children": [
-       47,
-       57
-      ],
-      "hand_named": false,
-      "joined_day": 5,
-      "look": {
-       "hair": 3,
-       "height": 1.05088496208191,
-       "outfit": 4,
-       "skin": 1
       },
       "name": "Oren",
       "parents": [],
       "partner": 34,
       "sex": "m",
-      "stage": 3,
+      "stage": 2,
       "traits": [
-       "stubborn"
+       "quick"
       ],
-      "trust": 1,
-      "uid": 29,
+      "trust": 2,
+      "uid": 27,
       "wanderer": true,
-      "years": 50
+      "years": 48
      },
-     "32": {
+     "28": {
       "alive": true,
       "children": [
-       50
+       51
       ],
       "hand_named": false,
-      "joined_day": 6,
+      "joined_day": 5,
       "look": {
-       "hair": 1,
-       "height": 0.987545251846313,
-       "outfit": 7,
+       "hair": 4,
+       "height": 1.00400149822235,
+       "outfit": 4,
        "skin": 0
       },
-      "name": "Rin",
+      "name": "Gor",
       "parents": [],
-      "partner": 35,
+      "partner": 29,
+      "sex": "m",
+      "stage": 2,
+      "traits": [
+       "quick"
+      ],
+      "trust": 3,
+      "uid": 28,
+      "wanderer": true,
+      "years": 49
+     },
+     "29": {
+      "alive": true,
+      "children": [
+       51
+      ],
+      "hand_named": false,
+      "joined_day": 5,
+      "look": {
+       "hair": 2,
+       "height": 1.02166032791138,
+       "outfit": 5,
+       "skin": 2
+      },
+      "name": "Oda",
+      "parents": [],
+      "partner": 28,
       "sex": "f",
       "stage": 2,
       "traits": [
-       "curious"
+       "sociable"
       ],
-      "trust": 4,
-      "uid": 32,
+      "trust": 2,
+      "uid": 29,
       "wanderer": true,
       "years": 48
      },
      "33": {
       "alive": true,
-      "children": [
-       43,
-       56
-      ],
+      "children": [],
       "hand_named": false,
-      "joined_day": 6,
+      "joined_day": 7,
       "look": {
-       "hair": 1,
-       "height": 1.0774290561676,
-       "outfit": 2,
-       "skin": 1
+       "hair": 3,
+       "height": 1.06113636493683,
+       "outfit": 4,
+       "skin": 4
       },
-      "name": "Pim",
+      "name": "Fen",
       "parents": [],
-      "partner": 28,
+      "partner": 0,
       "sex": "m",
       "stage": 2,
       "traits": [
-       "curious"
+       "devout"
       ],
-      "trust": 5,
+      "trust": 3,
       "uid": 33,
       "wanderer": true,
       "years": 47
@@ -3022,50 +2851,51 @@
      "34": {
       "alive": true,
       "children": [
-       47,
-       57
+       45,
+       55
       ],
       "hand_named": false,
-      "joined_day": 6,
+      "joined_day": 7,
       "look": {
-       "hair": 1,
-       "height": 1.03122866153717,
+       "hair": 3,
+       "height": 0.944924831390381,
        "outfit": 7,
        "skin": 2
       },
-      "name": "Juna",
+      "name": "Lema",
       "parents": [],
-      "partner": 29,
+      "partner": 27,
       "sex": "f",
       "stage": 2,
       "traits": [
-       "timid"
+       "quick"
       ],
-      "trust": 2,
+      "trust": 3,
       "uid": 34,
       "wanderer": true,
-      "years": 49
+      "years": 48
      },
      "35": {
       "alive": true,
       "children": [
-       50
+       49
       ],
       "hand_named": false,
-      "joined_day": 6,
+      "joined_day": 7,
       "look": {
-       "hair": 2,
-       "height": 0.929240763187408,
-       "outfit": 0,
-       "skin": 3
+       "hair": 0,
+       "height": 0.975791156291962,
+       "outfit": 6,
+       "skin": 0
       },
-      "name": "Hal",
+      "name": "Daro",
       "parents": [],
-      "partner": 32,
+      "partner": 36,
       "sex": "m",
       "stage": 2,
       "traits": [
-       "timid"
+       "strong",
+       "devout"
       ],
       "trust": 3,
       "uid": 35,
@@ -3074,203 +2904,173 @@
      },
      "36": {
       "alive": true,
-      "born_day": 6,
-      "children": [],
-      "hand_named": false,
-      "look": {
-       "hair": 4,
-       "height": 0.937178641557693,
-       "skin": 0
-      },
-      "name": "Yara",
-      "parents": [
-       22,
-       23
+      "children": [
+       49
       ],
-      "partner": 0,
+      "hand_named": false,
+      "joined_day": 7,
+      "look": {
+       "hair": 3,
+       "height": 0.947790324687958,
+       "outfit": 3,
+       "skin": 1
+      },
+      "name": "Ama",
+      "parents": [],
+      "partner": 35,
       "sex": "f",
       "stage": 2,
       "traits": [
-       "devout"
-      ],
-      "trust": 4,
-      "uid": 36,
-      "wanderer": false,
-      "years": 31
-     },
-     "43": {
-      "alive": true,
-      "born_day": 10,
-      "children": [],
-      "hand_named": false,
-      "look": {
-       "hair": 0,
-       "height": 1.04781122505665,
-       "skin": 1
-      },
-      "name": "Bo",
-      "parents": [
-       28,
-       33
-      ],
-      "partner": 0,
-      "sex": "m",
-      "stage": 2,
-      "traits": [
-       "strong",
-       "sociable"
-      ],
-      "trust": 3,
-      "uid": 43,
-      "wanderer": false,
-      "years": 24
-     },
-     "47": {
-      "alive": true,
-      "born_day": 13,
-      "children": [],
-      "hand_named": false,
-      "look": {
-       "hair": 3,
-       "height": 1.05363395251334,
-       "skin": 2
-      },
-      "name": "Kai",
-      "parents": [
-       34,
-       29
-      ],
-      "partner": 0,
-      "sex": "m",
-      "stage": 2,
-      "traits": [
        "timid",
-       "stubborn"
+       "brave"
       ],
-      "trust": 2,
-      "uid": 47,
-      "wanderer": false,
-      "years": 19
+      "trust": 1,
+      "uid": 36,
+      "wanderer": true,
+      "years": 47
      },
-     "50": {
+     "45": {
       "alive": true,
-      "born_day": 15,
+      "born_day": 16,
       "children": [],
       "hand_named": false,
       "look": {
        "hair": 1,
-       "height": 0.943245623260736,
+       "height": 1.00674716942012,
        "skin": 0
       },
-      "name": "Wim",
+      "name": "Ulf",
       "parents": [
-       32,
-       35
+       34,
+       27
       ],
       "partner": 0,
       "sex": "m",
-      "stage": 2,
+      "stage": 1,
       "traits": [
-       "curious",
        "quick"
       ],
-      "trust": 3,
-      "uid": 50,
+      "trust": 2,
+      "uid": 45,
       "wanderer": false,
-      "years": 15
+      "years": 13
      },
-     "51": {
+     "48": {
       "alive": true,
-      "born_day": 15,
+      "born_day": 18,
       "children": [],
       "hand_named": false,
       "look": {
        "hair": 4,
-       "height": 0.969956947490573,
-       "skin": 0
+       "height": 0.956329448148608,
+       "skin": 2
       },
-      "name": "Wen",
+      "name": "Fia",
       "parents": [
        22,
        23
-      ],
-      "partner": 0,
-      "sex": "f",
-      "stage": 2,
-      "traits": [
-       "quick",
-       "devout"
-      ],
-      "trust": 5,
-      "uid": 51,
-      "wanderer": false,
-      "years": 15
-     },
-     "56": {
-      "alive": true,
-      "born_day": 20,
-      "children": [],
-      "hand_named": false,
-      "look": {
-       "hair": 0,
-       "height": 1.06813601963222,
-       "skin": 3
-      },
-      "name": "Sela",
-      "parents": [
-       28,
-       33
       ],
       "partner": 0,
       "sex": "f",
       "stage": 1,
       "traits": [
-       "strong",
-       "curious"
+       "quick"
       ],
-      "trust": 3,
-      "uid": 56,
+      "trust": 4,
+      "uid": 48,
       "wanderer": false,
-      "years": 7
+      "years": 10
      },
-     "57": {
+     "49": {
       "alive": true,
-      "born_day": 22,
+      "born_day": 18,
       "children": [],
       "hand_named": false,
       "look": {
        "hair": 3,
-       "height": 1.01377456635237,
-       "skin": 2
+       "height": 0.968939473852515,
+       "skin": 0
       },
-      "name": "Nuk",
+      "name": "Kai",
       "parents": [
-       34,
-       29
+       36,
+       35
       ],
       "partner": 0,
       "sex": "m",
+      "stage": 1,
+      "traits": [
+       "strong"
+      ],
+      "trust": 2,
+      "uid": 49,
+      "wanderer": false,
+      "years": 10
+     },
+     "51": {
+      "alive": true,
+      "born_day": 18,
+      "children": [],
+      "hand_named": false,
+      "look": {
+       "hair": 2,
+       "height": 1.01944491453469,
+       "skin": 2
+      },
+      "name": "Mo",
+      "parents": [
+       29,
+       28
+      ],
+      "partner": 0,
+      "sex": "m",
+      "stage": 1,
+      "traits": [
+       "sociable"
+      ],
+      "trust": 2,
+      "uid": 51,
+      "wanderer": false,
+      "years": 10
+     },
+     "55": {
+      "alive": true,
+      "born_day": 24,
+      "children": [],
+      "hand_named": false,
+      "look": {
+       "hair": 3,
+       "height": 1.00863846205175,
+       "skin": 0
+      },
+      "name": "Hana",
+      "parents": [
+       34,
+       27
+      ],
+      "partner": 0,
+      "sex": "f",
       "stage": 0,
       "traits": [
-       "timid",
-       "stubborn"
+       "quick",
+       "devout"
       ],
-      "trust": 1,
-      "uid": 57,
+      "trust": 3,
+      "uid": 55,
       "wanderer": false,
-      "years": 3
+      "years": 0
      }
     }
    },
    "cottages_from_huts": 6,
    "deaths": 0,
    "dream_active": "",
-   "dream_started_t": 1321.19699200003,
+   "dream_started_t": 1321.14597433353,
    "dream_started_winters": 1,
    "dream_times": {
-    "shelter_of_our_own": 576.407794666606,
-    "shrine_to_the_hand": 1200.13999999996,
-    "stone_circle": 2400.2137546672
+    "shelter_of_our_own": 682.065163666541,
+    "shrine_to_the_hand": 1200.10285433334,
+    "stone_circle": 2400.53834766767
    },
    "dreams_done": [
     "shelter_of_our_own",
@@ -3278,13 +3078,13 @@
     "stone_circle"
    ],
    "elk_site": true,
-   "era_complete_t": 2400.2137546672,
+   "era_complete_t": 2400.53834766767,
    "era_gate_done": 1,
-   "era_started_t": 2452.22473866716,
+   "era_started_t": 2452.60425166768,
    "era_started_winters": 2,
    "era_summary": {
     "1": {
-     "births": 7,
+     "births": 4,
      "day": 23,
      "deaths": 0,
      "dreams": [
@@ -3293,16 +3093,16 @@
       "stone_circle"
      ],
      "era": 1,
-     "faith_earned": 168.782783534685,
+     "faith_earned": 121.194386291504,
      "first_two": [
       "Ona",
       "Tuk"
      ],
-     "game_minutes_total": 40.0035625777867,
-     "gifts": 2,
+     "game_minutes_total": 40.0089724611279,
+     "gifts": 1,
      "joined": 7,
-     "minutes": 40.0035625777867,
-     "population": 16,
+     "minutes": 40.0089724611279,
+     "population": 13,
      "powers": [
       "grip_2",
       "strength_1",
@@ -3329,107 +3129,123 @@
     "hide_clothes"
    ],
    "free_mode": false,
-   "gifts": 3,
+   "gifts": 1,
+   "guide_dance_spot": true,
+   "guide_fire_log": true,
+   "guide_first_birth": true,
+   "guide_first_wanderer": true,
+   "hint_blessing": true,
+   "hint_cold": true,
    "joined": 7,
-   "last_dream_t": 2400.2137546672,
-   "lodge_hunts": 9,
+   "last_dream_t": 2400.53834766767,
+   "lodge_hunts": 5,
    "memories": [
     {
      "day": 2,
-     "t": 185.836522666669,
+     "t": 187.051982333338,
      "text": "The hand brought us the log for our first fire."
     },
     {
      "day": 2,
-     "t": 194.406424000002,
+     "t": 195.878862333339,
      "text": "The hand picked up our handprint stone, and its grip grew."
     },
     {
-     "day": 6,
-     "t": 576.407794666606,
+     "day": 7,
+     "t": 682.065163666541,
      "text": "With the hand's help we made our dream come true: a shelter of our own, and a ring of stones for our fire"
     },
     {
      "day": 12,
-     "t": 1200.03333333329,
+     "t": 1200.04768633334,
      "text": "We lived through winter number 1."
     },
     {
      "day": 12,
-     "t": 1200.13999999996,
+     "t": 1200.10285433334,
      "text": "With the hand's help we made our dream come true: a shrine to the hand, so we can speak to you"
     },
     {
      "day": 12,
-     "t": 1201.82561066663,
+     "t": 1237.84705433341,
      "text": "Our hunters went out from the lodge together and brought home a deer."
     },
     {
      "day": 14,
-     "t": 1426.9450373334,
+     "t": 1423.12028633366,
      "text": "We learned to make stone tools. Now we gather faster, and we can fell trees."
     },
     {
-     "day": 19,
-     "t": 1960.13333333385,
+     "day": 18,
+     "t": 1794.94753166755,
      "text": "The hand learned to bless us."
     },
     {
-     "day": 20,
-     "t": 2015.0439093339,
+     "day": 18,
+     "t": 1831.84372188981,
      "text": "The hand blessed us and we danced at the fire all night. Our first festival."
     },
     {
-     "day": 20,
-     "t": 2031.44183006119,
+     "day": 18,
+     "t": 1845.72928011204,
      "text": "Blessed by the hand, our hunters brought down the great elk."
     },
     {
-     "day": 20,
-     "t": 2032.20531200059,
+     "day": 18,
+     "t": 1845.90471833427,
      "text": "We sewed clothes from the hides of the hunt, and the winter bit less."
     },
     {
      "day": 23,
-     "t": 2400.04708800054,
+     "t": 2400.17479300101,
      "text": "We lived through winter number 2."
     },
     {
      "day": 23,
-     "t": 2400.2137546672,
+     "t": 2400.53834766767,
      "text": "With the hand's help we made our dream come true: a circle of stones that points at the sky, where all of us can stand"
     },
     {
      "day": 24,
-     "t": 2452.22473866716,
+     "t": 2452.60425166768,
      "text": "We rebuilt our huts as cottages, with stone footings and room for a family"
     }
    ],
    "onboarding": 7,
    "onboarding_berries": 5,
-   "quiet_until": 2550.2137546672,
-   "stone_knapped": 9,
+   "quiet_until": 2550.53834766767,
+   "stone_knapped": 5,
    "surplus_days": 23,
    "wanderers_for_shelter_of_our_own": true,
    "wanderers_for_valley_floor": true,
    "wanderers_for_western_meadow": true,
-   "warmed": 201,
+   "warmed": 57,
    "winters_survived": 2,
    "wish_drying_rack": true,
    "wish_fire_2": true,
    "wish_food_store": true,
    "wish_lodge": true,
-   "wish_woodcutter": true
+   "wish_woodcutter": true,
+   "work_by": {
+    "knap_flint": {
+     "22": 1,
+     "23": 2,
+     "27": 1,
+     "34": 3,
+     "35": 3,
+     "36": 4
+    }
+   }
   },
   "store_cap": 70,
   "stores": {
-   "berries": 8,
-   "fish": 32,
+   "berries": 2,
+   "fish": 18,
    "hide": 1,
-   "meat": 70,
-   "stone": 26,
-   "water": 58,
-   "wood": 13
+   "meat": 40,
+   "stone": 2,
+   "water": 17,
+   "wood": 6
   }
  },
  "world": {
@@ -3437,10 +3253,14 @@
    "moved": 1,
    "pos": [
     5.5,
-    3.98398876190186,
+    3.99074935913086,
     -23.5
    ],
    "yaw": 0.0799999982118607
+  },
+  "drops": {
+   "allowed": [],
+   "crossings": []
   },
   "era2": {
    "boulders": [
@@ -3485,7 +3305,7 @@
     "moved": 1,
     "pos": [
      -38.0,
-     4.63147926330566,
+     4.62892532348633,
      -7.0
     ],
     "yaw": 1.32079637050629
@@ -3494,7 +3314,7 @@
     "moved": 1,
     "pos": [
      -38.0,
-     4.14158630371094,
+     4.1384596824646,
      -4.0
     ],
     "yaw": 1.57079637050629
@@ -3503,7 +3323,7 @@
     "moved": 1,
     "pos": [
      -38.0,
-     4.00291156768799,
+     4.00081920623779,
      -1.0
     ],
     "yaw": 1.82079637050629
@@ -3516,13 +3336,36 @@
    ],
    [
     "valley_floor",
-    494.475890666626
+    493.33918233327
    ],
    [
     "western_meadow",
-    580.666666666605
+    685.131050777652
    ]
   ],
+  "pass": {
+   "open": false
+  },
+  "paths": {
+   "chunk": 32,
+   "chunks": {
+    "104": "eJxjYBgFFABWCuVHwSgYBaNgFIyCAQEASuoACw==",
+    "105": "eJxjYCAfcFCgl0j9agT081DmAgUlfLIykt4MrMgAJsHKyiEkqawhjKYeQx0Doyge41mY+d2wyzAxMTAoK7MwSmCX5pdhlNJmZmDkw202G9BufGEjxMgojkeagZdAyLKx4ZUeBVDATECeQBYgpH0UjIJRMArIBwC0dgPj",
+    "106": "eJztkrtrFGEUxX8zs5t9ZuOabMy6MZinmiAxutEqQiCoEUHiYw2kywpqFF+gYmEhgmAtgo0gYqWVCr4CiljYiYWdrYUW2lhFNOu53yQLZte/wD0wcx/n++6ce+8AA1FoI0LyBVD5McMb/BzfOvDgpFKtcCQB57/In6zotRB0roOtOETz/XhNMP1Vwbjox3yUd4xTOZlVfsHKrGf2u6KJioJrtMudDdjQQtYvBimrcpdkQO9FWMzCISXKenayjIGS9HFH3i/Iw6sdAWT7pILDhaHhyTLefk4vKtTTLPMeu5AnOdezVGIz78C3+32KHhGzspaxHphiAmuAn65fnlNMQjHmJSx5j+sBv2lOuu8PkuIKZGJT9BrrcYKniDe8hjmZZ6qs0l0udys2r/d95+t+BxHvk+cEbIHRgHGJbc1pSEI30YLMubRPzKPHDec2PJGoovnzMbaZ/eD54fG0Fe2fsVnDzbGWCHu7lX4bidjdITSoz9PpcAYJzcQ6HoNLFkJOKvyHjmxxrQa2ne3h/BllD7s5uuDYyPIy1hI9DgcGzW8dkVa8RFuVtRJ0xWFkKdz3Uu158NeBUshbDzdW0hoQZ2EX4YEH1CArhZLQ6YKyW8EKpC7Y/vUHXk4yXENLQKbkypuANbUfEK6SDXw72pSry0thRgUC7bjm66b7oGtSaK97XX9znDPxZsK112DTRmfCJuqhmo7Xpf3QJKreCtp1zup/aGuggQb+B/wB809Pvw==",
+    "107": "eJztUttO20AQPTO+JXVsjBucS01KkhYKBVoapKp9SVXxAkL8QNWnvvIH8BGoH9Hv7MzuerGlqD/QnIf17sz4nDOzC+DpEkC6AhiKxz9wMOcoxM87+eZXOQKAgKlJHsQ7IbvC81rX+UzSv4eY/3K/Dnoh2YKyZ/+phG+J2T2BwkQC/dgxzAJdc9zao5rJkgnBYwfY94d074usYTKJ6IVUstDVLzXR8yUFCz/HdZqJa2ZD0MHQdZg2vR7kizdn83fHy9HhyfKbrxuk2ITpev31g9HMg9a0DMJms14sZK3YhgxRrD52da7PXAUaBqXKnLlDDY1Nu3AMVqLvNGSYI92FVdP5ZeNBjH0CXrvClQ1fKIOrmHhhPle5sTfTaeNjVJBG7sBnOG7lgM+BOSXjVmyaiOxDdIHqxzOfSB3JzbYE+Aa2rfenctzTfRQhselsV4UH+G7U9tnMAyfy4QrDbAC8Qq2PcETX0nVP3srbgu1QNoGtazIOnAb5RUbIOJKKgGrHQU1GTKA05kpQEZgLoyZX2pS967GEA3+hpd5MU7eSzkgfiuRjfQJl1x6Ze8SpttWJttGnjkAbiXkwLD7ijXnPSPhnfosttvj/8BfkbRhD",
+    "108": "eJztUcFKw0AUnLxkTdK0JDFJo1hsC+ZkxZOI1oNSoSAInvQkXqog+YOCIv6M4Fe6m8Rkk268ecscln07b2dm34IgoSpIK3ek4NW3FHRfKkslSdLS8wYiUoqzAx5El93q3sDAABypY6vGmhMMIxjkl95owAcNK2KD/oWmPj4LroL389PlarGb7ISRa7E2gTYFIOacllmPN7hpTwgy5qfAPIHpNBtG6NmM9+x7T6CEjgKQTlKIWPxlZs1MnY/KyDyqZ3q8MMx8PIxPOhyh3uBLtSeEbi/25EdFRQzKoo3F0eMgLH+B4TLfuDhM8Ab9m+9PUEZcw77HVOjeFFpO5mlQoW/jGRY+07y9v4I2s+sjMK7X28BDflUYyXC5ADSLB0mXX3f84HjaHKHA/FWskfYRz1S09N4WLMRCk9aLL2L5SzuCMliHDh06/BN+AIsjFPA=",
+    "109": "eJxjYGBgZhgFo2AUjIJRMApGwYgCAB/3AAQ=",
+    "126": "eJxjYMAN9FnwSI6CUTAKRsEoGAWjYMgCAJp3ADQ=",
+    "84": "eJxjYBgFxAJuQgq4GDgps0GUkAECDMyU2UA3wMwMRgPtjFEwCkbBKBgF2AEAYFcAXw==",
+    "85": "eJxjYBgFo4B8wMzAzAzCYMTIyADnEAIcVloMohqGdHDi0AWqunilpQmbgE8JBwMDGyNpDhoFo2AUDCcAAE0qAaE=",
+    "86": "eJztkk9IVFEUxn/PefOm94eXNf4tK0wkUaeJIHOTUwNtMixykUEgFRWhUWOEEbQQdOVCok20auWmiKg2URjkokW1kCBo0dJFMOsg877pnGuzEMRF2+Z73L/fOfee73sXavgH9D7ZnH/Hwc3ohc88Hglp3YgbhfHFiEnKco27nquTj9yNCfgBbeV1XBjt6JYhVwIHPtDPhSrVCe1ZbtMMAwRHOQmLsl2YuP7J8nJLRsdSys9r8j14Jsu+av5l2/uch48auQT3ZSOo8tv+1g1Jkhhz7Du8lkW7tKFisTRE/e5pfz9Pj7C120bBFA30EttM9tr+lcvybzszhfSqax1sU2HSpnexwGGcgVsJ5uEMDLOdpZhYwzPz83BaJr/E0A4zRtKHcZR5m9Ne2DkeZPdNybxyV44XhxInUeqRtMYwxI+gKQV3MhW4YgJeOE0vr6oJNIiwM7asAymt3DUr4s5zdS1Iy+6IVAdeJz9jqywvJ9CTVP+l4JCUeJwxcfZNP3VCl1v8nm/nJiHl4KlNXnRCbZlBSqhEK3NbGA/CwWv5LzR7axY7je6sjhe7KtauS5DOwqwobpFlaxpRwNeOeox3VvV1wc5iIbIKiAe5Cct7VtUB3utDOrXR26uhhhr+J/wB8fBo0A==",
+    "87": "eJztUbtOw0AQHJ/PD5I4tojjQHAgwQ4KQYqEgFBQBAmlIAIBBXQIGqQUgEQBoqMAvoCClo9A4nNoafgAOvb8DCg9BV5Z613v3NzOGMjiL8OEFFWSBK5piJ54rq4itzTmHI+QjCnAtlGz8+P5ZTzmwsoyy7JS/j1/xfpPvJvLQykmvQv52nuuoiWaiRSn2DbspOvvFneg0tLKKIYASlxK5kAsIxSVnQRAS8+g0oPQO0eXNashueWmJLXovbgl8myDBZ2uOlaMOLwPyc6i1eLDuuXgBBUy+PhC9Bt0sb5sAvNGwt4L6QadK8qb8VfG4mooEhdpij4viBmJ4nbkEJMPngp7K4E3+4DRFAKF4dOpgHfc+BCEt0B76ECVVWrqqZU0eeCTgHdHMLKJqSVaNFBRf/vkfE04rNEfYF3AxyUt5BRIRaNF3nx8JUQ6jko4lVg76MILOv75C5iheXSa9urzbmr9qM4sssji/8U3mfEffw==",
+    "88": "eJztUT0LwjAQfUljm1pRK6VIKXXq4KTiogUnd8H//2dMLmnaWHDTxTwOch/v3t0RIOC3WE4yySd6IgAhIBIkxkCPMFXxlRXnb3EGWYxCOZpaYOb8HJKOW/ndOdmAh3kOLsFJqLK0JxB5Ze1ybv2yiYjfMhO3d6ehLN5Y2pk0KL/Fwrix2tx2HXs5DX1AVKqjY6Qm06Bvd+spsM4KpRgdrXHrVA+7Anr8glhsqO5K9U819tpflybnvryqc0cdLZV5+oLO55zrE+TlxP3xA9hEiHt1FylBvxIQEPB/eAG3ogdg",
+    "89": "eJxjYBgFFAFp/NLi9HHFKBgFo2AUjIJRQBIAAFaUADM="
+   },
+   "v": 1,
+   "w": 640
+  },
   "storm": 4,
   "threats": {
    "cold_active": false,

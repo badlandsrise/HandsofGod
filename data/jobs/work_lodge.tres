@@ -8,6 +8,7 @@ id = &"work_lodge"
 title = "Hunt from the lodge"
 era = 1
 kind = 8
+anim = &"spear_ready"
 skill = &"gathering"
 max_people = 4
 outputs = {&"meat": 1, &"hide": 1}

@@ -27,10 +27,14 @@ func run() -> void:
 	await _wait(1.0)
 	_skip_onboarding()
 	# open the Valley Floor quietly (no banner over the shots)
-	Village.regions[&"valley_floor"] = true
-	w._open_region_visual(&"valley_floor", true)
+	for id in [&"valley_floor", &"western_meadow"]:
+		Village.regions[id] = true
+		w._open_region_visual(id, true)
+	if w.regions != null:
+		w.regions.sync_instant()
 	_run()
 	await _wait(1.0)
+	await _cards()
 	if "lodge" in want: await _lodge()
 	if "call" in want: await _call()
 	if "farmhouse" in want: await _farmhouse()
@@ -117,6 +121,7 @@ func _call() -> void:
 	for p in Village.alive():
 		if p._target.is_finite() and p._target.distance_to(at) < 5.0:
 			p.global_position = p._target
+	w.hand.aim_override = at + Vector3(1.5, 0, -4.5)   # the hand hovers just past them
 	await _frames(3)
 	await _shot("fb_work_call.png")
 	w.hand.aim_override = Vector3.INF
@@ -150,7 +155,26 @@ func _farmhouse() -> void:
 	await _shot("fb_work_farmhouse.png")
 	w.hand.aim_override = Vector3.INF
 
+## Dream cards (they pause the game and cover the view) are accepted.
+func _cards() -> void:
+	var h = w.hud
+	if h == null or not ("dream_card" in h) or h.dream_card == null:
+		return
+	for i in 8:
+		if not h.dream_card.pending():
+			break
+		if h.dream_card.is_open():
+			h.dream_card.accept()
+		await _frames(20)
+	_run()
+
 func _shot(file: String) -> void:
+	var rig = w.camera_rig
+	var keep := [rig.target_focus, rig.target_dist, rig.target_yaw]
+	await _cards()
+	rig.target_yaw = keep[2]
+	rig.snap_to(keep[0], keep[1])
+	await _frames(4)
 	await RenderingServer.frame_post_draw
 	var img := get_viewport().get_texture().get_image()
 	var path := ProjectSettings.globalize_path(OUT).path_join(file)
